@@ -276,7 +276,7 @@ Mithril = m = new function app(window, undefined) {
 		for (var attrName in dataAttrs) {
 			var dataAttr = dataAttrs[attrName]
 			var cachedAttr = cachedAttrs[attrName]
-			if (!(attrName in cachedAttrs) || (cachedAttr !== dataAttr) || node === window.document.activeElement) {
+			if (!(attrName in cachedAttrs) || (cachedAttr !== dataAttr)) {
 				cachedAttrs[attrName] = dataAttr
 				if (attrName === "config") continue
 				else if (typeof dataAttr == "function" && attrName.indexOf("on") == 0) {
@@ -294,9 +294,6 @@ Mithril = m = new function app(window, undefined) {
 					if (attrName === "href") node.setAttributeNS("http://www.w3.org/1999/xlink", "href", dataAttr)
 					else if (attrName === "className") node.setAttribute("class", dataAttr)
 					else node.setAttribute(attrName, dataAttr)
-				}
-				else if (attrName === "value" && tag === "input") {
-					if (node.value !== dataAttr) node.value = dataAttr
 				}
 				else if (attrName in node && !(attrName == "list" || attrName == "style")) {
 					node[attrName] = dataAttr
