@@ -1,5 +1,5 @@
 {
-	"name": "mithril",
+	"name": "zorium",
 	"version": "0.1.0",
 	"scripts": {
 		"test": "grunt test"
