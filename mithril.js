@@ -296,9 +296,15 @@ Mithril = m = new function app(window, undefined) {
 					else node.setAttribute(attrName, dataAttr)
 				}
 				else if (attrName in node && !(attrName == "list" || attrName == "style")) {
-					node[attrName] = dataAttr
+					if (!(attrName == "src" && tag == "iframe" && cachedAttr)) {
+						node[attrName] = dataAttr
+					}
 				}
-				else node.setAttribute(attrName, dataAttr)
+				else {
+					if (!(attrName == "src" && tag == "iframe" && cachedAttr)) {
+						node.setAttribute(attrName, dataAttr)
+					}
+				}
 			}
 		}
 		return cachedAttrs
