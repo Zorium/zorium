@@ -8,6 +8,7 @@ karma = require('karma').server
 RewirePlugin = require 'rewire-webpack'
 webpack = require 'gulp-webpack'
 webpackSource = require 'webpack'
+merge = require 'merge-stream'
 
 karmaConf = require './karma.defaults'
 
@@ -28,6 +29,7 @@ gulp.task 'demo', ->
 # compile sources: src/* -> dist/*
 gulp.task 'assets:prod', [
   'scripts:prod'
+  'scripts:prod-min'
 ]
 
 # build for production
@@ -101,22 +103,33 @@ gulp.task 'clean:dist', ->
   gulp.src paths.dist, read: false
     .pipe clean()
 
-# init.coffee --> dist/js/bundle.min.js
+webpackProdConfig =
+  output:
+    library: 'zorium'
+  module:
+    postLoaders: [
+      { test: /\.coffee$/, loader: 'transform/cacheable?envify' }
+    ]
+    loaders: [
+      { test: /\.coffee$/, loader: 'coffee' }
+      { test: /\.json$/, loader: 'json' }
+    ]
+  resolve:
+    extensions: ['.coffee', '.js', '.json', '']
+
 gulp.task 'scripts:prod', ->
   gulp.src paths.root
-  .pipe webpack
-    module:
-      postLoaders: [
-        { test: /\.coffee$/, loader: 'transform/cacheable?envify' }
-      ]
-      loaders: [
-        { test: /\.coffee$/, loader: 'coffee' }
-        { test: /\.json$/, loader: 'json' }
-      ]
+  .pipe webpack webpackProdConfig
+  .pipe rename 'zorium.js'
+  .pipe gulp.dest paths.dist
+
+gulp.task 'scripts:prod-min', ->
+  gulp.src paths.root
+  .pipe webpack _.defaults {
     plugins: [
       new webpackSource.optimize.UglifyJsPlugin()
     ]
-    resolve:
-      extensions: ['.coffee', '.js', '.json', '']
-  .pipe rename 'clay_ui.js'
+  }, webpackProdConfig
+  .pipe rename 'zorium.min.js'
   .pipe gulp.dest paths.dist
+  .pipe gulp.src paths.root
