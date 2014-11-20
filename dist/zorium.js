@@ -1,4 +1,4 @@
-var zorium =
+module.exports =
 /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -7786,7 +7786,7 @@ var zorium =
 /* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var split = __webpack_require__(33)
+	var split = __webpack_require__(32)
 
 	var classIdSplit = /([\.#]?[a-zA-Z0-9_:-]+)/
 	var notClassId = /^\.|#/
@@ -7871,14 +7871,14 @@ var zorium =
 /***/ function(module, exports, __webpack_require__) {
 
 	var isArray = __webpack_require__(22)
-	var isObject = __webpack_require__(32)
+	var isObject = __webpack_require__(33)
 
-	var VPatch = __webpack_require__(26)
+	var VPatch = __webpack_require__(25)
 	var isVNode = __webpack_require__(16)
 	var isVText = __webpack_require__(17)
 	var isWidget = __webpack_require__(18)
-	var isThunk = __webpack_require__(27)
-	var handleThunk = __webpack_require__(28)
+	var isThunk = __webpack_require__(26)
+	var handleThunk = __webpack_require__(27)
 
 	module.exports = diff
 
@@ -8223,7 +8223,7 @@ var zorium =
 	var version = __webpack_require__(24)
 	var isVNode = __webpack_require__(16)
 	var isWidget = __webpack_require__(18)
-	var isVHook = __webpack_require__(25)
+	var isVHook = __webpack_require__(28)
 
 	module.exports = VirtualNode
 
@@ -8345,8 +8345,8 @@ var zorium =
 	var document = __webpack_require__(35)
 	var isArray = __webpack_require__(22)
 
-	var domIndex = __webpack_require__(30)
-	var patchOp = __webpack_require__(31)
+	var domIndex = __webpack_require__(29)
+	var patchOp = __webpack_require__(30)
 	module.exports = patch
 
 	function patch(rootNode, patches) {
@@ -8426,12 +8426,12 @@ var zorium =
 
 	var document = __webpack_require__(35)
 
-	var applyProperties = __webpack_require__(29)
+	var applyProperties = __webpack_require__(31)
 
 	var isVNode = __webpack_require__(16)
 	var isVText = __webpack_require__(17)
 	var isWidget = __webpack_require__(18)
-	var handleThunk = __webpack_require__(28)
+	var handleThunk = __webpack_require__(27)
 
 	module.exports = createElement
 
@@ -8526,18 +8526,6 @@ var zorium =
 /* 25 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = isHook
-
-	function isHook(hook) {
-	    return hook && typeof hook.hook === "function" &&
-	        !hook.hasOwnProperty("hook")
-	}
-
-
-/***/ },
-/* 26 */
-/***/ function(module, exports, __webpack_require__) {
-
 	var version = __webpack_require__(24)
 
 	VirtualPatch.NONE = 0
@@ -8563,7 +8551,7 @@ var zorium =
 
 
 /***/ },
-/* 27 */
+/* 26 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = isThunk
@@ -8574,13 +8562,13 @@ var zorium =
 
 
 /***/ },
-/* 28 */
+/* 27 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var isVNode = __webpack_require__(16)
 	var isVText = __webpack_require__(17)
 	var isWidget = __webpack_require__(18)
-	var isThunk = __webpack_require__(27)
+	var isThunk = __webpack_require__(26)
 
 	module.exports = handleThunk
 
@@ -8620,105 +8608,19 @@ var zorium =
 
 
 /***/ },
-/* 29 */
+/* 28 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isObject = __webpack_require__(32)
-	var isHook = __webpack_require__(25)
+	module.exports = isHook
 
-	module.exports = applyProperties
-
-	function applyProperties(node, props, previous) {
-	    for (var propName in props) {
-	        var propValue = props[propName]
-
-	        if (propValue === undefined) {
-	            removeProperty(node, props, previous, propName);
-	        } else if (isHook(propValue)) {
-	            propValue.hook(node,
-	                propName,
-	                previous ? previous[propName] : undefined)
-	        } else {
-	            if (isObject(propValue)) {
-	                patchObject(node, props, previous, propName, propValue);
-	            } else if (propValue !== undefined) {
-	                node[propName] = propValue
-	            }
-	        }
-	    }
-	}
-
-	function removeProperty(node, props, previous, propName) {
-	    if (previous) {
-	        var previousValue = previous[propName]
-
-	        if (!isHook(previousValue)) {
-	            if (propName === "attributes") {
-	                for (var attrName in previousValue) {
-	                    node.removeAttribute(attrName)
-	                }
-	            } else if (propName === "style") {
-	                for (var i in previousValue) {
-	                    node.style[i] = ""
-	                }
-	            } else if (typeof previousValue === "string") {
-	                node[propName] = ""
-	            } else {
-	                node[propName] = null
-	            }
-	        }
-	    }
-	}
-
-	function patchObject(node, props, previous, propName, propValue) {
-	    var previousValue = previous ? previous[propName] : undefined
-
-	    // Set attributes
-	    if (propName === "attributes") {
-	        for (var attrName in propValue) {
-	            var attrValue = propValue[attrName]
-
-	            if (attrValue === undefined) {
-	                node.removeAttribute(attrName)
-	            } else {
-	                node.setAttribute(attrName, attrValue)
-	            }
-	        }
-
-	        return
-	    }
-
-	    if(previousValue && isObject(previousValue) &&
-	        getPrototype(previousValue) !== getPrototype(propValue)) {
-	        node[propName] = propValue
-	        return
-	    }
-
-	    if (!isObject(node[propName])) {
-	        node[propName] = {}
-	    }
-
-	    var replacer = propName === "style" ? "" : undefined
-
-	    for (var k in propValue) {
-	        var value = propValue[k]
-	        node[propName][k] = (value === undefined) ? replacer : value
-	    }
-	}
-
-	function getPrototype(value) {
-	    if (Object.getPrototypeOf) {
-	        return Object.getPrototypeOf(value)
-	    } else if (value.__proto__) {
-	        return value.__proto__
-	    } else if (value.constructor) {
-	        return value.constructor.prototype
-	    }
+	function isHook(hook) {
+	    return hook && typeof hook.hook === "function" &&
+	        !hook.hasOwnProperty("hook")
 	}
 
 
 /***/ },
-/* 30 */
+/* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Maps a virtual DOM tree onto a real DOM tree in an efficient manner.
@@ -8809,13 +8711,13 @@ var zorium =
 
 
 /***/ },
-/* 31 */
+/* 30 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var applyProperties = __webpack_require__(29)
+	var applyProperties = __webpack_require__(31)
 
 	var isWidget = __webpack_require__(18)
-	var VPatch = __webpack_require__(26)
+	var VPatch = __webpack_require__(25)
 
 	var render = __webpack_require__(20)
 	var updateWidget = __webpack_require__(34)
@@ -8983,18 +8885,105 @@ var zorium =
 
 
 /***/ },
-/* 32 */
+/* 31 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = isObject
+	var isObject = __webpack_require__(33)
+	var isHook = __webpack_require__(28)
 
-	function isObject(x) {
-	    return typeof x === "object" && x !== null
+	module.exports = applyProperties
+
+	function applyProperties(node, props, previous) {
+	    for (var propName in props) {
+	        var propValue = props[propName]
+
+	        if (propValue === undefined) {
+	            removeProperty(node, props, previous, propName);
+	        } else if (isHook(propValue)) {
+	            propValue.hook(node,
+	                propName,
+	                previous ? previous[propName] : undefined)
+	        } else {
+	            if (isObject(propValue)) {
+	                patchObject(node, props, previous, propName, propValue);
+	            } else if (propValue !== undefined) {
+	                node[propName] = propValue
+	            }
+	        }
+	    }
+	}
+
+	function removeProperty(node, props, previous, propName) {
+	    if (previous) {
+	        var previousValue = previous[propName]
+
+	        if (!isHook(previousValue)) {
+	            if (propName === "attributes") {
+	                for (var attrName in previousValue) {
+	                    node.removeAttribute(attrName)
+	                }
+	            } else if (propName === "style") {
+	                for (var i in previousValue) {
+	                    node.style[i] = ""
+	                }
+	            } else if (typeof previousValue === "string") {
+	                node[propName] = ""
+	            } else {
+	                node[propName] = null
+	            }
+	        }
+	    }
+	}
+
+	function patchObject(node, props, previous, propName, propValue) {
+	    var previousValue = previous ? previous[propName] : undefined
+
+	    // Set attributes
+	    if (propName === "attributes") {
+	        for (var attrName in propValue) {
+	            var attrValue = propValue[attrName]
+
+	            if (attrValue === undefined) {
+	                node.removeAttribute(attrName)
+	            } else {
+	                node.setAttribute(attrName, attrValue)
+	            }
+	        }
+
+	        return
+	    }
+
+	    if(previousValue && isObject(previousValue) &&
+	        getPrototype(previousValue) !== getPrototype(propValue)) {
+	        node[propName] = propValue
+	        return
+	    }
+
+	    if (!isObject(node[propName])) {
+	        node[propName] = {}
+	    }
+
+	    var replacer = propName === "style" ? "" : undefined
+
+	    for (var k in propValue) {
+	        var value = propValue[k]
+	        node[propName][k] = (value === undefined) ? replacer : value
+	    }
+	}
+
+	function getPrototype(value) {
+	    if (Object.getPrototypeOf) {
+	        return Object.getPrototypeOf(value)
+	    } else if (value.__proto__) {
+	        return value.__proto__
+	    } else if (value.constructor) {
+	        return value.constructor.prototype
+	    }
 	}
 
 
 /***/ },
-/* 33 */
+/* 32 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*!
@@ -9103,6 +9092,17 @@ var zorium =
 
 	  return self;
 	})();
+
+
+/***/ },
+/* 33 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isObject
+
+	function isObject(x) {
+	    return typeof x === "object" && x !== null
+	}
 
 
 /***/ },

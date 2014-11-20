@@ -104,8 +104,6 @@ gulp.task 'clean:dist', ->
     .pipe clean()
 
 webpackProdConfig =
-  output:
-    library: 'zorium'
   module:
     postLoaders: [
       { test: /\.coffee$/, loader: 'transform/cacheable?envify' }
@@ -119,13 +117,20 @@ webpackProdConfig =
 
 gulp.task 'scripts:prod', ->
   gulp.src paths.root
-  .pipe webpack webpackProdConfig
+  .pipe webpack _.defaults
+    output:
+      library: 'zorium'
+      libraryTarget: 'commonjs2'
+  , webpackProdConfig
+
   .pipe rename 'zorium.js'
   .pipe gulp.dest paths.dist
 
 gulp.task 'scripts:prod-min', ->
   gulp.src paths.root
   .pipe webpack _.defaults {
+    output:
+      library: 'zorium'
     plugins: [
       new webpackSource.optimize.UglifyJsPlugin()
     ]
