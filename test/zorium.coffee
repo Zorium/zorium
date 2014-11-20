@@ -80,6 +80,36 @@ describe 'Virtual DOM', ->
 
     new XMLSerializer().serializeToString($el).should.be result
 
+  it 'allows component render to return undefined', ->
+    class HelloWorldComponent
+      render: ->
+        return
+
+    hello = new HelloWorldComponent()
+
+    dom = z 'div',
+      z 'div', 'a'
+      z 'div', 'b'
+
+    root = document.createElement 'div'
+
+    result = '<div><div>' +
+      '<div>a</div>' +
+      '<div>b</div>' +
+      '<div></div>' +
+    '</div></div>'
+
+    z.render root, dom
+
+    dom = z 'div',
+      z 'div', 'a'
+      z 'div', 'b'
+      hello
+
+    z.render root, dom
+
+    new XMLSerializer().serializeToString(root).should.be result
+
   it 'handles null children', ->
     dom = z 'div',
       null

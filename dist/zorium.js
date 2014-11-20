@@ -119,6 +119,9 @@ module.exports =
 	  var OnMountHook, tree;
 	  if (isComponent(child)) {
 	    tree = child.render();
+	    if (!tree) {
+	      tree = z('div');
+	    }
 	    if (_.isArray(tree)) {
 	      tree = z('div', tree);
 	    }

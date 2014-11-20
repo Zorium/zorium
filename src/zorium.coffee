@@ -63,6 +63,9 @@ renderChild = (child) ->
   if isComponent child
     tree = child.render()
 
+    unless tree
+      tree = z 'div'
+
     if _.isArray tree
       tree = z 'div', tree
 
