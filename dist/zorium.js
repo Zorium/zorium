@@ -321,7 +321,7 @@ module.exports =
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var diff = __webpack_require__(13)
+	var diff = __webpack_require__(15)
 
 	module.exports = diff
 
@@ -330,7 +330,7 @@ module.exports =
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var patch = __webpack_require__(19)
+	var patch = __webpack_require__(13)
 
 	module.exports = patch
 
@@ -339,7 +339,7 @@ module.exports =
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var createElement = __webpack_require__(20)
+	var createElement = __webpack_require__(14)
 
 	module.exports = createElement
 
@@ -7717,11 +7717,11 @@ module.exports =
 	var isArray = __webpack_require__(22)
 	var isString = __webpack_require__(23)
 
-	var VNode = __webpack_require__(14)
-	var VText = __webpack_require__(15)
-	var isVNode = __webpack_require__(16)
-	var isVText = __webpack_require__(17)
-	var isWidget = __webpack_require__(18)
+	var VNode = __webpack_require__(16)
+	var VText = __webpack_require__(17)
+	var isVNode = __webpack_require__(18)
+	var isVText = __webpack_require__(19)
+	var isWidget = __webpack_require__(20)
 
 	var parseTag = __webpack_require__(12)
 
@@ -7791,7 +7791,7 @@ module.exports =
 /* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var split = __webpack_require__(33)
+	var split = __webpack_require__(32)
 
 	var classIdSplit = /([\.#]?[a-zA-Z0-9_:-]+)/
 	var notClassId = /^\.|#/
@@ -7875,15 +7875,149 @@ module.exports =
 /* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
+	var document = __webpack_require__(35)
 	var isArray = __webpack_require__(22)
-	var isObject = __webpack_require__(32)
 
-	var VPatch = __webpack_require__(24)
-	var isVNode = __webpack_require__(16)
-	var isVText = __webpack_require__(17)
-	var isWidget = __webpack_require__(18)
-	var isThunk = __webpack_require__(25)
-	var handleThunk = __webpack_require__(26)
+	var domIndex = __webpack_require__(24)
+	var patchOp = __webpack_require__(25)
+	module.exports = patch
+
+	function patch(rootNode, patches) {
+	    return patchRecursive(rootNode, patches)
+	}
+
+	function patchRecursive(rootNode, patches, renderOptions) {
+	    var indices = patchIndices(patches)
+
+	    if (indices.length === 0) {
+	        return rootNode
+	    }
+
+	    var index = domIndex(rootNode, patches.a, indices)
+	    var ownerDocument = rootNode.ownerDocument
+
+	    if (!renderOptions) {
+	        renderOptions = { patch: patchRecursive }
+	        if (ownerDocument !== document) {
+	            renderOptions.document = ownerDocument
+	        }
+	    }
+
+	    for (var i = 0; i < indices.length; i++) {
+	        var nodeIndex = indices[i]
+	        rootNode = applyPatch(rootNode,
+	            index[nodeIndex],
+	            patches[nodeIndex],
+	            renderOptions)
+	    }
+
+	    return rootNode
+	}
+
+	function applyPatch(rootNode, domNode, patchList, renderOptions) {
+	    if (!domNode) {
+	        return rootNode
+	    }
+
+	    var newNode
+
+	    if (isArray(patchList)) {
+	        for (var i = 0; i < patchList.length; i++) {
+	            newNode = patchOp(patchList[i], domNode, renderOptions)
+
+	            if (domNode === rootNode) {
+	                rootNode = newNode
+	            }
+	        }
+	    } else {
+	        newNode = patchOp(patchList, domNode, renderOptions)
+
+	        if (domNode === rootNode) {
+	            rootNode = newNode
+	        }
+	    }
+
+	    return rootNode
+	}
+
+	function patchIndices(patches) {
+	    var indices = []
+
+	    for (var key in patches) {
+	        if (key !== "a") {
+	            indices.push(Number(key))
+	        }
+	    }
+
+	    return indices
+	}
+
+
+/***/ },
+/* 14 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var document = __webpack_require__(35)
+
+	var applyProperties = __webpack_require__(26)
+
+	var isVNode = __webpack_require__(18)
+	var isVText = __webpack_require__(19)
+	var isWidget = __webpack_require__(20)
+	var handleThunk = __webpack_require__(27)
+
+	module.exports = createElement
+
+	function createElement(vnode, opts) {
+	    var doc = opts ? opts.document || document : document
+	    var warn = opts ? opts.warn : null
+
+	    vnode = handleThunk(vnode).a
+
+	    if (isWidget(vnode)) {
+	        return vnode.init()
+	    } else if (isVText(vnode)) {
+	        return doc.createTextNode(vnode.text)
+	    } else if (!isVNode(vnode)) {
+	        if (warn) {
+	            warn("Item is not a valid virtual dom node", vnode)
+	        }
+	        return null
+	    }
+
+	    var node = (vnode.namespace === null) ?
+	        doc.createElement(vnode.tagName) :
+	        doc.createElementNS(vnode.namespace, vnode.tagName)
+
+	    var props = vnode.properties
+	    applyProperties(node, props)
+
+	    var children = vnode.children
+
+	    for (var i = 0; i < children.length; i++) {
+	        var childNode = createElement(children[i], opts)
+	        if (childNode) {
+	            node.appendChild(childNode)
+	        }
+	    }
+
+	    return node
+	}
+
+
+/***/ },
+/* 15 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var isArray = __webpack_require__(22)
+	var isObject = __webpack_require__(33)
+
+	var VPatch = __webpack_require__(28)
+	var isVNode = __webpack_require__(18)
+	var isVText = __webpack_require__(19)
+	var isWidget = __webpack_require__(20)
+	var isThunk = __webpack_require__(29)
+	var handleThunk = __webpack_require__(27)
 
 	module.exports = diff
 
@@ -8222,13 +8356,13 @@ module.exports =
 
 
 /***/ },
-/* 14 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(27)
-	var isVNode = __webpack_require__(16)
-	var isWidget = __webpack_require__(18)
-	var isVHook = __webpack_require__(28)
+	var version = __webpack_require__(30)
+	var isVNode = __webpack_require__(18)
+	var isWidget = __webpack_require__(20)
+	var isVHook = __webpack_require__(31)
 
 	module.exports = VirtualNode
 
@@ -8291,10 +8425,10 @@ module.exports =
 
 
 /***/ },
-/* 15 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(27)
+	var version = __webpack_require__(30)
 
 	module.exports = VirtualText
 
@@ -8307,10 +8441,10 @@ module.exports =
 
 
 /***/ },
-/* 16 */
+/* 18 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(27)
+	var version = __webpack_require__(30)
 
 	module.exports = isVirtualNode
 
@@ -8320,10 +8454,10 @@ module.exports =
 
 
 /***/ },
-/* 17 */
+/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(27)
+	var version = __webpack_require__(30)
 
 	module.exports = isVirtualText
 
@@ -8333,147 +8467,13 @@ module.exports =
 
 
 /***/ },
-/* 18 */
+/* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = isWidget
 
 	function isWidget(w) {
 	    return w && w.type === "Widget"
-	}
-
-
-/***/ },
-/* 19 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var document = __webpack_require__(35)
-	var isArray = __webpack_require__(22)
-
-	var domIndex = __webpack_require__(29)
-	var patchOp = __webpack_require__(30)
-	module.exports = patch
-
-	function patch(rootNode, patches) {
-	    return patchRecursive(rootNode, patches)
-	}
-
-	function patchRecursive(rootNode, patches, renderOptions) {
-	    var indices = patchIndices(patches)
-
-	    if (indices.length === 0) {
-	        return rootNode
-	    }
-
-	    var index = domIndex(rootNode, patches.a, indices)
-	    var ownerDocument = rootNode.ownerDocument
-
-	    if (!renderOptions) {
-	        renderOptions = { patch: patchRecursive }
-	        if (ownerDocument !== document) {
-	            renderOptions.document = ownerDocument
-	        }
-	    }
-
-	    for (var i = 0; i < indices.length; i++) {
-	        var nodeIndex = indices[i]
-	        rootNode = applyPatch(rootNode,
-	            index[nodeIndex],
-	            patches[nodeIndex],
-	            renderOptions)
-	    }
-
-	    return rootNode
-	}
-
-	function applyPatch(rootNode, domNode, patchList, renderOptions) {
-	    if (!domNode) {
-	        return rootNode
-	    }
-
-	    var newNode
-
-	    if (isArray(patchList)) {
-	        for (var i = 0; i < patchList.length; i++) {
-	            newNode = patchOp(patchList[i], domNode, renderOptions)
-
-	            if (domNode === rootNode) {
-	                rootNode = newNode
-	            }
-	        }
-	    } else {
-	        newNode = patchOp(patchList, domNode, renderOptions)
-
-	        if (domNode === rootNode) {
-	            rootNode = newNode
-	        }
-	    }
-
-	    return rootNode
-	}
-
-	function patchIndices(patches) {
-	    var indices = []
-
-	    for (var key in patches) {
-	        if (key !== "a") {
-	            indices.push(Number(key))
-	        }
-	    }
-
-	    return indices
-	}
-
-
-/***/ },
-/* 20 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var document = __webpack_require__(35)
-
-	var applyProperties = __webpack_require__(31)
-
-	var isVNode = __webpack_require__(16)
-	var isVText = __webpack_require__(17)
-	var isWidget = __webpack_require__(18)
-	var handleThunk = __webpack_require__(26)
-
-	module.exports = createElement
-
-	function createElement(vnode, opts) {
-	    var doc = opts ? opts.document || document : document
-	    var warn = opts ? opts.warn : null
-
-	    vnode = handleThunk(vnode).a
-
-	    if (isWidget(vnode)) {
-	        return vnode.init()
-	    } else if (isVText(vnode)) {
-	        return doc.createTextNode(vnode.text)
-	    } else if (!isVNode(vnode)) {
-	        if (warn) {
-	            warn("Item is not a valid virtual dom node", vnode)
-	        }
-	        return null
-	    }
-
-	    var node = (vnode.namespace === null) ?
-	        doc.createElement(vnode.tagName) :
-	        doc.createElementNS(vnode.namespace, vnode.tagName)
-
-	    var props = vnode.properties
-	    applyProperties(node, props)
-
-	    var children = vnode.children
-
-	    for (var i = 0; i < children.length; i++) {
-	        var childNode = createElement(children[i], opts)
-	        if (childNode) {
-	            node.appendChild(childNode)
-	        }
-	    }
-
-	    return node
 	}
 
 
@@ -8522,110 +8522,6 @@ module.exports =
 
 /***/ },
 /* 24 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(27)
-
-	VirtualPatch.NONE = 0
-	VirtualPatch.VTEXT = 1
-	VirtualPatch.VNODE = 2
-	VirtualPatch.WIDGET = 3
-	VirtualPatch.PROPS = 4
-	VirtualPatch.ORDER = 5
-	VirtualPatch.INSERT = 6
-	VirtualPatch.REMOVE = 7
-	VirtualPatch.THUNK = 8
-
-	module.exports = VirtualPatch
-
-	function VirtualPatch(type, vNode, patch) {
-	    this.type = Number(type)
-	    this.vNode = vNode
-	    this.patch = patch
-	}
-
-	VirtualPatch.prototype.version = version
-	VirtualPatch.prototype.type = "VirtualPatch"
-
-
-/***/ },
-/* 25 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isThunk
-
-	function isThunk(t) {
-	    return t && t.type === "Thunk"
-	}
-
-
-/***/ },
-/* 26 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var isVNode = __webpack_require__(16)
-	var isVText = __webpack_require__(17)
-	var isWidget = __webpack_require__(18)
-	var isThunk = __webpack_require__(25)
-
-	module.exports = handleThunk
-
-	function handleThunk(a, b) {
-	    var renderedA = a
-	    var renderedB = b
-
-	    if (isThunk(b)) {
-	        renderedB = renderThunk(b, a)
-	    }
-
-	    if (isThunk(a)) {
-	        renderedA = renderThunk(a, null)
-	    }
-
-	    return {
-	        a: renderedA,
-	        b: renderedB
-	    }
-	}
-
-	function renderThunk(thunk, previous) {
-	    var renderedThunk = thunk.vnode
-
-	    if (!renderedThunk) {
-	        renderedThunk = thunk.vnode = thunk.render(previous)
-	    }
-
-	    if (!(isVNode(renderedThunk) ||
-	            isVText(renderedThunk) ||
-	            isWidget(renderedThunk))) {
-	        throw new Error("thunk did not return a valid node");
-	    }
-
-	    return renderedThunk
-	}
-
-
-/***/ },
-/* 27 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = "1"
-
-
-/***/ },
-/* 28 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isHook
-
-	function isHook(hook) {
-	    return hook && typeof hook.hook === "function" &&
-	        !hook.hasOwnProperty("hook")
-	}
-
-
-/***/ },
-/* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Maps a virtual DOM tree onto a real DOM tree in an efficient manner.
@@ -8716,15 +8612,15 @@ module.exports =
 
 
 /***/ },
-/* 30 */
+/* 25 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var applyProperties = __webpack_require__(31)
+	var applyProperties = __webpack_require__(26)
 
-	var isWidget = __webpack_require__(18)
-	var VPatch = __webpack_require__(24)
+	var isWidget = __webpack_require__(20)
+	var VPatch = __webpack_require__(28)
 
-	var render = __webpack_require__(20)
+	var render = __webpack_require__(14)
 	var updateWidget = __webpack_require__(34)
 
 	module.exports = applyPatch
@@ -8890,11 +8786,11 @@ module.exports =
 
 
 /***/ },
-/* 31 */
+/* 26 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isObject = __webpack_require__(32)
-	var isHook = __webpack_require__(28)
+	var isObject = __webpack_require__(33)
+	var isHook = __webpack_require__(31)
 
 	module.exports = applyProperties
 
@@ -8988,18 +8884,111 @@ module.exports =
 
 
 /***/ },
-/* 32 */
+/* 27 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = isObject
+	var isVNode = __webpack_require__(18)
+	var isVText = __webpack_require__(19)
+	var isWidget = __webpack_require__(20)
+	var isThunk = __webpack_require__(29)
 
-	function isObject(x) {
-	    return typeof x === "object" && x !== null
+	module.exports = handleThunk
+
+	function handleThunk(a, b) {
+	    var renderedA = a
+	    var renderedB = b
+
+	    if (isThunk(b)) {
+	        renderedB = renderThunk(b, a)
+	    }
+
+	    if (isThunk(a)) {
+	        renderedA = renderThunk(a, null)
+	    }
+
+	    return {
+	        a: renderedA,
+	        b: renderedB
+	    }
+	}
+
+	function renderThunk(thunk, previous) {
+	    var renderedThunk = thunk.vnode
+
+	    if (!renderedThunk) {
+	        renderedThunk = thunk.vnode = thunk.render(previous)
+	    }
+
+	    if (!(isVNode(renderedThunk) ||
+	            isVText(renderedThunk) ||
+	            isWidget(renderedThunk))) {
+	        throw new Error("thunk did not return a valid node");
+	    }
+
+	    return renderedThunk
 	}
 
 
 /***/ },
-/* 33 */
+/* 28 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(30)
+
+	VirtualPatch.NONE = 0
+	VirtualPatch.VTEXT = 1
+	VirtualPatch.VNODE = 2
+	VirtualPatch.WIDGET = 3
+	VirtualPatch.PROPS = 4
+	VirtualPatch.ORDER = 5
+	VirtualPatch.INSERT = 6
+	VirtualPatch.REMOVE = 7
+	VirtualPatch.THUNK = 8
+
+	module.exports = VirtualPatch
+
+	function VirtualPatch(type, vNode, patch) {
+	    this.type = Number(type)
+	    this.vNode = vNode
+	    this.patch = patch
+	}
+
+	VirtualPatch.prototype.version = version
+	VirtualPatch.prototype.type = "VirtualPatch"
+
+
+/***/ },
+/* 29 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isThunk
+
+	function isThunk(t) {
+	    return t && t.type === "Thunk"
+	}
+
+
+/***/ },
+/* 30 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = "1"
+
+
+/***/ },
+/* 31 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isHook
+
+	function isHook(hook) {
+	    return hook && typeof hook.hook === "function" &&
+	        !hook.hasOwnProperty("hook")
+	}
+
+
+/***/ },
+/* 32 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*!
@@ -9111,10 +9100,21 @@ module.exports =
 
 
 /***/ },
+/* 33 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isObject
+
+	function isObject(x) {
+	    return typeof x === "object" && x !== null
+	}
+
+
+/***/ },
 /* 34 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isWidget = __webpack_require__(18)
+	var isWidget = __webpack_require__(20)
 
 	module.exports = updateWidget
 
