@@ -73,10 +73,9 @@ renderChild = (child) ->
       class OnMountHook
         hook: ($el, propName) ->
           setTimeout ->
-            child.zorium_hasBeenMounted = true
             child.onMount $el
 
-
+      child.zorium_hasBeenMounted = true
       tree.properties['ev-zorium-onmount'] = new OnMountHook()
 
     if _.isFunction child.onBeforeUnmount
