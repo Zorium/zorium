@@ -204,9 +204,10 @@ module.exports =
 	        return component.onBeforeUnmount();
 	      });
 	      rendered.lastRendered = renderedComponents;
-	      patches = diff(rendered.tree, renderedTree);
+	      patches = diff(rendered.renderedTree, renderedTree);
 	      rendered.node = patch(rendered.node, patches);
 	      rendered.tree = tree;
+	      rendered.renderedTree = renderedTree;
 	      return root;
 	    }
 	    $el = createElement(renderedTree);
@@ -216,6 +217,7 @@ module.exports =
 	      root: root,
 	      node: $el,
 	      tree: tree,
+	      renderedTree: renderedTree,
 	      lastRendered: renderedComponents
 	    };
 	    root.appendChild($el);
@@ -7873,12 +7875,12 @@ module.exports =
 	var isArray = __webpack_require__(22)
 	var isObject = __webpack_require__(33)
 
-	var VPatch = __webpack_require__(25)
+	var VPatch = __webpack_require__(24)
 	var isVNode = __webpack_require__(16)
 	var isVText = __webpack_require__(17)
 	var isWidget = __webpack_require__(18)
-	var isThunk = __webpack_require__(26)
-	var handleThunk = __webpack_require__(27)
+	var isThunk = __webpack_require__(25)
+	var handleThunk = __webpack_require__(26)
 
 	module.exports = diff
 
@@ -8220,7 +8222,7 @@ module.exports =
 /* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(24)
+	var version = __webpack_require__(27)
 	var isVNode = __webpack_require__(16)
 	var isWidget = __webpack_require__(18)
 	var isVHook = __webpack_require__(28)
@@ -8289,7 +8291,7 @@ module.exports =
 /* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(24)
+	var version = __webpack_require__(27)
 
 	module.exports = VirtualText
 
@@ -8305,7 +8307,7 @@ module.exports =
 /* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(24)
+	var version = __webpack_require__(27)
 
 	module.exports = isVirtualNode
 
@@ -8318,7 +8320,7 @@ module.exports =
 /* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(24)
+	var version = __webpack_require__(27)
 
 	module.exports = isVirtualText
 
@@ -8431,7 +8433,7 @@ module.exports =
 	var isVNode = __webpack_require__(16)
 	var isVText = __webpack_require__(17)
 	var isWidget = __webpack_require__(18)
-	var handleThunk = __webpack_require__(27)
+	var handleThunk = __webpack_require__(26)
 
 	module.exports = createElement
 
@@ -8519,14 +8521,7 @@ module.exports =
 /* 24 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = "1"
-
-
-/***/ },
-/* 25 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(24)
+	var version = __webpack_require__(27)
 
 	VirtualPatch.NONE = 0
 	VirtualPatch.VTEXT = 1
@@ -8551,7 +8546,7 @@ module.exports =
 
 
 /***/ },
-/* 26 */
+/* 25 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = isThunk
@@ -8562,13 +8557,13 @@ module.exports =
 
 
 /***/ },
-/* 27 */
+/* 26 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var isVNode = __webpack_require__(16)
 	var isVText = __webpack_require__(17)
 	var isWidget = __webpack_require__(18)
-	var isThunk = __webpack_require__(26)
+	var isThunk = __webpack_require__(25)
 
 	module.exports = handleThunk
 
@@ -8605,6 +8600,13 @@ module.exports =
 
 	    return renderedThunk
 	}
+
+
+/***/ },
+/* 27 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = "1"
 
 
 /***/ },
@@ -8717,7 +8719,7 @@ module.exports =
 	var applyProperties = __webpack_require__(31)
 
 	var isWidget = __webpack_require__(18)
-	var VPatch = __webpack_require__(25)
+	var VPatch = __webpack_require__(24)
 
 	var render = __webpack_require__(20)
 	var updateWidget = __webpack_require__(34)
