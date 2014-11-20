@@ -151,9 +151,10 @@ z.render = do ->
 
       rendered.lastRendered = renderedComponents
 
-      patches = diff rendered.tree, renderedTree
+      patches = diff rendered.renderedTree, renderedTree
       rendered.node = patch rendered.node, patches
       rendered.tree = tree
+      rendered.renderedTree = renderedTree
 
 
       return root
@@ -166,6 +167,7 @@ z.render = do ->
       root: root
       node: $el
       tree: tree
+      renderedTree: renderedTree
       lastRendered: renderedComponents
 
     root.appendChild $el

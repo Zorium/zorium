@@ -110,6 +110,23 @@ describe 'Virtual DOM', ->
     new XMLSerializer().serializeToString($el).should.be result
 
 
+  # https://github.com/claydotio/zorium.js/issues/3
+  it 'correctly patches component-based trees without DOM removal', ->
+    class Uniq
+      render: ->
+        z '#uniq'
+
+    dom = new Uniq()
+
+    root = document.createElement 'div'
+    z.render root, dom
+    first = root.querySelector '#uniq'
+    (first == root.querySelector '#uniq').should.be true
+    z.render root, dom
+    (first == root.querySelector '#uniq').should.be true
+    z.render root, dom, z 'd'
+
+
   describe 'Anchor Tag', ->
     it 'defaults anchor tag onclick event to use router', ->
       dom = z 'a[href=/pathname/here]'
@@ -251,87 +268,45 @@ describe 'render()', ->
     result3 = '<div><span><div>done</div></span></div>'
     new XMLSerializer().serializeToString(root).should.be result3
 
-describe 'Lifecycle Callbacks', ->
-  describe 'onMount', ->
-    it 'gets called after initial load', (done) ->
-      mountCalled = 0
-      class BindComponent
-        onMount: ($el) ->
-          should.exist $el
-          mountCalled += 1
-        render: ->
-          z 'div'
-
-      bind = new BindComponent()
-      root = document.createElement 'div'
-      z.render root, bind
-      setTimeout ->
-        mountCalled.should.be 1
+describe 'Hooks', ->
+  it 'onMount', (done) ->
+    class BindComponent
+      onMount: ($el) ->
+        should.exist $el
         done()
-      , 20
+      render: ->
+        z 'div'
 
-    # https://github.com/claydotio/zorium.js/issues/5
-    it 'is only called once on first render', (done) ->
-      mountCalled = 0
+    bind = new BindComponent()
+    root = document.createElement 'div'
+    z.render root, bind
 
-      class BindComponent
-        onMount: ($el) ->
-          should.exist $el
-          mountCalled += 1
-        render: ->
-          z 'div'
+  it 'onBeforeUnmount', (done) ->
+    class BindComponent
+      onBeforeUnmount: ->
+        done()
+      render: ->
+        z 'div',
+          z 'span', 'Hello World'
+          z 'span', 'Goodbye'
 
-      bind = new BindComponent()
-      root = document.createElement 'div'
-      z.render root, bind
+    class ContainerComponent
+      constructor: ->
+        @removed = false
+        @bind = new BindComponent()
+      render: =>
+        z 'div',
+          unless @removed then @bind else 'hello'
+      removeChild: =>
+        @removed = true
 
-      setTimeout ->
-        z.redraw()
-
-        setTimeout ->
-          z.redraw()
-
-          z.render root, bind
-
-          setTimeout ->
-            z.redraw()
-
-            setTimeout ->
-              mountCalled.should.be 1
-              done()
-
-            , 10
-          , 20
-        , 20
-      , 20
-
-  describe 'onBeforeUnmount', ->
-    it 'gets called before removal from DOM', (done) ->
-      class BindComponent
-        onBeforeUnmount: ->
-          done()
-        render: ->
-          z 'div',
-            z 'span', 'Hello World'
-            z 'span', 'Goodbye'
-
-      class ContainerComponent
-        constructor: ->
-          @removed = false
-          @bind = new BindComponent()
-        render: =>
-          z 'div',
-            unless @removed then @bind else 'hello'
-        removeChild: =>
-          @removed = true
-
-      container = new ContainerComponent()
-      root = document.createElement 'div'
+    container = new ContainerComponent()
+    root = document.createElement 'div'
+    z.render root, container
+    setTimeout ->
+      container.removeChild()
       z.render root, container
-      setTimeout ->
-        container.removeChild()
-        z.render root, container
-      , 20
+    , 20
 
 describe 'redraw()', ->
   it 'redraws all bound root nodes', ->
