@@ -7791,7 +7791,7 @@ module.exports =
 /* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var split = __webpack_require__(32)
+	var split = __webpack_require__(33)
 
 	var classIdSplit = /([\.#]?[a-zA-Z0-9_:-]+)/
 	var notClassId = /^\.|#/
@@ -7876,7 +7876,7 @@ module.exports =
 /***/ function(module, exports, __webpack_require__) {
 
 	var isArray = __webpack_require__(22)
-	var isObject = __webpack_require__(33)
+	var isObject = __webpack_require__(32)
 
 	var VPatch = __webpack_require__(24)
 	var isVNode = __webpack_require__(16)
@@ -8893,7 +8893,7 @@ module.exports =
 /* 31 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isObject = __webpack_require__(33)
+	var isObject = __webpack_require__(32)
 	var isHook = __webpack_require__(28)
 
 	module.exports = applyProperties
@@ -8989,6 +8989,17 @@ module.exports =
 
 /***/ },
 /* 32 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isObject
+
+	function isObject(x) {
+	    return typeof x === "object" && x !== null
+	}
+
+
+/***/ },
+/* 33 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*!
@@ -9097,17 +9108,6 @@ module.exports =
 
 	  return self;
 	})();
-
-
-/***/ },
-/* 33 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isObject
-
-	function isObject(x) {
-	    return typeof x === "object" && x !== null
-	}
 
 
 /***/ },
