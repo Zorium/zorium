@@ -180,12 +180,12 @@ module.exports =
 	    props = _.merge(props, children[0]);
 	    children.shift();
 	    children = _.isArray(children[0]) ? children[0] : children;
-	    return h(tagName, props, _.map(children, renderChild));
+	    return h(tagName, props, _.map(_.filter(children), renderChild));
 	  }
 	  if (children[0] && _.isArray(children[0])) {
 	    children = children[0];
 	  }
-	  return h(tagName, props, _.map(children, renderChild));
+	  return h(tagName, props, _.map(_.filter(children), renderChild));
 	};
 
 	roots = {};

@@ -110,6 +110,29 @@ describe 'Virtual DOM', ->
 
     new XMLSerializer().serializeToString(root).should.be result
 
+  it 'allows undefined children on redraw', ->
+    dom = z 'div',
+      z 'div', 'a'
+      z 'div', 'b'
+
+    root = document.createElement 'div'
+
+    result = '<div><div>' +
+      '<div>a</div>' +
+      '<div>b</div>' +
+    '</div></div>'
+
+    z.render root, dom
+
+    dom = z 'div',
+      z 'div', 'a'
+      z 'div', 'b'
+      undefined
+
+    z.render root, dom
+
+    new XMLSerializer().serializeToString(root).should.be result
+
   it 'handles null children', ->
     dom = z 'div',
       null

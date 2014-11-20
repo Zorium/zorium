@@ -125,12 +125,12 @@ z = (tagName, children...) ->
     # children may be passed as array
     children = if _.isArray children[0] then children[0] else children
 
-    return h tagName, props, _.map children, renderChild
+    return h tagName, props, _.map _.filter(children), renderChild
 
   if children[0] and _.isArray children[0]
     children = children[0]
 
-  return h tagName, props, _.map children, renderChild
+  return h tagName, props, _.map _.filter(children), renderChild
 
 roots = {}
 z.render = do ->
