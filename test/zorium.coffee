@@ -413,6 +413,60 @@ describe 'Lifecycle Callbacks', ->
         z.render root, container
       , 20
 
+    it 'gets called after mounting only', (done) ->
+      unmountCalled = 0
+      mountCalled = 0
+      class BindComponent
+        onMount: ->
+          mountCalled += 1
+        onBeforeUnmount: ->
+          unmountCalled += 1
+        render: ->
+          z 'div',
+            z 'span', 'Hello World'
+            z 'span', 'Goodbye'
+
+      bind = new BindComponent()
+
+      root = document.createElement 'div'
+      z.render root, bind
+      z.redraw()
+      unmountCalled.should.be 0
+
+      setTimeout ->
+        z.redraw()
+        mountCalled.should.be 1
+        unmountCalled.should.be 0
+        z.render root, z 'div'
+        z.render root, bind
+        unmountCalled.should.be 1
+        done()
+      , 20
+
+    it 'remounts after unmounting', (done) ->
+      unmountCalled = 0
+      mountCalled = 0
+      class BindComponent
+        onMount: ->
+          mountCalled += 1
+        onBeforeUnmount: ->
+          unmountCalled += 1
+        render: ->
+          z 'div'
+
+      bind = new BindComponent()
+      root = document.createElement 'div'
+      z.render root, bind
+
+      setTimeout ->
+        mountCalled.should.be 1
+        z.render root, z 'div'
+        unmountCalled.should.be 1
+        z.render root, bind
+
+        setTimeout ->
+          mountCalled.should.be 2
+          done()
 
 describe 'redraw()', ->
   it 'redraws all bound root nodes', ->

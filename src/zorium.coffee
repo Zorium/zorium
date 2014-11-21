@@ -131,55 +131,57 @@ z = (tagName, children...) ->
 
   return h tagName, props, _.map _.filter(children), renderChild
 
-roots = {}
+registeredRoots = {}
 z.render = do ->
   id = 0
 
   nextRootId = ->
     id += 1
 
-  return (root, tree) ->
+  return ($root, tree) ->
     renderedComponents = []
 
     renderedTree = renderChild tree
 
-    if root._zoriumId
-      rendered = roots[root._zoriumId]
+    if $root._zoriumId
+      root = registeredRoots[$root._zoriumId]
 
-      lastRendered = rendered.lastRendered
+      lastRendered = root.lastRendered
 
-      _.each _.without(lastRendered, renderedComponents), (component) ->
-        component.onBeforeUnmount()
+      for component in lastRendered
+        unless component in renderedComponents
+          component.onBeforeUnmount()
+          component.zorium_hasBeenMounted = false
 
-      rendered.lastRendered = renderedComponents
+      root.lastRendered = renderedComponents
 
-      patches = diff rendered.renderedTree, renderedTree
-      rendered.node = patch rendered.node, patches
-      rendered.tree = tree
-      rendered.renderedTree = renderedTree
+      patches = diff root.renderedTree, renderedTree
+      root.node = patch root.node, patches
+      root.tree = tree
+      root.renderedTree = renderedTree
 
 
-      return root
+      return $root
 
     $el = createElement renderedTree
 
     id = nextRootId()
-    root._zoriumId = id
-    roots[id] =
-      root: root
+    $root._zoriumId = id
+    registeredRoots[id] =
+      $root: $root
       node: $el
       tree: tree
       renderedTree: renderedTree
       lastRendered: renderedComponents
 
-    root.appendChild $el
+    $root.appendChild $el
 
     renderedComponents = []
-    return root
+    return $root
 
 z.redraw = ->
-  for id, root of roots
-    z.render root.root, root.tree
+  for id, root of registeredRoots
+    z.render root.$root, root.tree
 
 router = new (require 'routes')()
 class ZoriumRouter
@@ -188,8 +190,8 @@ class ZoriumRouter
     @mode = 'hash'
     window.addEventListener 'popstate', (e) => @go()
 
-  setRoot: (root) =>
-    @routesRoot = root
+  setRoot: ($root) =>
+    @routesRoot = $root
 
   add: (path, componentClass) ->
     router.addRoute path, ->

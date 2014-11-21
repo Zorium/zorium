@@ -45,8 +45,9 @@ module.exports =
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var ZoriumRouter, createElement, diff, getAttributes, h, isChild, isChildren, isComponent, isVNode, isVText, isWidget, onAnchorClick, patch, renderChild, renderedComponents, roots, router, z, _,
+	var ZoriumRouter, createElement, diff, getAttributes, h, isChild, isChildren, isComponent, isVNode, isVText, isWidget, onAnchorClick, patch, registeredRoots, renderChild, renderedComponents, router, z, _,
 	  __slice = [].slice,
+	  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
 	  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 	if (!Function.prototype.bind) {
@@ -188,7 +189,7 @@ module.exports =
 	  return h(tagName, props, _.map(_.filter(children), renderChild));
 	};
 
-	roots = {};
+	registeredRoots = {};
 
 	z.render = (function() {
 	  var id, nextRootId;
@@ -196,45 +197,49 @@ module.exports =
 	  nextRootId = function() {
 	    return id += 1;
 	  };
-	  return function(root, tree) {
-	    var $el, lastRendered, patches, rendered, renderedTree;
+	  return function($root, tree) {
+	    var $el, component, lastRendered, patches, renderedTree, root, _i, _len;
 	    renderedComponents = [];
 	    renderedTree = renderChild(tree);
-	    if (root._zoriumId) {
-	      rendered = roots[root._zoriumId];
-	      lastRendered = rendered.lastRendered;
-	      _.each(_.without(lastRendered, renderedComponents), function(component) {
-	        return component.onBeforeUnmount();
-	      });
-	      rendered.lastRendered = renderedComponents;
-	      patches = diff(rendered.renderedTree, renderedTree);
-	      rendered.node = patch(rendered.node, patches);
-	      rendered.tree = tree;
-	      rendered.renderedTree = renderedTree;
-	      return root;
+	    if ($root._zoriumId) {
+	      root = registeredRoots[$root._zoriumId];
+	      lastRendered = root.lastRendered;
+	      for (_i = 0, _len = lastRendered.length; _i < _len; _i++) {
+	        component = lastRendered[_i];
+	        if (__indexOf.call(renderedComponents, component) < 0) {
+	          component.onBeforeUnmount();
+	          component.zorium_hasBeenMounted = false;
+	        }
+	      }
+	      root.lastRendered = renderedComponents;
+	      patches = diff(root.renderedTree, renderedTree);
+	      root.node = patch(root.node, patches);
+	      root.tree = tree;
+	      root.renderedTree = renderedTree;
+	      return $root;
 	    }
 	    $el = createElement(renderedTree);
 	    id = nextRootId();
-	    root._zoriumId = id;
-	    roots[id] = {
-	      root: root,
+	    $root._zoriumId = id;
+	    registeredRoots[id] = {
+	      $root: $root,
 	      node: $el,
 	      tree: tree,
 	      renderedTree: renderedTree,
 	      lastRendered: renderedComponents
 	    };
-	    root.appendChild($el);
+	    $root.appendChild($el);
 	    renderedComponents = [];
-	    return root;
+	    return $root;
 	  };
 	})();
 
 	z.redraw = function() {
 	  var id, root, _results;
 	  _results = [];
-	  for (id in roots) {
-	    root = roots[id];
-	    _results.push(z.render(root.root, root.tree));
+	  for (id in registeredRoots) {
+	    root = registeredRoots[id];
+	    _results.push(z.render(root.$root, root.tree));
 	  }
 	  return _results;
 	};
@@ -255,8 +260,8 @@ module.exports =
 	    })(this));
 	  }
 
-	  ZoriumRouter.prototype.setRoot = function(root) {
-	    return this.routesRoot = root;
+	  ZoriumRouter.prototype.setRoot = function($root) {
+	    return this.routesRoot = $root;
 	  };
 
 	  ZoriumRouter.prototype.add = function(path, componentClass) {
@@ -330,7 +335,7 @@ module.exports =
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var patch = __webpack_require__(19)
+	var patch = __webpack_require__(20)
 
 	module.exports = patch
 
@@ -339,7 +344,7 @@ module.exports =
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var createElement = __webpack_require__(20)
+	var createElement = __webpack_require__(19)
 
 	module.exports = createElement
 
@@ -7714,8 +7719,8 @@ module.exports =
 /* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isArray = __webpack_require__(22)
-	var isString = __webpack_require__(23)
+	var isArray = __webpack_require__(23)
+	var isString = __webpack_require__(22)
 
 	var VNode = __webpack_require__(14)
 	var VText = __webpack_require__(15)
@@ -7791,7 +7796,7 @@ module.exports =
 /* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var split = __webpack_require__(33)
+	var split = __webpack_require__(32)
 
 	var classIdSplit = /([\.#]?[a-zA-Z0-9_:-]+)/
 	var notClassId = /^\.|#/
@@ -7875,8 +7880,8 @@ module.exports =
 /* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isArray = __webpack_require__(22)
-	var isObject = __webpack_require__(32)
+	var isArray = __webpack_require__(23)
+	var isObject = __webpack_require__(33)
 
 	var VPatch = __webpack_require__(24)
 	var isVNode = __webpack_require__(16)
@@ -8348,10 +8353,62 @@ module.exports =
 /***/ function(module, exports, __webpack_require__) {
 
 	var document = __webpack_require__(35)
-	var isArray = __webpack_require__(22)
 
-	var domIndex = __webpack_require__(29)
-	var patchOp = __webpack_require__(30)
+	var applyProperties = __webpack_require__(29)
+
+	var isVNode = __webpack_require__(16)
+	var isVText = __webpack_require__(17)
+	var isWidget = __webpack_require__(18)
+	var handleThunk = __webpack_require__(26)
+
+	module.exports = createElement
+
+	function createElement(vnode, opts) {
+	    var doc = opts ? opts.document || document : document
+	    var warn = opts ? opts.warn : null
+
+	    vnode = handleThunk(vnode).a
+
+	    if (isWidget(vnode)) {
+	        return vnode.init()
+	    } else if (isVText(vnode)) {
+	        return doc.createTextNode(vnode.text)
+	    } else if (!isVNode(vnode)) {
+	        if (warn) {
+	            warn("Item is not a valid virtual dom node", vnode)
+	        }
+	        return null
+	    }
+
+	    var node = (vnode.namespace === null) ?
+	        doc.createElement(vnode.tagName) :
+	        doc.createElementNS(vnode.namespace, vnode.tagName)
+
+	    var props = vnode.properties
+	    applyProperties(node, props)
+
+	    var children = vnode.children
+
+	    for (var i = 0; i < children.length; i++) {
+	        var childNode = createElement(children[i], opts)
+	        if (childNode) {
+	            node.appendChild(childNode)
+	        }
+	    }
+
+	    return node
+	}
+
+
+/***/ },
+/* 20 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var document = __webpack_require__(35)
+	var isArray = __webpack_require__(23)
+
+	var domIndex = __webpack_require__(30)
+	var patchOp = __webpack_require__(31)
 	module.exports = patch
 
 	function patch(rootNode, patches) {
@@ -8426,58 +8483,6 @@ module.exports =
 
 
 /***/ },
-/* 20 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var document = __webpack_require__(35)
-
-	var applyProperties = __webpack_require__(31)
-
-	var isVNode = __webpack_require__(16)
-	var isVText = __webpack_require__(17)
-	var isWidget = __webpack_require__(18)
-	var handleThunk = __webpack_require__(26)
-
-	module.exports = createElement
-
-	function createElement(vnode, opts) {
-	    var doc = opts ? opts.document || document : document
-	    var warn = opts ? opts.warn : null
-
-	    vnode = handleThunk(vnode).a
-
-	    if (isWidget(vnode)) {
-	        return vnode.init()
-	    } else if (isVText(vnode)) {
-	        return doc.createTextNode(vnode.text)
-	    } else if (!isVNode(vnode)) {
-	        if (warn) {
-	            warn("Item is not a valid virtual dom node", vnode)
-	        }
-	        return null
-	    }
-
-	    var node = (vnode.namespace === null) ?
-	        doc.createElement(vnode.tagName) :
-	        doc.createElementNS(vnode.namespace, vnode.tagName)
-
-	    var props = vnode.properties
-	    applyProperties(node, props)
-
-	    var children = vnode.children
-
-	    for (var i = 0; i < children.length; i++) {
-	        var childNode = createElement(children[i], opts)
-	        if (childNode) {
-	            node.appendChild(childNode)
-	        }
-	    }
-
-	    return node
-	}
-
-
-/***/ },
 /* 21 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -8497,13 +8502,12 @@ module.exports =
 /* 22 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var nativeIsArray = Array.isArray
 	var toString = Object.prototype.toString
 
-	module.exports = nativeIsArray || isArray
+	module.exports = isString
 
-	function isArray(obj) {
-	    return toString.call(obj) === "[object Array]"
+	function isString(obj) {
+	    return toString.call(obj) === "[object String]"
 	}
 
 
@@ -8511,12 +8515,13 @@ module.exports =
 /* 23 */
 /***/ function(module, exports, __webpack_require__) {
 
+	var nativeIsArray = Array.isArray
 	var toString = Object.prototype.toString
 
-	module.exports = isString
+	module.exports = nativeIsArray || isArray
 
-	function isString(obj) {
-	    return toString.call(obj) === "[object String]"
+	function isArray(obj) {
+	    return toString.call(obj) === "[object Array]"
 	}
 
 
@@ -8628,6 +8633,104 @@ module.exports =
 /* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
+	var isObject = __webpack_require__(33)
+	var isHook = __webpack_require__(28)
+
+	module.exports = applyProperties
+
+	function applyProperties(node, props, previous) {
+	    for (var propName in props) {
+	        var propValue = props[propName]
+
+	        if (propValue === undefined) {
+	            removeProperty(node, props, previous, propName);
+	        } else if (isHook(propValue)) {
+	            propValue.hook(node,
+	                propName,
+	                previous ? previous[propName] : undefined)
+	        } else {
+	            if (isObject(propValue)) {
+	                patchObject(node, props, previous, propName, propValue);
+	            } else if (propValue !== undefined) {
+	                node[propName] = propValue
+	            }
+	        }
+	    }
+	}
+
+	function removeProperty(node, props, previous, propName) {
+	    if (previous) {
+	        var previousValue = previous[propName]
+
+	        if (!isHook(previousValue)) {
+	            if (propName === "attributes") {
+	                for (var attrName in previousValue) {
+	                    node.removeAttribute(attrName)
+	                }
+	            } else if (propName === "style") {
+	                for (var i in previousValue) {
+	                    node.style[i] = ""
+	                }
+	            } else if (typeof previousValue === "string") {
+	                node[propName] = ""
+	            } else {
+	                node[propName] = null
+	            }
+	        }
+	    }
+	}
+
+	function patchObject(node, props, previous, propName, propValue) {
+	    var previousValue = previous ? previous[propName] : undefined
+
+	    // Set attributes
+	    if (propName === "attributes") {
+	        for (var attrName in propValue) {
+	            var attrValue = propValue[attrName]
+
+	            if (attrValue === undefined) {
+	                node.removeAttribute(attrName)
+	            } else {
+	                node.setAttribute(attrName, attrValue)
+	            }
+	        }
+
+	        return
+	    }
+
+	    if(previousValue && isObject(previousValue) &&
+	        getPrototype(previousValue) !== getPrototype(propValue)) {
+	        node[propName] = propValue
+	        return
+	    }
+
+	    if (!isObject(node[propName])) {
+	        node[propName] = {}
+	    }
+
+	    var replacer = propName === "style" ? "" : undefined
+
+	    for (var k in propValue) {
+	        var value = propValue[k]
+	        node[propName][k] = (value === undefined) ? replacer : value
+	    }
+	}
+
+	function getPrototype(value) {
+	    if (Object.getPrototypeOf) {
+	        return Object.getPrototypeOf(value)
+	    } else if (value.__proto__) {
+	        return value.__proto__
+	    } else if (value.constructor) {
+	        return value.constructor.prototype
+	    }
+	}
+
+
+/***/ },
+/* 30 */
+/***/ function(module, exports, __webpack_require__) {
+
 	// Maps a virtual DOM tree onto a real DOM tree in an efficient manner.
 	// We don't want to read all of the DOM nodes in the tree so we use
 	// the in-order tree indexing to eliminate recursion down certain branches.
@@ -8716,15 +8819,15 @@ module.exports =
 
 
 /***/ },
-/* 30 */
+/* 31 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var applyProperties = __webpack_require__(31)
+	var applyProperties = __webpack_require__(29)
 
 	var isWidget = __webpack_require__(18)
 	var VPatch = __webpack_require__(24)
 
-	var render = __webpack_require__(20)
+	var render = __webpack_require__(19)
 	var updateWidget = __webpack_require__(34)
 
 	module.exports = applyPatch
@@ -8890,116 +8993,7 @@ module.exports =
 
 
 /***/ },
-/* 31 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var isObject = __webpack_require__(32)
-	var isHook = __webpack_require__(28)
-
-	module.exports = applyProperties
-
-	function applyProperties(node, props, previous) {
-	    for (var propName in props) {
-	        var propValue = props[propName]
-
-	        if (propValue === undefined) {
-	            removeProperty(node, props, previous, propName);
-	        } else if (isHook(propValue)) {
-	            propValue.hook(node,
-	                propName,
-	                previous ? previous[propName] : undefined)
-	        } else {
-	            if (isObject(propValue)) {
-	                patchObject(node, props, previous, propName, propValue);
-	            } else if (propValue !== undefined) {
-	                node[propName] = propValue
-	            }
-	        }
-	    }
-	}
-
-	function removeProperty(node, props, previous, propName) {
-	    if (previous) {
-	        var previousValue = previous[propName]
-
-	        if (!isHook(previousValue)) {
-	            if (propName === "attributes") {
-	                for (var attrName in previousValue) {
-	                    node.removeAttribute(attrName)
-	                }
-	            } else if (propName === "style") {
-	                for (var i in previousValue) {
-	                    node.style[i] = ""
-	                }
-	            } else if (typeof previousValue === "string") {
-	                node[propName] = ""
-	            } else {
-	                node[propName] = null
-	            }
-	        }
-	    }
-	}
-
-	function patchObject(node, props, previous, propName, propValue) {
-	    var previousValue = previous ? previous[propName] : undefined
-
-	    // Set attributes
-	    if (propName === "attributes") {
-	        for (var attrName in propValue) {
-	            var attrValue = propValue[attrName]
-
-	            if (attrValue === undefined) {
-	                node.removeAttribute(attrName)
-	            } else {
-	                node.setAttribute(attrName, attrValue)
-	            }
-	        }
-
-	        return
-	    }
-
-	    if(previousValue && isObject(previousValue) &&
-	        getPrototype(previousValue) !== getPrototype(propValue)) {
-	        node[propName] = propValue
-	        return
-	    }
-
-	    if (!isObject(node[propName])) {
-	        node[propName] = {}
-	    }
-
-	    var replacer = propName === "style" ? "" : undefined
-
-	    for (var k in propValue) {
-	        var value = propValue[k]
-	        node[propName][k] = (value === undefined) ? replacer : value
-	    }
-	}
-
-	function getPrototype(value) {
-	    if (Object.getPrototypeOf) {
-	        return Object.getPrototypeOf(value)
-	    } else if (value.__proto__) {
-	        return value.__proto__
-	    } else if (value.constructor) {
-	        return value.constructor.prototype
-	    }
-	}
-
-
-/***/ },
 /* 32 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isObject
-
-	function isObject(x) {
-	    return typeof x === "object" && x !== null
-	}
-
-
-/***/ },
-/* 33 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*!
@@ -9108,6 +9102,17 @@ module.exports =
 
 	  return self;
 	})();
+
+
+/***/ },
+/* 33 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isObject
+
+	function isObject(x) {
+	    return typeof x === "object" && x !== null
+	}
 
 
 /***/ },
