@@ -98,7 +98,7 @@ z = (tagName, children...) ->
     return z 'div', tagName
 
   # Default tag to div
-  if tagName[0] is '.'
+  unless /[a-zA-Z]/.test tagName[0]
     tagName = 'div' + tagName
 
   tag = tagName.match(/(^[^.\[]+)/)[1]

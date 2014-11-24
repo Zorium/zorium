@@ -4,8 +4,10 @@ z = require 'zorium'
 
 createElement = require 'virtual-dom/create-element'
 
-# TODO: check for double child array children: [[..]]
-# TODO: onUnload -> onBeforeUnload
+# TODO: batch redraws
+# Observable state?
+# Streams?
+
 describe 'Virtual DOM', ->
   it 'creates basic DOM trees', ->
     dom = z 'div',
@@ -25,6 +27,21 @@ describe 'Virtual DOM', ->
       '</a>' +
     '</div>'
 
+    new XMLSerializer().serializeToString($el).should.be result
+
+  it 'supports default div tag prefixing', ->
+    dom = z 'div',
+      z '.container'
+      z '#layout'
+      z '[contenteditable]'
+
+    result = '<div>' +
+      '<div class="container"></div>' +
+      '<div id="layout"></div>' +
+      '<div contenteditable="true"></div>' +
+    '</div>'
+
+    $el = createElement(dom)
     new XMLSerializer().serializeToString($el).should.be result
 
   it 'supports nested zorium components', ->
@@ -680,10 +697,3 @@ describe 'router', ->
     z.router.go('/test/world')
 
     new XMLSerializer().serializeToString(root).should.be result
-
-
-
-
-# TODO: batch redraws
-# Observable state?
-# Streams?
