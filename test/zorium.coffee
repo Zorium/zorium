@@ -1,8 +1,8 @@
 should = require('clay-chai').should()
+createElement = require 'virtual-dom/create-element'
+Promise = require 'promiz'
 
 z = require 'zorium'
-
-createElement = require 'virtual-dom/create-element'
 
 # TODO: batch redraws
 # Observable state?
@@ -199,7 +199,7 @@ describe 'Virtual DOM', ->
 
   describe 'Anchor Tag', ->
     it 'defaults anchor tag onclick event to use router', ->
-      dom = z 'a[href=/pathname/here]'
+      dom = z.router.a '[href=/pathname/here]'
       $el = createElement(dom)
 
       dom.properties.onclick.should.be.a.Function
@@ -225,7 +225,7 @@ describe 'Virtual DOM', ->
 
 
     it 'doesn\'t default anchor tags with external path', ->
-      dom = z 'a[href=http://google.com]'
+      dom = z.router.a '[href=http://google.com]'
       $el = createElement(dom)
 
       dom.properties.onclick.should.be.a.Function
@@ -250,7 +250,7 @@ describe 'Virtual DOM', ->
 
 
     it 'writes if other properties exist', ->
-      dom = z 'a[href=/][name=test]', {onmousedown: -> null}
+      dom = z.router.a '[href=/][name=test]', {onmousedown: -> null}
       $el = createElement(dom)
 
       dom.properties.onclick.should.be.a.Function
@@ -277,7 +277,7 @@ describe 'Virtual DOM', ->
 
     it 'doesn\'t override current onclick', ->
       clickCalled = 0
-      dom = z 'a[href=/][name=test]', {onclick: -> clickCalled += 1}
+      dom = z.router.a '[href=/][name=test]', {onclick: -> clickCalled += 1}
       $el = createElement(dom)
 
       dom.properties.onclick.should.be.a.Function
@@ -514,6 +514,119 @@ describe 'redraw()', ->
     result = '<div><div></div></div>'
     new XMLSerializer().serializeToString(root).should.be result
     drawCnt.should.be 3
+
+describe 'z.observe', ->
+  it 'recursively observes all values', ->
+    obj = z.observe
+      arr: [
+        {
+          v: 1
+          arr: [
+            [
+              2
+            ]
+          ]
+        }
+        'a'
+      ]
+      num: 123
+      str: 'abc'
+      obj: {
+        abc: 123
+      }
+
+    obj().arr[1].should.be 'a'
+    obj().arr[0].v.should.be 1
+    obj().arr[0].arr[0][0].should.be 2
+    obj().num.should.be 123
+    obj().str.should.be 'abc'
+    obj().obj.abc.should.be 123
+
+    _.isFunction(obj.set).should.be true
+    _.isFunction(obj.arr.set).should.be true
+    _.isFunction(obj.arr[0].set).should.be true
+    _.isFunction(obj.arr[1].set).should.be true
+    _.isFunction(obj.arr[0].v.set).should.be true
+    _.isFunction(obj.arr[0].arr.set).should.be true
+    _.isFunction(obj.arr[0].arr[0].set).should.be true
+    _.isFunction(obj.arr[0].arr[0][0].set).should.be true
+    _.isFunction(obj.num.set).should.be true
+    _.isFunction(obj.str.set).should.be true
+    _.isFunction(obj.obj.abc.set).should.be true
+
+    obj.arr[0].arr[0][0]().should.be 2
+
+    obj.arr[0].arr[0][0] (val) ->
+      val.should.be 3
+
+    obj (obj) ->
+      obj.arr[0].arr[0][0].should.be 3
+
+    obj.arr[0].arr[0][0].set 3
+    obj().arr[0].arr[0][0].should.be 3
+
+    obj (obj) ->
+      obj.num.should.be 321
+
+    obj.num.set 321
+
+  it 'resolves promises as null until they are resolved', ->
+    p = new Promise (@resolve) -> null
+
+    obj = z.observe p
+
+    (obj() == null).should.be true
+
+    p.resolve 'abc'
+
+    p.then ->
+      obj().should.be 'abc'
+
+  it 'ignores rejected promises', ->
+    p = new Promise (_, @reject) -> null
+
+    obj = z.observe p
+
+    (obj() == null).should.be true
+
+    p.reject new Error 'abc'
+
+    p.catch ->
+      (obj() == null).should.be true
+
+  it 'adds promise methods onto the observable', ->
+    p = new Promise (@resolve) -> null
+    p.resolve 'abc'
+
+    op = z.observe p
+    obj = z.observe op
+
+    op.then (v) ->
+      v.should.be 'abc'
+
+  it 'redraws on state observable change', ->
+    cnt = 0
+    class App
+      constructor: ->
+        @state = z.observe
+          abc: 'def'
+      render: ->
+        cnt += 1
+        z 'div'
+
+    root = document.createElement 'div'
+    app = new App()
+    z.render root, app
+    z.render root, app
+    z.render root, app
+
+    app.state.set
+      abc: 'fed'
+
+    app.state.set
+      abc: 'den'
+
+    cnt.should.be 5
 
 describe 'router', ->
   describe 'route()', ->

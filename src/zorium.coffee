@@ -33,8 +33,12 @@ createElement = require 'virtual-dom/create-element'
 isVNode = require 'vtree/is-vnode'
 isVText = require 'vtree/is-vtext'
 isWidget = require 'vtree/is-widget'
+observStruct = require 'observ-struct'
+observArray = require 'observ-array'
+observ = require 'observ'
 
 renderedComponents = []
+registeredRoots = {}
 
 isComponent = (x) ->
   _.isObject(x) and _.isFunction x.render
@@ -78,6 +82,12 @@ renderChild = (child) ->
       child.zorium_hasBeenMounted = true
       tree.properties['ev-zorium-onmount'] = new OnMountHook()
 
+    if not child.zorium_isWatchingState and _.isFunction child.state
+      child.state ->
+        z.redraw()
+
+      child.zorium_isWatchingState = true
+
     if _.isFunction child.onBeforeUnmount
       renderedComponents.push child
     return tree
@@ -93,9 +103,27 @@ onAnchorClick = (e) ->
     z.router?.go @pathname
 # coffeelint: enable=missing_fat_arrows
 
-z = (tagName, children...) ->
+parseZfuncArgs = (tagName, children...) ->
+  props = {}
+
+  # children[0] is props
+  if children[0] and not isChildren children[0]
+    props = children[0]
+    children.shift()
+
+  if children[0] and _.isArray children[0]
+    children = children[0]
+
   if _.isArray tagName
-    return z 'div', tagName
+    return {tagName: null, props, children: tagName}
+
+  return {tagName, props, children}
+
+z = ->
+  {tagName, props, children} = parseZfuncArgs.apply null, arguments
+
+  if _.isNull tagName
+    return z 'div', children
 
   # Default tag to div
   unless /[a-zA-Z]/.test tagName[0]
@@ -105,33 +133,42 @@ z = (tagName, children...) ->
 
   # Extract shortcut attributes
   attributes = getAttributes tagName
+  props = _.merge props, {attributes}
 
   # Remove attribute declarations from tagName
   tagName = tagName.replace /\[[^\[]+\]/g, ''
-  props = {attributes}
-
-  # use router for relative anchor tags by default
-  if tag is 'a'
-    props.onclick = onAnchorClick
-
-
-  if children[0] and not isChildren children[0]
-    props = _.merge props, children[0]
-
-    # remove props from child list
-    children.shift()
-
-    # children may be passed as array
-    children = if _.isArray children[0] then children[0] else children
-
-    return h tagName, props, _.map _.filter(children), renderChild
-
-  if children[0] and _.isArray children[0]
-    children = children[0]
 
   return h tagName, props, _.map _.filter(children), renderChild
 
-registeredRoots = {}
+# recursively observe every property and value
+z.observe = (obj) ->
+  if _.isFunction obj
+    return obj
+
+  if _.isArray obj
+    # FIXME: PR observ-array to add values
+    return observArray _.map obj, z.observe
+
+  if _.isObject obj
+    if _.isFunction obj.then
+      observed = observ null
+
+      obj.then (val) ->
+        observed.set val
+        return val
+
+      for key in Object.keys obj
+        if _.isFunction obj[key]
+          observed[key] = obj[key].bind obj
+
+      return observed
+
+    return observStruct _.transform obj, (obj, val, key) ->
+      obj[key] = z.observe val
+    , {}
+
+  return observ obj
+
 z.render = do ->
   id = 0
 
@@ -201,6 +238,17 @@ class ZoriumRouter
     @mode = if mode is 'pathname' and window.history.pushState \
       then 'pathname'
       else 'hash'
+
+  a: ->
+    {tagName, props, children} = parseZfuncArgs.apply null, arguments
+
+    unless tagName[0] is 'a'
+      tagName = 'a' + tagName
+
+    unless props.onclick
+      props.onclick = onAnchorClick
+
+    z tagName, props, children
 
   go: (path) =>
     unless @routesRoot
