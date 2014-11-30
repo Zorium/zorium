@@ -28,43 +28,37 @@ h = require 'virtual-dom/h'
 diff = require 'virtual-dom/diff'
 patch = require 'virtual-dom/patch'
 createElement = require 'virtual-dom/create-element'
+routes = require 'routes'
 
-# TODO: make sure vtree isn't being included twice, as it's used by virtual-dom
-isVNode = require 'vtree/is-vnode'
-isVText = require 'vtree/is-vtext'
-isWidget = require 'vtree/is-widget'
-observStruct = require 'observ-struct'
-observArray = require 'observ-array'
-observ = require 'observ'
+util = require './util'
 
+router = new routes()
 renderedComponents = []
 registeredRoots = {}
 
-isComponent = (x) ->
-  _.isObject(x) and _.isFunction x.render
+z = ->
+  {tagName, props, children} = util.parseZfuncArgs.apply null, arguments
 
-isChild = (x) ->
-  isVNode(x) or isVText(x) or isWidget(x) or isComponent(x)
+  if _.isNull tagName
+    return z 'div', children
 
-isChildren = (x) ->
-  _.isArray(x) or _.isString(x) or isChild(x)
+  # Default tag to div
+  unless /[a-zA-Z]/.test tagName[0]
+    tagName = 'div' + tagName
 
-getAttributes = (tagName) ->
-  re = /\[([^=\]]+)=?([^\]]+)?\]/g
-  match = re.exec tagName
-  props = {}
+  tag = tagName.match(/(^[^.\[]+)/)[1]
 
-  while match?
-    if match[2]
-      props[match[1]] = match[2]
-    else
-      props[match[1]] = true
-    match = re.exec tagName
+  # Extract shortcut attributes
+  attributes = util.getTagAttributes tagName
+  props = _.merge props, {attributes}
 
-  return props
+  # Remove attribute declarations from tagName
+  tagName = tagName.replace /\[[^\[]+\]/g, ''
+
+  return h tagName, props, _.map _.filter(children), renderChild
 
 renderChild = (child) ->
-  if isComponent child
+  if util.isComponent child
     tree = child.render()
 
     unless tree
@@ -103,71 +97,8 @@ onAnchorClick = (e) ->
     z.router?.go @pathname
 # coffeelint: enable=missing_fat_arrows
 
-parseZfuncArgs = (tagName, children...) ->
-  props = {}
-
-  # children[0] is props
-  if children[0] and not isChildren children[0]
-    props = children[0]
-    children.shift()
-
-  if children[0] and _.isArray children[0]
-    children = children[0]
-
-  if _.isArray tagName
-    return {tagName: null, props, children: tagName}
-
-  return {tagName, props, children}
-
-z = ->
-  {tagName, props, children} = parseZfuncArgs.apply null, arguments
-
-  if _.isNull tagName
-    return z 'div', children
-
-  # Default tag to div
-  unless /[a-zA-Z]/.test tagName[0]
-    tagName = 'div' + tagName
-
-  tag = tagName.match(/(^[^.\[]+)/)[1]
-
-  # Extract shortcut attributes
-  attributes = getAttributes tagName
-  props = _.merge props, {attributes}
-
-  # Remove attribute declarations from tagName
-  tagName = tagName.replace /\[[^\[]+\]/g, ''
-
-  return h tagName, props, _.map _.filter(children), renderChild
-
 # recursively observe every property and value
-z.observe = (obj) ->
-  if _.isFunction obj
-    return obj
-
-  if _.isArray obj
-    # FIXME: PR observ-array to add values
-    return observArray _.map obj, z.observe
-
-  if _.isObject obj
-    if _.isFunction obj.then
-      observed = observ null
-
-      obj.then (val) ->
-        observed.set val
-        return val
-
-      for key in Object.keys obj
-        if _.isFunction obj[key]
-          observed[key] = obj[key].bind obj
-
-      return observed
-
-    return observStruct _.transform obj, (obj, val, key) ->
-      obj[key] = z.observe val
-    , {}
-
-  return observ obj
+z.observe = require './observe'
 
 z.render = do ->
   id = 0
@@ -220,7 +151,6 @@ z.redraw = ->
   for id, root of registeredRoots
     z.render root.$root, root.tree
 
-router = new (require 'routes')()
 class ZoriumRouter
   constructor: ->
     @routesRoot = null
@@ -240,7 +170,7 @@ class ZoriumRouter
       else 'hash'
 
   a: ->
-    {tagName, props, children} = parseZfuncArgs.apply null, arguments
+    {tagName, props, children} = util.parseZfuncArgs.apply null, arguments
 
     unless tagName[0] is 'a'
       tagName = 'a' + tagName
