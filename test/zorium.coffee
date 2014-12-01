@@ -873,6 +873,7 @@ describe 'router', ->
       window.location.pathname.should.be '/test'
       root.isEqualNode(htmlToNode(result1)).should.be true
       done()
+    , 10
 
   it 'passes params', ->
     class App
