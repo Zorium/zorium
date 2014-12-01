@@ -6,26 +6,39 @@ z = require 'zorium'
 
 # TODO: batch redraws
 
+htmlToNode = (html) ->
+  root = document.createElement 'div'
+  root.innerHTML = html
+  return root.firstChild
+
 describe 'Virtual DOM', ->
   it 'creates basic DOM trees', ->
     dom = z 'div',
       z '.cname#cid', 'abc'
       z 'a.b[href=#][data-non=123][eatme]',
-        z 'img',
-          style:
-            backgroundColor: 'red'
-            lineHeight: '1rem'
+        z 'img'
 
     $el = createElement(dom)
 
     result = '<div>' +
       '<div id="cid" class="cname">abc</div>' +
       '<a href="#" data-non="123" eatme="true" class="b">' +
-        '<img style="background-color: red; line-height: 1rem; ">' +
+        '<img>' +
       '</a>' +
     '</div>'
 
-    new XMLSerializer().serializeToString($el).should.be result
+    $el.isEqualNode(htmlToNode(result)).should.be true
+
+  it 'sets style', ->
+    dom = z 'img',
+      style:
+        backgroundColor: 'red'
+        lineHeight: '1rem'
+
+    $el = createElement(dom)
+    $el.style.lineHeight.should.be '1rem'
+    $el.style.backgroundColor.should.be 'red'
+
 
   it 'javascript format check', ->
     AppComponent = (params) ->
@@ -48,7 +61,7 @@ describe 'Virtual DOM', ->
     result = '<div><a href="/" class="zorium-link">' +
              '<img src="Zorium.png"></a></div>'
 
-    new XMLSerializer().serializeToString($el).should.be result
+    $el.isEqualNode(htmlToNode(result)).should.be true
 
     z.render document.body, new AppComponent()
 
@@ -65,7 +78,7 @@ describe 'Virtual DOM', ->
     '</div>'
 
     $el = createElement(dom)
-    new XMLSerializer().serializeToString($el).should.be result
+    $el.isEqualNode(htmlToNode(result)).should.be true
 
   it 'supports nested zorium components', ->
     class HelloWorldComponent
@@ -78,7 +91,7 @@ describe 'Virtual DOM', ->
 
     result = '<div><span>Hello World</span></div>'
 
-    new XMLSerializer().serializeToString($el).should.be result
+    $el.isEqualNode(htmlToNode(result)).should.be true
 
   it 'supports arrs', ->
     dom = z 'div', [
@@ -90,7 +103,7 @@ describe 'Virtual DOM', ->
 
     result = '<div><div>a</div><div>b</div></div>'
 
-    new XMLSerializer().serializeToString($el).should.be result
+    $el.isEqualNode(htmlToNode(result)).should.be true
 
   it 'allows component render to return an array', ->
     class HelloWorldComponent
@@ -118,7 +131,7 @@ describe 'Virtual DOM', ->
       '</div>' +
     '</div>'
 
-    new XMLSerializer().serializeToString($el).should.be result
+    $el.isEqualNode(htmlToNode(result)).should.be true
 
   it 'allows component render to return undefined', ->
     class HelloWorldComponent
@@ -148,7 +161,7 @@ describe 'Virtual DOM', ->
 
     z.render root, dom
 
-    new XMLSerializer().serializeToString(root).should.be result
+    root.isEqualNode(htmlToNode(result)).should.be true
 
   it 'allows undefined children on redraw', ->
     dom = z 'div',
@@ -171,7 +184,7 @@ describe 'Virtual DOM', ->
 
     z.render root, dom
 
-    new XMLSerializer().serializeToString(root).should.be result
+    root.isEqualNode(htmlToNode(result)).should.be true
 
   it 'handles null children', ->
     dom = z 'div',
@@ -192,7 +205,7 @@ describe 'Virtual DOM', ->
       '</div>' +
     '</div>'
 
-    new XMLSerializer().serializeToString($el).should.be result
+    $el.isEqualNode(htmlToNode(result)).should.be true
 
   # https://github.com/claydotio/zorium.js/issues/1
   it 'doesn\'t add extra class names', ->
@@ -200,7 +213,7 @@ describe 'Virtual DOM', ->
     $el = createElement(dom)
     result = '<a href="http://192.168.1.0">test</a>'
 
-    new XMLSerializer().serializeToString($el).should.be result
+    $el.isEqualNode(htmlToNode(result)).should.be true
 
 
   # https://github.com/claydotio/zorium.js/issues/3
@@ -214,9 +227,9 @@ describe 'Virtual DOM', ->
     root = document.createElement 'div'
     z.render root, dom
     first = root.querySelector '#uniq'
-    (first == root.querySelector '#uniq').should.be true
+    (first is root.querySelector '#uniq').should.be true
     z.render root, dom
-    (first == root.querySelector '#uniq').should.be true
+    (first is root.querySelector '#uniq').should.be true
     z.render root, dom, z 'd'
 
 
@@ -225,7 +238,7 @@ describe 'Virtual DOM', ->
       dom = z.router.a '[href=/pathname/here]'
       $el = createElement(dom)
 
-      dom.properties.onclick.should.be.a.Function
+      (typeof dom.properties.onclick).should.be 'function'
       preventDefaultCalled = 0
       goCalled = 0
       e = {
@@ -251,7 +264,7 @@ describe 'Virtual DOM', ->
       dom = z.router.a '[href=http://google.com]'
       $el = createElement(dom)
 
-      dom.properties.onclick.should.be.a.Function
+      (typeof dom.properties.onclick).should.be 'function'
       preventDefaultCalled = 0
       goCalled = 0
       e = {
@@ -276,7 +289,7 @@ describe 'Virtual DOM', ->
       dom = z.router.a '[href=/][name=test]', {onmousedown: -> null}
       $el = createElement(dom)
 
-      dom.properties.onclick.should.be.a.Function
+      (typeof dom.properties.onclick).should.be 'function'
       preventDefaultCalled = 0
       goCalled = 0
       e = {
@@ -303,7 +316,7 @@ describe 'Virtual DOM', ->
       dom = z.router.a '[href=/][name=test]', {onclick: -> clickCalled += 1}
       $el = createElement(dom)
 
-      dom.properties.onclick.should.be.a.Function
+      (typeof dom.properties.onclick).should.be 'function'
       preventDefaultCalled = 0
       goCalled = 0
       e = {
@@ -333,7 +346,7 @@ describe 'render()', ->
     root = document.createElement('div')
     z.render root, (z 'span', 'Hello World')
     result = '<div><span>Hello World</span></div>'
-    new XMLSerializer().serializeToString(root).should.be result
+    root.isEqualNode(htmlToNode(result)).should.be true
 
   it 'renders components', ->
     class HelloWorldComponent
@@ -345,21 +358,21 @@ describe 'render()', ->
     $el = z.render root, hello
     result = '<div><span>Hello World</span></div>'
 
-    new XMLSerializer().serializeToString(root).should.be result
+    root.isEqualNode(htmlToNode(result)).should.be true
 
   it 'patches dom node on multiple renders', ->
     root = document.createElement('div')
     z.render root, (z 'span', 'Hello World')
     result1 = '<div><span>Hello World</span></div>'
-    new XMLSerializer().serializeToString(root).should.be result1
+    root.isEqualNode(htmlToNode(result1)).should.be true
 
     z.render root, (z 'span', 'Sayonara')
     result2 = '<div><span>Sayonara</span></div>'
-    new XMLSerializer().serializeToString(root).should.be result2
+    root.isEqualNode(htmlToNode(result2)).should.be true
 
     z.render root, (z 'span', (z 'div', 'done'))
     result3 = '<div><span><div>done</div></span></div>'
-    new XMLSerializer().serializeToString(root).should.be result3
+    root.isEqualNode(htmlToNode(result3)).should.be true
 
 describe 'Lifecycle Callbacks', ->
   describe 'onMount', ->
@@ -535,7 +548,7 @@ describe 'redraw()', ->
     z.redraw()
     z.redraw()
     result = '<div><div></div></div>'
-    new XMLSerializer().serializeToString(root).should.be result
+    root.isEqualNode(htmlToNode(result)).should.be true
     drawCnt.should.be 3
 
 describe 'z.observe()', ->
@@ -562,7 +575,7 @@ describe 'z.observe()', ->
     promise = new Promise (@resolve, reject) => null
     p = z.observe promise
 
-    (p() == null).should.be true
+    (p() is null).should.be true
 
     promise.resolve 1
 
@@ -574,12 +587,12 @@ describe 'z.observe()', ->
 
     obj = z.observe p
 
-    (obj() == null).should.be true
+    (obj() is null).should.be true
 
     p.reject new Error 'abc'
 
     p.catch ->
-      (obj() == null).should.be true
+      (obj() is null).should.be true
 
   it 'sets promises correctly', ->
     p = new Promise (@resolve) => null
@@ -588,7 +601,7 @@ describe 'z.observe()', ->
 
     obj.set p
 
-    (obj() == null).should.be true
+    (obj() is null).should.be true
 
     p.resolve 'abc'
 
@@ -604,7 +617,7 @@ describe 'z.observe()', ->
     obj.set p1
     obj.set p2
 
-    (obj() == null).should.be true
+    (obj() is null).should.be true
 
     p2.resolve 'a'
     p2.then ->
@@ -717,9 +730,9 @@ describe 'router', ->
       result2 = '<div><div>World Hello</div></div>'
 
       z.router.go '/test'
-      new XMLSerializer().serializeToString(root).should.be result1
+      root.isEqualNode(htmlToNode(result1)).should.be true
       z.router.go '/test2'
-      new XMLSerializer().serializeToString(root).should.be result2
+      root.isEqualNode(htmlToNode(result2)).should.be true
 
   it 'updates location hash', ->
     class App
@@ -817,15 +830,15 @@ describe 'router', ->
 
     window.location.hash = '/test'
     z.router.go()
-    new XMLSerializer().serializeToString(root).should.be result1
+    root.isEqualNode(htmlToNode(result1)).should.be true
 
     window.location.hash = '/test2'
     z.router.go()
-    new XMLSerializer().serializeToString(root).should.be result2
+    root.isEqualNode(htmlToNode(result2)).should.be true
 
     window.location.hash = '/test'
     window.location.hash.should.be '#/test'
-    new XMLSerializer().serializeToString(root).should.be result1
+    root.isEqualNode(htmlToNode(result1)).should.be true
 
   it 'responds to popstate', (done) ->
     class App
@@ -849,16 +862,16 @@ describe 'router', ->
 
     window.history.pushState null, null, '/test'
     z.router.go()
-    new XMLSerializer().serializeToString(root).should.be result1
+    root.isEqualNode(htmlToNode(result1)).should.be true
 
     window.history.pushState null, null, '/test2'
     z.router.go()
-    new XMLSerializer().serializeToString(root).should.be result2
+    root.isEqualNode(htmlToNode(result2)).should.be true
 
     window.history.back()
     setTimeout ->
       window.location.pathname.should.be '/test'
-      new XMLSerializer().serializeToString(root).should.be result1
+      root.isEqualNode(htmlToNode(result1)).should.be true
       done()
 
   it 'passes params', ->
@@ -877,4 +890,4 @@ describe 'router', ->
     result = '<div><div>Hello world</div></div>'
     z.router.go('/test/world')
 
-    new XMLSerializer().serializeToString(root).should.be result
+    root.isEqualNode(htmlToNode(result)).should.be true

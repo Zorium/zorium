@@ -24,7 +24,7 @@ unless Function::bind
 # coffeelint: enable=missing_fat_arrows
 
 _ = require 'lodash'
-h = require 'virtual-dom/h'
+h = require 'virtual-hyperscript'
 diff = require 'virtual-dom/diff'
 patch = require 'virtual-dom/patch'
 createElement = require 'virtual-dom/create-element'
@@ -197,26 +197,19 @@ class ZoriumRouter
         window.history.pushState null, null, path
       else
         window.location.hash = path
-
-      route = router.match(path)
-      unless route
-        return
-
-      componentClass = route.fn()
-      z.render @routesRoot, new componentClass(route.params)
-
     else
       pathname = window.location.pathname
       hash = window.location.hash.slice(1)
       path = if @mode is 'pathname' then pathname or hash \
               else hash or pathname
 
-      route = router.match(path)
-      unless route
-        return
-      componentClass = route.fn()
+    route = router.match(path)
 
-      z.render @routesRoot, new componentClass(route.params)
+    unless route
+      return
+
+    componentClass = route.fn()
+    z.render @routesRoot, new componentClass(route.params)
 
 
 z.router = new ZoriumRouter()
