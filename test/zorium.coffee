@@ -5,8 +5,6 @@ Promise = require 'promiz'
 z = require 'zorium'
 
 # TODO: batch redraws
-# Observable state?
-# Streams?
 
 describe 'Virtual DOM', ->
   it 'creates basic DOM trees', ->
@@ -28,6 +26,31 @@ describe 'Virtual DOM', ->
     '</div>'
 
     new XMLSerializer().serializeToString($el).should.be result
+
+  it 'javascript format check', ->
+    AppComponent = (params) ->
+      state = z.state(z: 'Zorium')
+      clicker = (e) ->
+        state.set z: 'AllOfTheThings'
+        return
+
+      state: state
+      render: ->
+        return z 'a.zorium-link[href=/]', z('img[src=' + state().z + '.png]',
+          onclick: clicker
+        )
+
+    comp = new AppComponent()
+    dom = z 'div', comp
+
+    $el = createElement(dom)
+
+    result = '<div><a href="/" class="zorium-link">' +
+             '<img src="Zorium.png"></a></div>'
+
+    new XMLSerializer().serializeToString($el).should.be result
+
+    z.render document.body, new AppComponent()
 
   it 'supports default div tag prefixing', ->
     dom = z 'div',
