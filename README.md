@@ -12,7 +12,7 @@ z = require 'zorium'
 
 class AppComponent
   constructor: (params) ->
-    @state = z.observe
+    @state = z.state
       z: 'Zorium'
 
   clicker: (e) =>
@@ -99,7 +99,7 @@ class BindComponent
 ```coffee
 class App
   constructor: (params) ->
-    @state = z.observe
+    @state = z.state
       key: params.key or 'none'
 
   render: =>
@@ -192,34 +192,68 @@ z.redraw()
 
 ### State
 
-#### z.observe()
+#### z.state()
 
+Partial updating state object  
 When set as a property of a Zorium Component, `z.redraw()` will automatically be called  
-If passed a `Promise`, the value will be set to `null` until the promise resolves (causing an update). If the promise rejects, the value stays `null`
+If passed a `z.observe`, an update is triggered on child updates
 
 ```coffee
 promise = new Promise (@resolve, reject) -> null
-value = z.observe
+
+state = z.state
   a: 'abc'
   b: 123
   c: [1, 2, 3]
-  d: promise
+  d: z.observe promise
 
-value.a() == 'abc'
-value.b() == 123
-value.c() == [1, 2, 3]
-value.d() == null
+state() ==
+  a: 'abc'
+  b: 123
+  c: [1, 2, 3]
+  d: null
 
-value.d.resolve(123)
+promise.resolve(123)
 
-value.d() == 123
+# promise resolved
+state().d == 123
 
-value (value) ->
-  value.a == 'def'
+# watch for changes
+state (state) ->
+  state.b == 321
 
-value.a.set 'def'
+# partial update
+state.set
+  b: 321
+state() ==
+  a: 'abc'
+  b: 123
+  c: [1, 2, 3]
+  d: 123
 ```
 
+#### z.observe()
+
+Create an observable  
+Promises observe to `null` until resolved (but still have promise methods)
+
+```coffee
+a = z.observe 'a'
+a() == 'a'
+
+a (change) ->
+  change == 'b'
+
+a.set 'b'
+
+promise = new Promise (@resolve, reject) -> null
+p = z.observe promise
+p() == null
+promise.resolve 1
+
+p.then ->
+  p() == 1
+```
 
 ## Architecture
 
@@ -245,7 +279,7 @@ Currently, routing goes here, along with other miscellaneous things.
 
 ### Components
 
-Components should set `@state` as a `z.observe` when using local state
+Components should set `@state` as a `z.state` when using local state
 Components are classes of the form:
 
 ```coffee
@@ -266,13 +300,6 @@ class AbcModel
 module.exports = new AbcModel()
 ```
 
-Model methods should wrap their returned values in a `z.observe`, including promises  
-e.g.
-
-```coffee
-return z.observe new Promise (resolve) -> resolve {abc: 'def'}
-```
-
 ### Pages
 
 Pages are components which are routed to via the router.  
@@ -282,7 +309,7 @@ components on the page.
 ```coffee
 module.exports = class HomePage
   constructor: (params) ->
-    @state = z.observe
+    @state = z.state
       nav: new require('../components/nav')()
       body: new require('../components/body')(params.key)
 
@@ -299,7 +326,7 @@ If extending a root page with sub-pages is desired, subclass.
 ```coffee
 class RootPage
   constructor: ->
-    @state = z.observe
+    @state = z.state
         nav: new require('../components/nav')()
         footer: new require('../components/footer')()
 

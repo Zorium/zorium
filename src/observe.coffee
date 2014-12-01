@@ -3,32 +3,54 @@ observStruct = require 'observ-struct'
 observArray = require 'observ-array'
 observ = require 'observ'
 
-_observe = (obj) ->
-  if _.isFunction obj
-    return obj
+isPromise = (obj) ->
+  _.isObject(obj) and _.isFunction(obj.then)
 
-  if _.isArray obj
-    # FIXME: PR observ-array to add values
-    return observArray _.map obj, _observe
 
-  if _.isObject obj
-    if _.isFunction obj.then
-      observed = observ null
+# coffeelint: disable=missing_fat_arrows
+observePromise = (observable, promise) ->
+  this._set = observable.set.bind observable
+  this._set._pending = promise
 
-      obj.then (val) ->
-        observed.set val
-        return val
+  promise.then (val) =>
+    if this._set._pending is promise
+      this._set val
 
-      for key in Object.keys obj
-        if _.isFunction obj[key]
-          observed[key] = obj[key].bind obj
+  for key in Object.keys promise
+    if _.isFunction promise[key]
+      observable[key] = promise[key].bind promise
 
-      return observed
+  return observable
+# coffeelint: enable=missing_fat_arrows
 
-    return observStruct _.transform obj, (obj, val, key) ->
-      obj[key] = _observe val
-    , {}
+observe = (obj) ->
+  observed = switch
+    when  _.isFunction obj
+      obj
 
-  return observ obj
+    when _.isArray obj
+      observArray obj
 
-module.exports = _observe
+    when isPromise obj
+      do ->
+        return observePromise observ(null), obj
+
+    when _.isObject obj
+      observStruct obj
+
+    else
+      observ obj
+
+  observed._set = observed.set.bind observed
+
+  # coffeelint: disable=missing_fat_arrows
+  observed.set = (diff) ->
+    if isPromise diff
+      observePromise this, diff
+    else
+      this._set diff
+  # coffeelint: enable=missing_fat_arrows
+
+  return observed
+
+module.exports = observe

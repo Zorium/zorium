@@ -515,75 +515,39 @@ describe 'redraw()', ->
     new XMLSerializer().serializeToString(root).should.be result
     drawCnt.should.be 3
 
-describe 'z.observe', ->
-  it 'recursively observes all values', ->
-    obj = z.observe
-      arr: [
-        {
-          v: 1
-          arr: [
-            [
-              2
-            ]
-          ]
-        }
-        'a'
-      ]
-      num: 123
-      str: 'abc'
-      obj: {
-        abc: 123
-      }
+describe 'z.observe()', ->
+  it 'observes values', ->
+    types = [
+      'a', 1, [2], false, {b: 1}
+    ]
+    changed = [
+      'b', 9, [2,1], true, {c: 2}
+    ]
 
-    obj().arr[1].should.be 'a'
-    obj().arr[0].v.should.be 1
-    obj().arr[0].arr[0][0].should.be 2
-    obj().num.should.be 123
-    obj().str.should.be 'abc'
-    obj().obj.abc.should.be 123
+    for type, i in types
+      a = z.observe type
+      a().should.be type
 
-    _.isFunction(obj.set).should.be true
-    _.isFunction(obj.arr.set).should.be true
-    _.isFunction(obj.arr[0].set).should.be true
-    _.isFunction(obj.arr[1].set).should.be true
-    _.isFunction(obj.arr[0].v.set).should.be true
-    _.isFunction(obj.arr[0].arr.set).should.be true
-    _.isFunction(obj.arr[0].arr[0].set).should.be true
-    _.isFunction(obj.arr[0].arr[0][0].set).should.be true
-    _.isFunction(obj.num.set).should.be true
-    _.isFunction(obj.str.set).should.be true
-    _.isFunction(obj.obj.abc.set).should.be true
+      change = changed[i]
 
-    obj.arr[0].arr[0][0]().should.be 2
+      a (newed) ->
+        newed.should.be change
 
-    obj.arr[0].arr[0][0] (val) ->
-      val.should.be 3
+      a.set change
 
-    obj (obj) ->
-      obj.arr[0].arr[0][0].should.be 3
+  it 'observes promises', ->
+    promise = new Promise (@resolve, reject) => null
+    p = z.observe promise
 
-    obj.arr[0].arr[0][0].set 3
-    obj().arr[0].arr[0][0].should.be 3
+    (p() == null).should.be true
 
-    obj (obj) ->
-      obj.num.should.be 321
-
-    obj.num.set 321
-
-  it 'resolves promises as null until they are resolved', ->
-    p = new Promise (@resolve) -> null
-
-    obj = z.observe p
-
-    (obj() == null).should.be true
-
-    p.resolve 'abc'
+    promise.resolve 1
 
     p.then ->
-      obj().should.be 'abc'
+      p().should.be 1
 
   it 'ignores rejected promises', ->
-    p = new Promise (_, @reject) -> null
+    p = new Promise (_, @reject) => null
 
     obj = z.observe p
 
@@ -594,21 +558,81 @@ describe 'z.observe', ->
     p.catch ->
       (obj() == null).should.be true
 
-  it 'adds promise methods onto the observable', ->
-    p = new Promise (@resolve) -> null
+  it 'sets promises correctly', ->
+    p = new Promise (@resolve) => null
+
+    obj = z.observe null
+
+    obj.set p
+
+    (obj() == null).should.be true
+
     p.resolve 'abc'
 
-    op = z.observe p
-    obj = z.observe op
+    obj.then ->
+      obj().should.be 'abc'
 
-    op.then (v) ->
-      v.should.be 'abc'
+  it 'sets promises correctly against race conditions', ->
+    p1 = new Promise (@resolve) => null
+    p2 = new Promise (@resolve) => null
+
+    obj = z.observe null
+
+    obj.set p1
+    obj.set p2
+
+    (obj() == null).should.be true
+
+    p2.resolve 'a'
+    p2.then ->
+      obj().should.be 'a'
+
+      p1.resolve 'NO'
+      p1.then ->
+        obj().should.be 'a'
+
+
+describe 'z.state', ->
+  it 'observes state', ->
+
+    promise = new Promise (@resolve, reject) => null
+
+    state = z.state
+      a: 'abc'
+      b: 123
+      c: [1, 2, 3]
+      d: z.observe promise
+
+    state().should.be
+      a: 'abc'
+      b: 123
+      c: [1, 2, 3]
+      d: null
+
+    promise.resolve(123)
+
+    # promise resolved
+    state.d.then ->
+      state().d.should.be 123
+
+      # watch for changes
+      state (state) ->
+        state.b.should.be 321
+
+      # partial update
+      state.set
+        b: 321
+      state().should.be
+        a: 'abc'
+        b: 321
+        c: [1, 2, 3]
+        d: 123
 
   it 'redraws on state observable change', ->
     cnt = 0
     class App
       constructor: ->
-        @state = z.observe
+        @state = z.state
           abc: 'def'
       render: ->
         cnt += 1
@@ -627,6 +651,27 @@ describe 'z.observe', ->
       abc: 'den'
 
     cnt.should.be 5
+
+  it 'redraws on promise resolution', ->
+    promise = new Promise (@resolve) => null
+    cnt = 0
+    class App
+      constructor: ->
+        @state = z.state
+          p: z.observe promise
+      render: ->
+        cnt += 1
+        z 'div'
+
+    root = document.createElement 'div'
+    app = new App()
+    z.render root, app
+
+    promise.resolve 'abc'
+
+    promise.then ->
+      cnt.should.be 2
+
 
 describe 'router', ->
   describe 'route()', ->

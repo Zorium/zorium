@@ -29,6 +29,7 @@ diff = require 'virtual-dom/diff'
 patch = require 'virtual-dom/patch'
 createElement = require 'virtual-dom/create-element'
 routes = require 'routes'
+observe = require './observe'
 
 util = require './util'
 
@@ -56,6 +57,16 @@ z = ->
   tagName = tagName.replace /\[[^\[]+\]/g, ''
 
   return h tagName, props, _.map _.filter(children), renderChild
+
+z.observe = observe
+z.state = (obj) ->
+  observed = observe obj
+
+  _set = observed.set.bind observed
+  observed.set = (diff) ->
+    _set _.defaults diff, observed()
+
+  return observed
 
 renderChild = (child) ->
   if util.isComponent child
@@ -96,9 +107,6 @@ onAnchorClick = (e) ->
     e.preventDefault()
     z.router?.go @pathname
 # coffeelint: enable=missing_fat_arrows
-
-# recursively observe every property and value
-z.observe = require './observe'
 
 z.render = do ->
   id = 0
