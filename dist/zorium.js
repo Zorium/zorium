@@ -274,23 +274,17 @@ module.exports =
 	      } else {
 	        window.location.hash = path;
 	      }
-	      route = router.match(path);
-	      if (!route) {
-	        return;
-	      }
-	      componentClass = route.fn();
-	      return z.render(this.routesRoot, new componentClass(route.params));
 	    } else {
 	      pathname = window.location.pathname;
 	      hash = window.location.hash.slice(1);
 	      path = this.mode === 'pathname' ? pathname || hash : hash || pathname;
-	      route = router.match(path);
-	      if (!route) {
-	        return;
-	      }
-	      componentClass = route.fn();
-	      return z.render(this.routesRoot, new componentClass(route.params));
 	    }
+	    route = router.match(path);
+	    if (!route) {
+	      return;
+	    }
+	    componentClass = route.fn();
+	    return z.render(this.routesRoot, new componentClass(route.params));
 	  };
 
 	  return ZoriumRouter;
@@ -310,11 +304,11 @@ module.exports =
 
 	_ = __webpack_require__(7);
 
-	observStruct = __webpack_require__(10);
+	observStruct = __webpack_require__(13);
 
-	observArray = __webpack_require__(11);
+	observArray = __webpack_require__(14);
 
-	observ = __webpack_require__(12);
+	observ = __webpack_require__(15);
 
 	isPromise = function(obj) {
 	  return _.isObject(obj) && _.isFunction(obj.then);
@@ -380,11 +374,11 @@ module.exports =
 	var getTagAttributes, isChild, isChildren, isComponent, isVNode, isVText, isWidget, parseZfuncArgs,
 	  __slice = [].slice;
 
-	isVNode = __webpack_require__(13);
+	isVNode = __webpack_require__(16);
 
-	isVText = __webpack_require__(14);
+	isVText = __webpack_require__(17);
 
-	isWidget = __webpack_require__(15);
+	isWidget = __webpack_require__(18);
 
 	isComponent = function(x) {
 	  return _.isObject(x) && _.isFunction(x.render);
@@ -450,16 +444,140 @@ module.exports =
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var h = __webpack_require__(9)
+	var TypedError = __webpack_require__(19)
+
+	var VNode = __webpack_require__(20)
+	var VText = __webpack_require__(21)
+	var isVNode = __webpack_require__(22)
+	var isVText = __webpack_require__(23)
+	var isWidget = __webpack_require__(24)
+	var isHook = __webpack_require__(25)
+	var isVThunk = __webpack_require__(26)
+
+	var parseTag = __webpack_require__(9)
+	var softSetHook = __webpack_require__(10)
+	var dataSetHook = __webpack_require__(11)
+	var evHook = __webpack_require__(12)
+
+	var UnexpectedVirtualElement = TypedError({
+	    type: "virtual-hyperscript.unexpected.virtual-element",
+	    message: "Unexpected virtual child passed to h().\n" +
+	        "Expected a VNode / Vthunk / VWidget / string but:\n" +
+	        "got a {foreignObjectStr}.\n" +
+	        "The parent vnode is {parentVnodeStr}.\n" +
+	        "Suggested fix: change your `h(..., [ ... ])` callsite.",
+	    foreignObjectStr: null,
+	    parentVnodeStr: null,
+	    foreignObject: null,
+	    parentVnode: null
+	})
 
 	module.exports = h
+
+	function h(tagName, properties, children) {
+	    var childNodes = []
+	    var tag, props, key, namespace
+
+	    if (!children && isChildren(properties)) {
+	        children = properties
+	        props = {}
+	    }
+
+	    props = props || properties || {}
+	    tag = parseTag(tagName, props)
+
+	    // support keys
+	    if ("key" in props) {
+	        key = props.key
+	        props.key = undefined
+	    }
+
+	    // support namespace
+	    if ("namespace" in props) {
+	        namespace = props.namespace
+	        props.namespace = undefined
+	    }
+
+	    // fix cursor bug
+	    if (tag === "input" &&
+	        "value" in props &&
+	        props.value !== undefined &&
+	        !isHook(props.value)
+	    ) {
+	        props.value = softSetHook(props.value)
+	    }
+
+	    var keys = Object.keys(props)
+	    var propName, value
+	    for (var j = 0; j < keys.length; j++) {
+	        propName = keys[j]
+	        value = props[propName]
+	        if (isHook(value)) {
+	            continue
+	        }
+
+	        // add data-foo support
+	        if (propName.substr(0, 5) === "data-") {
+	            props[propName] = dataSetHook(value)
+	        }
+
+	        // add ev-foo support
+	        if (propName.substr(0, 3) === "ev-") {
+	            props[propName] = evHook(value)
+	        }
+	    }
+
+	    if (children !== undefined && children !== null) {
+	        addChild(children, childNodes, tag, props)
+	    }
+
+
+	    var node = new VNode(tag, props, childNodes, key, namespace)
+
+	    return node
+	}
+
+	function addChild(c, childNodes, tag, props) {
+	    if (typeof c === "string") {
+	        childNodes.push(new VText(c))
+	    } else if (isChild(c)) {
+	        childNodes.push(c)
+	    } else if (Array.isArray(c)) {
+	        for (var i = 0; i < c.length; i++) {
+	            addChild(c[i], childNodes, tag, props)
+	        }
+	    } else if (c === null || c === undefined) {
+	        return
+	    } else {
+	        throw UnexpectedVirtualElement({
+	            foreignObjectStr: JSON.stringify(c),
+	            foreignObject: c,
+	            parentVnodeStr: JSON.stringify({
+	                tagName: tag,
+	                properties: props
+	            }),
+	            parentVnode: {
+	                tagName: tag,
+	                properties: props
+	            }
+	        })
+	    }
+	}
+
+	function isChild(x) {
+	    return isVNode(x) || isVText(x) || isWidget(x) || isVThunk(x)
+	}
+
+	function isChildren(x) {
+	    return typeof x === "string" || Array.isArray(x) || isChild(x)
+	}
 
 
 /***/ },
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var diff = __webpack_require__(23)
+	var diff = __webpack_require__(34)
 
 	module.exports = diff
 
@@ -468,7 +586,7 @@ module.exports =
 /* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var patch = __webpack_require__(29)
+	var patch = __webpack_require__(35)
 
 	module.exports = patch
 
@@ -477,7 +595,7 @@ module.exports =
 /* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var createElement = __webpack_require__(30)
+	var createElement = __webpack_require__(36)
 
 	module.exports = createElement
 
@@ -7644,7 +7762,7 @@ module.exports =
 	  }
 	}.call(this));
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(31)(module), (function() { return this; }())))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(33)(module), (function() { return this; }())))
 
 /***/ },
 /* 8 */
@@ -7815,69 +7933,54 @@ module.exports =
 /* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isArray = __webpack_require__(33)
-	var isString = __webpack_require__(34)
+	var classIdSplit = /([\.#]?[a-zA-Z0-9_:-]+)/
+	var notClassId = /^\.|#/
 
-	var VNode = __webpack_require__(24)
-	var VText = __webpack_require__(25)
-	var isVNode = __webpack_require__(26)
-	var isVText = __webpack_require__(27)
-	var isWidget = __webpack_require__(28)
+	module.exports = parseTag
 
-	var parseTag = __webpack_require__(16)
+	function parseTag(tag, props) {
+	    if (!tag) {
+	        return "div"
+	    }
 
-	module.exports = h
+	    var noId = !("id" in props)
 
-	function h(tagName, properties, children) {
-	    var tag, props, childNodes, key
+	    var tagParts = tag.split(classIdSplit)
+	    var tagName = null
 
-	    if (!children) {
-	        if (isChildren(properties)) {
-	            children = properties
-	            properties = undefined
+	    if (notClassId.test(tagParts[1])) {
+	        tagName = "div"
+	    }
+
+	    var classes, part, type, i
+	    for (i = 0; i < tagParts.length; i++) {
+	        part = tagParts[i]
+
+	        if (!part) {
+	            continue
+	        }
+
+	        type = part.charAt(0)
+
+	        if (!tagName) {
+	            tagName = part
+	        } else if (type === ".") {
+	            classes = classes || []
+	            classes.push(part.substring(1, part.length))
+	        } else if (type === "#" && noId) {
+	            props.id = part.substring(1, part.length)
 	        }
 	    }
 
-	    tag = parseTag(tagName, properties)
-
-	    if (!isString(tag)) {
-	        props = tag.properties
-	        tag = tag.tagName
-	    } else {
-	        props = properties
-	    }
-
-	    if (isArray(children)) {
-	        var len = children.length
-
-	        for (var i = 0; i < len; i++) {
-	            var child = children[i]
-	            if (isString(child)) {
-	                children[i] = new VText(child)
-	            }
+	    if (classes) {
+	        if (props.className) {
+	            classes.push(props.className)
 	        }
 
-	        childNodes = children
-	    } else if (isString(children)) {
-	        childNodes = [new VText(children)]
-	    } else if (isChild(children)) {
-	        childNodes = [children]
+	        props.className = classes.join(" ")
 	    }
 
-	    if (props && "key" in props) {
-	        key = props.key
-	        delete props.key
-	    }
-
-	    return new VNode(tag, props, childNodes, key)
-	}
-
-	function isChild(x) {
-	    return isVNode(x) || isVText(x) || isWidget(x)
-	}
-
-	function isChildren(x) {
-	    return isArray(x) || isString(x) || isChild(x)
+	    return tagName ? tagName.toLowerCase() : "div"
 	}
 
 
@@ -7885,8 +7988,84 @@ module.exports =
 /* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Observ = __webpack_require__(12)
-	var extend = __webpack_require__(35)
+	module.exports = SoftSetHook;
+
+	function SoftSetHook(value) {
+	    if (!(this instanceof SoftSetHook)) {
+	        return new SoftSetHook(value);
+	    }
+
+	    this.value = value;
+	}
+
+	SoftSetHook.prototype.hook = function (node, propertyName) {
+	    if (node[propertyName] !== this.value) {
+	        node[propertyName] = this.value;
+	    }
+	};
+
+
+/***/ },
+/* 11 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var DataSet = __webpack_require__(38)
+
+	module.exports = DataSetHook;
+
+	function DataSetHook(value) {
+	    if (!(this instanceof DataSetHook)) {
+	        return new DataSetHook(value);
+	    }
+
+	    this.value = value;
+	}
+
+	DataSetHook.prototype.hook = function (node, propertyName) {
+	    var ds = DataSet(node)
+	    var propName = propertyName.substr(5)
+
+	    ds[propName] = this.value;
+	};
+
+
+/***/ },
+/* 12 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var DataSet = __webpack_require__(38)
+
+	module.exports = DataSetHook;
+
+	function DataSetHook(value) {
+	    if (!(this instanceof DataSetHook)) {
+	        return new DataSetHook(value);
+	    }
+
+	    this.value = value;
+	}
+
+	DataSetHook.prototype.hook = function (node, propertyName) {
+	    var ds = DataSet(node)
+	    var propName = propertyName.substr(3)
+
+	    ds[propName] = this.value;
+	};
+
+	DataSetHook.prototype.unhook = function(node, propertyName) {
+	    var ds = DataSet(node);
+	    var propName = propertyName.substr(3);
+
+	    ds[propName] = undefined;
+	}
+
+
+/***/ },
+/* 13 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Observ = __webpack_require__(15)
+	var extend = __webpack_require__(40)
 
 	var blackList = {
 	    "length": "Clashes with `Function.prototype.length`.\n",
@@ -7996,20 +8175,20 @@ module.exports =
 
 
 /***/ },
-/* 11 */
+/* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Observ = __webpack_require__(12)
+	var Observ = __webpack_require__(15)
 
 	// circular dep between ArrayMethods & this file
 	module.exports = ObservArray
 
-	var splice = __webpack_require__(17)
-	var put = __webpack_require__(18)
-	var set = __webpack_require__(19)
-	var transaction = __webpack_require__(20)
-	var ArrayMethods = __webpack_require__(21)
-	var addListener = __webpack_require__(22)
+	var splice = __webpack_require__(27)
+	var put = __webpack_require__(28)
+	var set = __webpack_require__(29)
+	var transaction = __webpack_require__(30)
+	var ArrayMethods = __webpack_require__(31)
+	var addListener = __webpack_require__(32)
 
 
 	/*  ObservArray := (Array<T>) => Observ<
@@ -8087,7 +8266,7 @@ module.exports =
 
 
 /***/ },
-/* 12 */
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = Observable
@@ -8120,10 +8299,10 @@ module.exports =
 
 
 /***/ },
-/* 13 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(32)
+	var version = __webpack_require__(37)
 
 	module.exports = isVirtualNode
 
@@ -8133,10 +8312,10 @@ module.exports =
 
 
 /***/ },
-/* 14 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(32)
+	var version = __webpack_require__(37)
 
 	module.exports = isVirtualText
 
@@ -8146,7 +8325,7 @@ module.exports =
 
 
 /***/ },
-/* 15 */
+/* 18 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = isWidget
@@ -8157,97 +8336,191 @@ module.exports =
 
 
 /***/ },
-/* 16 */
+/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var split = __webpack_require__(45)
+	var camelize = __webpack_require__(56)
+	var template = __webpack_require__(52)
+	var extend = __webpack_require__(57)
 
-	var classIdSplit = /([\.#]?[a-zA-Z0-9_:-]+)/
-	var notClassId = /^\.|#/
+	module.exports = TypedError
 
-	module.exports = parseTag
-
-	function parseTag(tag, props) {
-	    if (!tag) {
-	        return "div"
+	function TypedError(args) {
+	    if (!args) {
+	        throw new Error("args is required");
+	    }
+	    if (!args.type) {
+	        throw new Error("args.type is required");
+	    }
+	    if (!args.message) {
+	        throw new Error("args.message is required");
 	    }
 
-	    var noId = !props || !("id" in props)
+	    var message = args.message
 
-	    var tagParts = split(tag, classIdSplit)
-	    var tagName = null
-
-	    if(notClassId.test(tagParts[1])) {
-	        tagName = "div"
+	    if (args.type && !args.name) {
+	        var errorName = camelize(args.type) + "Error"
+	        args.name = errorName[0].toUpperCase() + errorName.substr(1)
 	    }
 
-	    var id, classes, part, type, i
-	    for (i = 0; i < tagParts.length; i++) {
-	        part = tagParts[i]
+	    createError.type = args.type;
+	    createError._name = args.name;
 
-	        if (!part) {
-	            continue
-	        }
+	    return createError;
 
-	        type = part.charAt(0)
+	    function createError(opts) {
+	        var result = new Error()
 
-	        if (!tagName) {
-	            tagName = part
-	        } else if (type === ".") {
-	            classes = classes || []
-	            classes.push(part.substring(1, part.length))
-	        } else if (type === "#" && noId) {
-	            id = part.substring(1, part.length)
-	        }
+	        Object.defineProperty(result, "type", {
+	            value: result.type,
+	            enumerable: true,
+	            writable: true,
+	            configurable: true
+	        })
+
+	        var options = extend({}, args, opts)
+
+	        extend(result, options)
+	        result.message = template(message, options)
+
+	        return result
 	    }
+	}
 
-	    var parsedTags
 
-	    if (props) {
-	        if (id !== undefined && !("id" in props)) {
-	            props.id = id
-	        }
 
-	        if (classes) {
-	            if (props.className) {
-	                classes.push(props.className)
+/***/ },
+/* 20 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(39)
+	var isVNode = __webpack_require__(22)
+	var isWidget = __webpack_require__(24)
+	var isVHook = __webpack_require__(25)
+
+	module.exports = VirtualNode
+
+	var noProperties = {}
+	var noChildren = []
+
+	function VirtualNode(tagName, properties, children, key, namespace) {
+	    this.tagName = tagName
+	    this.properties = properties || noProperties
+	    this.children = children || noChildren
+	    this.key = key != null ? String(key) : undefined
+	    this.namespace = (typeof namespace === "string") ? namespace : null
+
+	    var count = (children && children.length) || 0
+	    var descendants = 0
+	    var hasWidgets = false
+
+	    for (var i = 0; i < count; i++) {
+	        var child = children[i]
+	        if (isVNode(child)) {
+	            descendants += child.count || 0
+
+	            if (!hasWidgets && child.hasWidgets) {
+	                hasWidgets = true
 	            }
-
-	            props.className = classes.join(" ")
+	        } else if (!hasWidgets && isWidget(child)) {
+	            if (typeof child.destroy === "function") {
+	                hasWidgets = true
+	            }
 	        }
-
-	        parsedTags = tagName
-	    } else if (classes || id !== undefined) {
-	        var properties = {}
-
-	        if (id !== undefined) {
-	            properties.id = id
-	        }
-
-	        if (classes) {
-	            properties.className = classes.join(" ")
-	        }
-
-	        parsedTags = {
-	            tagName: tagName,
-	            properties: properties
-	        }
-	    } else {
-	        parsedTags = tagName
 	    }
 
-	    return parsedTags
+	    this.count = count + descendants
+	    this.hasWidgets = hasWidgets
+	}
+
+	VirtualNode.prototype.version = version
+	VirtualNode.prototype.type = "VirtualNode"
+
+
+/***/ },
+/* 21 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(39)
+
+	module.exports = VirtualText
+
+	function VirtualText(text) {
+	    this.text = String(text)
+	}
+
+	VirtualText.prototype.version = version
+	VirtualText.prototype.type = "VirtualText"
+
+
+/***/ },
+/* 22 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(39)
+
+	module.exports = isVirtualNode
+
+	function isVirtualNode(x) {
+	    return x && x.type === "VirtualNode" && x.version === version
 	}
 
 
 /***/ },
-/* 17 */
+/* 23 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(39)
+
+	module.exports = isVirtualText
+
+	function isVirtualText(x) {
+	    return x && x.type === "VirtualText" && x.version === version
+	}
+
+
+/***/ },
+/* 24 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isWidget
+
+	function isWidget(w) {
+	    return w && w.type === "Widget"
+	}
+
+
+/***/ },
+/* 25 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isHook
+
+	function isHook(hook) {
+	    return hook && typeof hook.hook === "function" &&
+	        !hook.hasOwnProperty("hook")
+	}
+
+
+/***/ },
+/* 26 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isThunk
+
+	function isThunk(t) {
+	    return t && t.type === "Thunk"
+	}
+
+
+/***/ },
+/* 27 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var slice = Array.prototype.slice
 
-	var addListener = __webpack_require__(22)
-	var setNonEnumerable = __webpack_require__(44);
+	var addListener = __webpack_require__(32)
+	var setNonEnumerable = __webpack_require__(50);
 
 	module.exports = splice
 
@@ -8297,11 +8570,11 @@ module.exports =
 
 
 /***/ },
-/* 18 */
+/* 28 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var addListener = __webpack_require__(22)
-	var setNonEnumerable = __webpack_require__(44);
+	var addListener = __webpack_require__(32)
+	var setNonEnumerable = __webpack_require__(50);
 
 	module.exports = put
 
@@ -8340,12 +8613,12 @@ module.exports =
 	}
 
 /***/ },
-/* 19 */
+/* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var addListener = __webpack_require__(22)
-	var setNonEnumerable = __webpack_require__(44)
-	var adiff = __webpack_require__(47)
+	var addListener = __webpack_require__(32)
+	var setNonEnumerable = __webpack_require__(50)
+	var adiff = __webpack_require__(55)
 
 	module.exports = set
 
@@ -8398,7 +8671,7 @@ module.exports =
 	}
 
 /***/ },
-/* 20 */
+/* 30 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = transaction
@@ -8414,10 +8687,10 @@ module.exports =
 	}
 
 /***/ },
-/* 21 */
+/* 31 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var ObservArray = __webpack_require__(11)
+	var ObservArray = __webpack_require__(14)
 
 	var slice = Array.prototype.slice
 
@@ -8485,10 +8758,10 @@ module.exports =
 
 
 /***/ },
-/* 22 */
+/* 32 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var setNonEnumerable = __webpack_require__(44);
+	var setNonEnumerable = __webpack_require__(50);
 
 	module.exports = addListener
 
@@ -8519,18 +8792,34 @@ module.exports =
 
 
 /***/ },
-/* 23 */
+/* 33 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isArray = __webpack_require__(33)
-	var isObject = __webpack_require__(46)
+	module.exports = function(module) {
+		if(!module.webpackPolyfill) {
+			module.deprecate = function() {};
+			module.paths = [];
+			// module.parent = undefined by default
+			module.children = [];
+			module.webpackPolyfill = 1;
+		}
+		return module;
+	}
 
-	var VPatch = __webpack_require__(36)
-	var isVNode = __webpack_require__(26)
-	var isVText = __webpack_require__(27)
-	var isWidget = __webpack_require__(28)
-	var isThunk = __webpack_require__(37)
-	var handleThunk = __webpack_require__(38)
+
+/***/ },
+/* 34 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var isArray = __webpack_require__(53)
+	var isObject = __webpack_require__(54)
+
+	var VPatch = __webpack_require__(41)
+	var isVNode = __webpack_require__(42)
+	var isVText = __webpack_require__(43)
+	var isWidget = __webpack_require__(44)
+	var isThunk = __webpack_require__(45)
+	var handleThunk = __webpack_require__(46)
 
 	module.exports = diff
 
@@ -8869,136 +9158,14 @@ module.exports =
 
 
 /***/ },
-/* 24 */
+/* 35 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(39)
-	var isVNode = __webpack_require__(26)
-	var isWidget = __webpack_require__(28)
-	var isVHook = __webpack_require__(40)
+	var document = __webpack_require__(61)
+	var isArray = __webpack_require__(53)
 
-	module.exports = VirtualNode
-
-	var noProperties = {}
-	var noChildren = []
-
-	function VirtualNode(tagName, properties, children, key, namespace) {
-	    this.tagName = tagName
-	    this.properties = properties || noProperties
-	    this.children = children || noChildren
-	    this.key = key != null ? String(key) : undefined
-	    this.namespace = (typeof namespace === "string") ? namespace : null
-
-	    var count = (children && children.length) || 0
-	    var descendants = 0
-	    var hasWidgets = false
-	    var descendantHooks = false
-	    var hooks
-
-	    for (var propName in properties) {
-	        if (properties.hasOwnProperty(propName)) {
-	            var property = properties[propName]
-	            if (isVHook(property)) {
-	                if (!hooks) {
-	                    hooks = {}
-	                }
-
-	                hooks[propName] = property
-	            }
-	        }
-	    }
-
-	    for (var i = 0; i < count; i++) {
-	        var child = children[i]
-	        if (isVNode(child)) {
-	            descendants += child.count || 0
-
-	            if (!hasWidgets && child.hasWidgets) {
-	                hasWidgets = true
-	            }
-
-	            if (!descendantHooks && (child.hooks || child.descendantHooks)) {
-	                descendantHooks = true
-	            }
-	        } else if (!hasWidgets && isWidget(child)) {
-	            if (typeof child.destroy === "function") {
-	                hasWidgets = true
-	            }
-	        }
-	    }
-
-	    this.count = count + descendants
-	    this.hasWidgets = hasWidgets
-	    this.hooks = hooks
-	    this.descendantHooks = descendantHooks
-	}
-
-	VirtualNode.prototype.version = version
-	VirtualNode.prototype.type = "VirtualNode"
-
-
-/***/ },
-/* 25 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(39)
-
-	module.exports = VirtualText
-
-	function VirtualText(text) {
-	    this.text = String(text)
-	}
-
-	VirtualText.prototype.version = version
-	VirtualText.prototype.type = "VirtualText"
-
-
-/***/ },
-/* 26 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(39)
-
-	module.exports = isVirtualNode
-
-	function isVirtualNode(x) {
-	    return x && x.type === "VirtualNode" && x.version === version
-	}
-
-
-/***/ },
-/* 27 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(39)
-
-	module.exports = isVirtualText
-
-	function isVirtualText(x) {
-	    return x && x.type === "VirtualText" && x.version === version
-	}
-
-
-/***/ },
-/* 28 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isWidget
-
-	function isWidget(w) {
-	    return w && w.type === "Widget"
-	}
-
-
-/***/ },
-/* 29 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var document = __webpack_require__(49)
-	var isArray = __webpack_require__(33)
-
-	var domIndex = __webpack_require__(41)
-	var patchOp = __webpack_require__(42)
+	var domIndex = __webpack_require__(48)
+	var patchOp = __webpack_require__(49)
 	module.exports = patch
 
 	function patch(rootNode, patches) {
@@ -9073,17 +9240,17 @@ module.exports =
 
 
 /***/ },
-/* 30 */
+/* 36 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var document = __webpack_require__(49)
+	var document = __webpack_require__(61)
 
-	var applyProperties = __webpack_require__(43)
+	var applyProperties = __webpack_require__(47)
 
-	var isVNode = __webpack_require__(26)
-	var isVText = __webpack_require__(27)
-	var isWidget = __webpack_require__(28)
-	var handleThunk = __webpack_require__(38)
+	var isVNode = __webpack_require__(42)
+	var isVText = __webpack_require__(43)
+	var isWidget = __webpack_require__(44)
+	var handleThunk = __webpack_require__(46)
 
 	module.exports = createElement
 
@@ -9125,57 +9292,45 @@ module.exports =
 
 
 /***/ },
-/* 31 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = function(module) {
-		if(!module.webpackPolyfill) {
-			module.deprecate = function() {};
-			module.paths = [];
-			// module.parent = undefined by default
-			module.children = [];
-			module.webpackPolyfill = 1;
-		}
-		return module;
-	}
-
-
-/***/ },
-/* 32 */
+/* 37 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = "1"
 
 
 /***/ },
-/* 33 */
+/* 38 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var nativeIsArray = Array.isArray
-	var toString = Object.prototype.toString
+	var createStore = __webpack_require__(63)
+	var Individual = __webpack_require__(62)
 
-	module.exports = nativeIsArray || isArray
+	var createHash = __webpack_require__(51)
 
-	function isArray(obj) {
-	    return toString.call(obj) === "[object Array]"
+	var hashStore = Individual("__DATA_SET_WEAKMAP@3", createStore())
+
+	module.exports = DataSet
+
+	function DataSet(elem) {
+	    var store = hashStore(elem)
+
+	    if (!store.hash) {
+	        store.hash = createHash(elem)
+	    }
+
+	    return store.hash
 	}
 
 
 /***/ },
-/* 34 */
+/* 39 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var toString = Object.prototype.toString
-
-	module.exports = isString
-
-	function isString(obj) {
-	    return toString.call(obj) === "[object String]"
-	}
+	module.exports = "1"
 
 
 /***/ },
-/* 35 */
+/* 40 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = extend
@@ -9198,10 +9353,10 @@ module.exports =
 
 
 /***/ },
-/* 36 */
+/* 41 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(39)
+	var version = __webpack_require__(58)
 
 	VirtualPatch.NONE = 0
 	VirtualPatch.VTEXT = 1
@@ -9226,7 +9381,44 @@ module.exports =
 
 
 /***/ },
-/* 37 */
+/* 42 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(58)
+
+	module.exports = isVirtualNode
+
+	function isVirtualNode(x) {
+	    return x && x.type === "VirtualNode" && x.version === version
+	}
+
+
+/***/ },
+/* 43 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(58)
+
+	module.exports = isVirtualText
+
+	function isVirtualText(x) {
+	    return x && x.type === "VirtualText" && x.version === version
+	}
+
+
+/***/ },
+/* 44 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isWidget
+
+	function isWidget(w) {
+	    return w && w.type === "Widget"
+	}
+
+
+/***/ },
+/* 45 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = isThunk
@@ -9237,13 +9429,13 @@ module.exports =
 
 
 /***/ },
-/* 38 */
+/* 46 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isVNode = __webpack_require__(26)
-	var isVText = __webpack_require__(27)
-	var isWidget = __webpack_require__(28)
-	var isThunk = __webpack_require__(37)
+	var isVNode = __webpack_require__(42)
+	var isVText = __webpack_require__(43)
+	var isWidget = __webpack_require__(44)
+	var isThunk = __webpack_require__(45)
 
 	module.exports = handleThunk
 
@@ -9283,26 +9475,105 @@ module.exports =
 
 
 /***/ },
-/* 39 */
+/* 47 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = "1"
+	var isObject = __webpack_require__(54)
+	var isHook = __webpack_require__(59)
 
+	module.exports = applyProperties
 
-/***/ },
-/* 40 */
-/***/ function(module, exports, __webpack_require__) {
+	function applyProperties(node, props, previous) {
+	    for (var propName in props) {
+	        var propValue = props[propName]
 
-	module.exports = isHook
+	        if (propValue === undefined) {
+	            removeProperty(node, props, previous, propName);
+	        } else if (isHook(propValue)) {
+	            propValue.hook(node,
+	                propName,
+	                previous ? previous[propName] : undefined)
+	        } else {
+	            if (isObject(propValue)) {
+	                patchObject(node, props, previous, propName, propValue);
+	            } else if (propValue !== undefined) {
+	                node[propName] = propValue
+	            }
+	        }
+	    }
+	}
 
-	function isHook(hook) {
-	    return hook && typeof hook.hook === "function" &&
-	        !hook.hasOwnProperty("hook")
+	function removeProperty(node, props, previous, propName) {
+	    if (previous) {
+	        var previousValue = previous[propName]
+
+	        if (!isHook(previousValue)) {
+	            if (propName === "attributes") {
+	                for (var attrName in previousValue) {
+	                    node.removeAttribute(attrName)
+	                }
+	            } else if (propName === "style") {
+	                for (var i in previousValue) {
+	                    node.style[i] = ""
+	                }
+	            } else if (typeof previousValue === "string") {
+	                node[propName] = ""
+	            } else {
+	                node[propName] = null
+	            }
+	        }
+	    }
+	}
+
+	function patchObject(node, props, previous, propName, propValue) {
+	    var previousValue = previous ? previous[propName] : undefined
+
+	    // Set attributes
+	    if (propName === "attributes") {
+	        for (var attrName in propValue) {
+	            var attrValue = propValue[attrName]
+
+	            if (attrValue === undefined) {
+	                node.removeAttribute(attrName)
+	            } else {
+	                node.setAttribute(attrName, attrValue)
+	            }
+	        }
+
+	        return
+	    }
+
+	    if(previousValue && isObject(previousValue) &&
+	        getPrototype(previousValue) !== getPrototype(propValue)) {
+	        node[propName] = propValue
+	        return
+	    }
+
+	    if (!isObject(node[propName])) {
+	        node[propName] = {}
+	    }
+
+	    var replacer = propName === "style" ? "" : undefined
+
+	    for (var k in propValue) {
+	        var value = propValue[k]
+	        node[propName][k] = (value === undefined) ? replacer : value
+	    }
+	}
+
+	function getPrototype(value) {
+	    if (Object.getPrototypeOf) {
+	        return Object.getPrototypeOf(value)
+	    } else if (value.__proto__) {
+	        return value.__proto__
+	    } else if (value.constructor) {
+	        return value.constructor.prototype
+	    }
 	}
 
 
 /***/ },
-/* 41 */
+/* 48 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Maps a virtual DOM tree onto a real DOM tree in an efficient manner.
@@ -9393,16 +9664,16 @@ module.exports =
 
 
 /***/ },
-/* 42 */
+/* 49 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var applyProperties = __webpack_require__(43)
+	var applyProperties = __webpack_require__(47)
 
-	var isWidget = __webpack_require__(28)
-	var VPatch = __webpack_require__(36)
+	var isWidget = __webpack_require__(44)
+	var VPatch = __webpack_require__(41)
 
-	var render = __webpack_require__(30)
-	var updateWidget = __webpack_require__(48)
+	var render = __webpack_require__(36)
+	var updateWidget = __webpack_require__(60)
 
 	module.exports = applyPatch
 
@@ -9567,105 +9838,7 @@ module.exports =
 
 
 /***/ },
-/* 43 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var isObject = __webpack_require__(46)
-	var isHook = __webpack_require__(40)
-
-	module.exports = applyProperties
-
-	function applyProperties(node, props, previous) {
-	    for (var propName in props) {
-	        var propValue = props[propName]
-
-	        if (propValue === undefined) {
-	            removeProperty(node, props, previous, propName);
-	        } else if (isHook(propValue)) {
-	            propValue.hook(node,
-	                propName,
-	                previous ? previous[propName] : undefined)
-	        } else {
-	            if (isObject(propValue)) {
-	                patchObject(node, props, previous, propName, propValue);
-	            } else if (propValue !== undefined) {
-	                node[propName] = propValue
-	            }
-	        }
-	    }
-	}
-
-	function removeProperty(node, props, previous, propName) {
-	    if (previous) {
-	        var previousValue = previous[propName]
-
-	        if (!isHook(previousValue)) {
-	            if (propName === "attributes") {
-	                for (var attrName in previousValue) {
-	                    node.removeAttribute(attrName)
-	                }
-	            } else if (propName === "style") {
-	                for (var i in previousValue) {
-	                    node.style[i] = ""
-	                }
-	            } else if (typeof previousValue === "string") {
-	                node[propName] = ""
-	            } else {
-	                node[propName] = null
-	            }
-	        }
-	    }
-	}
-
-	function patchObject(node, props, previous, propName, propValue) {
-	    var previousValue = previous ? previous[propName] : undefined
-
-	    // Set attributes
-	    if (propName === "attributes") {
-	        for (var attrName in propValue) {
-	            var attrValue = propValue[attrName]
-
-	            if (attrValue === undefined) {
-	                node.removeAttribute(attrName)
-	            } else {
-	                node.setAttribute(attrName, attrValue)
-	            }
-	        }
-
-	        return
-	    }
-
-	    if(previousValue && isObject(previousValue) &&
-	        getPrototype(previousValue) !== getPrototype(propValue)) {
-	        node[propName] = propValue
-	        return
-	    }
-
-	    if (!isObject(node[propName])) {
-	        node[propName] = {}
-	    }
-
-	    var replacer = propName === "style" ? "" : undefined
-
-	    for (var k in propValue) {
-	        var value = propValue[k]
-	        node[propName][k] = (value === undefined) ? replacer : value
-	    }
-	}
-
-	function getPrototype(value) {
-	    if (Object.getPrototypeOf) {
-	        return Object.getPrototypeOf(value)
-	    } else if (value.__proto__) {
-	        return value.__proto__
-	    } else if (value.constructor) {
-	        return value.constructor.prototype
-	    }
-	}
-
-
-/***/ },
-/* 44 */
+/* 50 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = setNonEnumerable;
@@ -9681,119 +9854,89 @@ module.exports =
 
 
 /***/ },
-/* 45 */
+/* 51 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/*!
-	 * Cross-Browser Split 1.1.1
-	 * Copyright 2007-2012 Steven Levithan <stevenlevithan.com>
-	 * Available under the MIT License
-	 * ECMAScript compliant, uniform cross-browser split method
-	 */
+	module.exports = createHash
 
-	/**
-	 * Splits a string into an array of strings using a regex or string separator. Matches of the
-	 * separator are not included in the result array. However, if `separator` is a regex that contains
-	 * capturing groups, backreferences are spliced into the result each time `separator` is matched.
-	 * Fixes browser bugs compared to the native `String.prototype.split` and can be used reliably
-	 * cross-browser.
-	 * @param {String} str String to split.
-	 * @param {RegExp|String} separator Regex or string to use for separating the string.
-	 * @param {Number} [limit] Maximum number of items to include in the result array.
-	 * @returns {Array} Array of substrings.
-	 * @example
-	 *
-	 * // Basic use
-	 * split('a b c d', ' ');
-	 * // -> ['a', 'b', 'c', 'd']
-	 *
-	 * // With limit
-	 * split('a b c d', ' ', 2);
-	 * // -> ['a', 'b']
-	 *
-	 * // Backreferences in result array
-	 * split('..word1 word2..', /([a-z]+)(\d+)/i);
-	 * // -> ['..', 'word', '1', ' ', 'word', '2', '..']
-	 */
-	module.exports = (function split(undef) {
+	function createHash(elem) {
+	    var attributes = elem.attributes
+	    var hash = {}
 
-	  var nativeSplit = String.prototype.split,
-	    compliantExecNpcg = /()??/.exec("")[1] === undef,
-	    // NPCG: nonparticipating capturing group
-	    self;
-
-	  self = function(str, separator, limit) {
-	    // If `separator` is not a regex, use `nativeSplit`
-	    if (Object.prototype.toString.call(separator) !== "[object RegExp]") {
-	      return nativeSplit.call(str, separator, limit);
+	    if (attributes === null || attributes === undefined) {
+	        return hash
 	    }
-	    var output = [],
-	      flags = (separator.ignoreCase ? "i" : "") + (separator.multiline ? "m" : "") + (separator.extended ? "x" : "") + // Proposed for ES6
-	      (separator.sticky ? "y" : ""),
-	      // Firefox 3+
-	      lastLastIndex = 0,
-	      // Make `global` and avoid `lastIndex` issues by working with a copy
-	      separator = new RegExp(separator.source, flags + "g"),
-	      separator2, match, lastIndex, lastLength;
-	    str += ""; // Type-convert
-	    if (!compliantExecNpcg) {
-	      // Doesn't need flags gy, but they don't hurt
-	      separator2 = new RegExp("^" + separator.source + "$(?!\\s)", flags);
-	    }
-	    /* Values for `limit`, per the spec:
-	     * If undefined: 4294967295 // Math.pow(2, 32) - 1
-	     * If 0, Infinity, or NaN: 0
-	     * If positive number: limit = Math.floor(limit); if (limit > 4294967295) limit -= 4294967296;
-	     * If negative number: 4294967296 - Math.floor(Math.abs(limit))
-	     * If other: Type-convert, then use the above rules
-	     */
-	    limit = limit === undef ? -1 >>> 0 : // Math.pow(2, 32) - 1
-	    limit >>> 0; // ToUint32(limit)
-	    while (match = separator.exec(str)) {
-	      // `separator.lastIndex` is not reliable cross-browser
-	      lastIndex = match.index + match[0].length;
-	      if (lastIndex > lastLastIndex) {
-	        output.push(str.slice(lastLastIndex, match.index));
-	        // Fix browsers whose `exec` methods don't consistently return `undefined` for
-	        // nonparticipating capturing groups
-	        if (!compliantExecNpcg && match.length > 1) {
-	          match[0].replace(separator2, function() {
-	            for (var i = 1; i < arguments.length - 2; i++) {
-	              if (arguments[i] === undef) {
-	                match[i] = undef;
-	              }
-	            }
-	          });
+
+	    for (var i = 0; i < attributes.length; i++) {
+	        var attr = attributes[i]
+
+	        if (attr.name.substr(0,5) !== "data-") {
+	            continue
 	        }
-	        if (match.length > 1 && match.index < str.length) {
-	          Array.prototype.push.apply(output, match.slice(1));
-	        }
-	        lastLength = match[0].length;
-	        lastLastIndex = lastIndex;
-	        if (output.length >= limit) {
-	          break;
-	        }
-	      }
-	      if (separator.lastIndex === match.index) {
-	        separator.lastIndex++; // Avoid an infinite loop
-	      }
-	    }
-	    if (lastLastIndex === str.length) {
-	      if (lastLength || !separator.test("")) {
-	        output.push("");
-	      }
-	    } else {
-	      output.push(str.slice(lastLastIndex));
-	    }
-	    return output.length > limit ? output.slice(0, limit) : output;
-	  };
 
-	  return self;
-	})();
+	        hash[attr.name.substr(5)] = attr.value
+	    }
+
+	    return hash
+	}
 
 
 /***/ },
-/* 46 */
+/* 52 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var nargs = /\{([0-9a-zA-Z]+)\}/g
+	var slice = Array.prototype.slice
+
+	module.exports = template
+
+	function template(string) {
+	    var args
+
+	    if (arguments.length === 2 && typeof arguments[1] === "object") {
+	        args = arguments[1]
+	    } else {
+	        args = slice.call(arguments, 1)
+	    }
+
+	    if (!args || !args.hasOwnProperty) {
+	        args = {}
+	    }
+
+	    return string.replace(nargs, function replaceArg(match, i, index) {
+	        var result
+
+	        if (string[index - 1] === "{" &&
+	            string[index + match.length] === "}") {
+	            return i
+	        } else {
+	            result = args.hasOwnProperty(i) ? args[i] : null
+	            if (result === null || result === undefined) {
+	                return ""
+	            }
+
+	            return result
+	        }
+	    })
+	}
+
+
+/***/ },
+/* 53 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var nativeIsArray = Array.isArray
+	var toString = Object.prototype.toString
+
+	module.exports = nativeIsArray || isArray
+
+	function isArray(obj) {
+	    return toString.call(obj) === "[object Array]"
+	}
+
+
+/***/ },
+/* 54 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = isObject
@@ -9804,7 +9947,7 @@ module.exports =
 
 
 /***/ },
-/* 47 */
+/* 55 */
 /***/ function(module, exports, __webpack_require__) {
 
 	function head (a) {
@@ -10111,10 +10254,115 @@ module.exports =
 
 
 /***/ },
-/* 48 */
+/* 56 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isWidget = __webpack_require__(28)
+	module.exports = function(obj) {
+	    if (typeof obj === 'string') return camelCase(obj);
+	    return walk(obj);
+	};
+
+	function walk (obj) {
+	    if (!obj || typeof obj !== 'object') return obj;
+	    if (isDate(obj) || isRegex(obj)) return obj;
+	    if (isArray(obj)) return map(obj, walk);
+	    return reduce(objectKeys(obj), function (acc, key) {
+	        var camel = camelCase(key);
+	        acc[camel] = walk(obj[key]);
+	        return acc;
+	    }, {});
+	}
+
+	function camelCase(str) {
+	    return str.replace(/[_.-](\w|$)/g, function (_,x) {
+	        return x.toUpperCase();
+	    });
+	}
+
+	var isArray = Array.isArray || function (obj) {
+	    return Object.prototype.toString.call(obj) === '[object Array]';
+	};
+
+	var isDate = function (obj) {
+	    return Object.prototype.toString.call(obj) === '[object Date]';
+	};
+
+	var isRegex = function (obj) {
+	    return Object.prototype.toString.call(obj) === '[object RegExp]';
+	};
+
+	var has = Object.prototype.hasOwnProperty;
+	var objectKeys = Object.keys || function (obj) {
+	    var keys = [];
+	    for (var key in obj) {
+	        if (has.call(obj, key)) keys.push(key);
+	    }
+	    return keys;
+	};
+
+	function map (xs, f) {
+	    if (xs.map) return xs.map(f);
+	    var res = [];
+	    for (var i = 0; i < xs.length; i++) {
+	        res.push(f(xs[i], i));
+	    }
+	    return res;
+	}
+
+	function reduce (xs, f, acc) {
+	    if (xs.reduce) return xs.reduce(f, acc);
+	    for (var i = 0; i < xs.length; i++) {
+	        acc = f(acc, xs[i], i);
+	    }
+	    return acc;
+	}
+
+
+/***/ },
+/* 57 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = extend
+
+	function extend(target) {
+	    for (var i = 1; i < arguments.length; i++) {
+	        var source = arguments[i]
+
+	        for (var key in source) {
+	            if (source.hasOwnProperty(key)) {
+	                target[key] = source[key]
+	            }
+	        }
+	    }
+
+	    return target
+	}
+
+
+/***/ },
+/* 58 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = "1"
+
+
+/***/ },
+/* 59 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isHook
+
+	function isHook(hook) {
+	    return hook && typeof hook.hook === "function" &&
+	        !hook.hasOwnProperty("hook")
+	}
+
+
+/***/ },
+/* 60 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var isWidget = __webpack_require__(44)
 
 	module.exports = updateWidget
 
@@ -10132,12 +10380,12 @@ module.exports =
 
 
 /***/ },
-/* 49 */
+/* 61 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {var topLevel = typeof global !== 'undefined' ? global :
 	    typeof window !== 'undefined' ? window : {}
-	var minDoc = __webpack_require__(50);
+	var minDoc = __webpack_require__(64);
 
 	if (typeof document !== 'undefined') {
 	    module.exports = document;
@@ -10154,10 +10402,80 @@ module.exports =
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 50 */
+/* 62 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(global) {var root = typeof window !== 'undefined' ?
+	    window : typeof global !== 'undefined' ?
+	    global : {};
+
+	module.exports = Individual
+
+	function Individual(key, value) {
+	    if (root[key]) {
+	        return root[key]
+	    }
+
+	    Object.defineProperty(root, key, {
+	        value: value
+	        , configurable: true
+	    })
+
+	    return value
+	}
+	
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
+
+/***/ },
+/* 63 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var hiddenStore = __webpack_require__(65);
+
+	module.exports = createStore;
+
+	function createStore() {
+	    var key = {};
+
+	    return function (obj) {
+	        if (typeof obj !== 'object' || obj === null) {
+	            throw new Error('Weakmap-shim: Key must be object')
+	        }
+
+	        var store = obj.valueOf(key);
+	        return store && store.identity === key ?
+	            store : hiddenStore(obj, key);
+	    };
+	}
+
+
+/***/ },
+/* 64 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* (ignored) */
+
+/***/ },
+/* 65 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = hiddenStore;
+
+	function hiddenStore(obj, key) {
+	    var store = { identity: key };
+	    var valueOf = obj.valueOf;
+
+	    Object.defineProperty(obj, "valueOf", {
+	        value: function (value) {
+	            return value !== key ?
+	                valueOf.apply(this, arguments) : store;
+	        },
+	        writable: true
+	    });
+
+	    return store;
+	}
+
 
 /***/ }
 /******/ ])

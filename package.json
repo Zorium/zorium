@@ -1,6 +1,6 @@
 {
   "name": "zorium",
-  "version": "0.2.14",
+  "version": "0.4.0",
   "description": "",
   "main": "dist/zorium.js",
   "scripts": {
