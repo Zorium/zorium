@@ -10,7 +10,7 @@ isChild = (x) ->
   isVNode(x) or isVText(x) or isWidget(x) or isComponent(x)
 
 isChildren = (x) ->
-  _.isArray(x) or _.isString(x) or isChild(x)
+  _.isArray(x) or _.isString(x) or _.isNumber(x) or isChild(x)
 
 getTagAttributes = (tagName) ->
   re = /\[([^=\]]+)=?([^\]]+)?\]/g

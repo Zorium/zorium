@@ -65,6 +65,13 @@ describe 'Virtual DOM', ->
 
     z.render document.body, new AppComponent()
 
+  it 'renders numbers', ->
+    dom = z 'div', 123
+
+    result = '<div>123</div>'
+    $el = createElement(dom)
+    $el.isEqualNode(htmlToNode(result)).should.be true
+
   it 'supports default div tag prefixing', ->
     dom = z 'div',
       z '.container'

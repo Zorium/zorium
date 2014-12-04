@@ -97,6 +97,9 @@ renderChild = (child) ->
       renderedComponents.push child
     return tree
 
+  if _.isNumber(child)
+    return '' + child
+
   return child
 
 # coffeelint: disable=missing_fat_arrows
