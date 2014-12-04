@@ -697,11 +697,13 @@ describe 'z.state', ->
 
   it 'redraws on promise resolution', ->
     promise = new Promise (@resolve) => null
+    p2 = new Promise (@resolve) => null
     cnt = 0
     class App
       constructor: ->
         @state = z.state
           p: z.observe promise
+          p2: z.observe p2
       render: ->
         cnt += 1
         z 'div'
@@ -713,6 +715,7 @@ describe 'z.state', ->
     promise.resolve 'abc'
 
     promise.then ->
+      app.state().p.should.be 'abc'
       cnt.should.be 2
 
 
