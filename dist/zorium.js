@@ -323,9 +323,7 @@ module.exports =
 	  this._set._pending = promise;
 	  promise.then((function(_this) {
 	    return function(val) {
-	      console.log('PROMISE RESOLVED', val);
 	      if (_this._set._pending === promise) {
-	        console.log('SETTING VALUE');
 	        return _this._set(val);
 	      }
 	    };
@@ -8378,8 +8376,8 @@ module.exports =
 /* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isArray = __webpack_require__(50)
-	var isObject = __webpack_require__(49)
+	var isArray = __webpack_require__(49)
+	var isObject = __webpack_require__(50)
 
 	var VPatch = __webpack_require__(40)
 	var isVNode = __webpack_require__(16)
@@ -9841,17 +9839,6 @@ module.exports =
 /* 49 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = isObject
-
-	function isObject(x) {
-	    return typeof x === "object" && x !== null
-	}
-
-
-/***/ },
-/* 50 */
-/***/ function(module, exports, __webpack_require__) {
-
 	var nativeIsArray = Array.isArray
 	var toString = Object.prototype.toString
 
@@ -9859,6 +9846,17 @@ module.exports =
 
 	function isArray(obj) {
 	    return toString.call(obj) === "[object Array]"
+	}
+
+
+/***/ },
+/* 50 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isObject
+
+	function isObject(x) {
+	    return typeof x === "object" && x !== null
 	}
 
 
