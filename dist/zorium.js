@@ -158,6 +158,9 @@ module.exports =
 	    }
 	    return tree;
 	  }
+	  if (_.isNumber(child)) {
+	    return '' + child;
+	  }
 	  return child;
 	};
 
@@ -389,7 +392,7 @@ module.exports =
 	};
 
 	isChildren = function(x) {
-	  return _.isArray(x) || _.isString(x) || isChild(x);
+	  return _.isArray(x) || _.isString(x) || _.isNumber(x) || isChild(x);
 	};
 
 	getTagAttributes = function(tagName) {
@@ -444,15 +447,15 @@ module.exports =
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var TypedError = __webpack_require__(19)
+	var TypedError = __webpack_require__(20)
 
-	var VNode = __webpack_require__(20)
-	var VText = __webpack_require__(21)
-	var isVNode = __webpack_require__(22)
-	var isVText = __webpack_require__(23)
-	var isWidget = __webpack_require__(24)
-	var isHook = __webpack_require__(25)
-	var isVThunk = __webpack_require__(26)
+	var VNode = __webpack_require__(21)
+	var VText = __webpack_require__(22)
+	var isVNode = __webpack_require__(23)
+	var isVText = __webpack_require__(24)
+	var isWidget = __webpack_require__(25)
+	var isHook = __webpack_require__(26)
+	var isVThunk = __webpack_require__(27)
 
 	var parseTag = __webpack_require__(9)
 	var softSetHook = __webpack_require__(10)
@@ -577,7 +580,7 @@ module.exports =
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var diff = __webpack_require__(34)
+	var diff = __webpack_require__(19)
 
 	module.exports = diff
 
@@ -586,7 +589,7 @@ module.exports =
 /* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var patch = __webpack_require__(35)
+	var patch = __webpack_require__(37)
 
 	module.exports = patch
 
@@ -595,7 +598,7 @@ module.exports =
 /* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var createElement = __webpack_require__(36)
+	var createElement = __webpack_require__(38)
 
 	module.exports = createElement
 
@@ -7762,7 +7765,7 @@ module.exports =
 	  }
 	}.call(this));
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(33)(module), (function() { return this; }())))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(36)(module), (function() { return this; }())))
 
 /***/ },
 /* 8 */
@@ -8009,7 +8012,7 @@ module.exports =
 /* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var DataSet = __webpack_require__(38)
+	var DataSet = __webpack_require__(42)
 
 	module.exports = DataSetHook;
 
@@ -8033,7 +8036,7 @@ module.exports =
 /* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var DataSet = __webpack_require__(38)
+	var DataSet = __webpack_require__(42)
 
 	module.exports = DataSetHook;
 
@@ -8065,7 +8068,7 @@ module.exports =
 /***/ function(module, exports, __webpack_require__) {
 
 	var Observ = __webpack_require__(15)
-	var extend = __webpack_require__(40)
+	var extend = __webpack_require__(44)
 
 	var blackList = {
 	    "length": "Clashes with `Function.prototype.length`.\n",
@@ -8183,12 +8186,12 @@ module.exports =
 	// circular dep between ArrayMethods & this file
 	module.exports = ObservArray
 
-	var splice = __webpack_require__(27)
-	var put = __webpack_require__(28)
-	var set = __webpack_require__(29)
-	var transaction = __webpack_require__(30)
-	var ArrayMethods = __webpack_require__(31)
-	var addListener = __webpack_require__(32)
+	var splice = __webpack_require__(28)
+	var put = __webpack_require__(29)
+	var set = __webpack_require__(30)
+	var transaction = __webpack_require__(31)
+	var ArrayMethods = __webpack_require__(32)
+	var addListener = __webpack_require__(33)
 
 
 	/*  ObservArray := (Array<T>) => Observ<
@@ -8302,7 +8305,7 @@ module.exports =
 /* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(37)
+	var version = __webpack_require__(39)
 
 	module.exports = isVirtualNode
 
@@ -8315,7 +8318,7 @@ module.exports =
 /* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(37)
+	var version = __webpack_require__(39)
 
 	module.exports = isVirtualText
 
@@ -8339,487 +8342,16 @@ module.exports =
 /* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var camelize = __webpack_require__(56)
-	var template = __webpack_require__(52)
-	var extend = __webpack_require__(57)
-
-	module.exports = TypedError
-
-	function TypedError(args) {
-	    if (!args) {
-	        throw new Error("args is required");
-	    }
-	    if (!args.type) {
-	        throw new Error("args.type is required");
-	    }
-	    if (!args.message) {
-	        throw new Error("args.message is required");
-	    }
-
-	    var message = args.message
-
-	    if (args.type && !args.name) {
-	        var errorName = camelize(args.type) + "Error"
-	        args.name = errorName[0].toUpperCase() + errorName.substr(1)
-	    }
-
-	    createError.type = args.type;
-	    createError._name = args.name;
-
-	    return createError;
-
-	    function createError(opts) {
-	        var result = new Error()
-
-	        Object.defineProperty(result, "type", {
-	            value: result.type,
-	            enumerable: true,
-	            writable: true,
-	            configurable: true
-	        })
-
-	        var options = extend({}, args, opts)
-
-	        extend(result, options)
-	        result.message = template(message, options)
-
-	        return result
-	    }
-	}
-
-
-
-/***/ },
-/* 20 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(39)
-	var isVNode = __webpack_require__(22)
-	var isWidget = __webpack_require__(24)
-	var isVHook = __webpack_require__(25)
-
-	module.exports = VirtualNode
-
-	var noProperties = {}
-	var noChildren = []
-
-	function VirtualNode(tagName, properties, children, key, namespace) {
-	    this.tagName = tagName
-	    this.properties = properties || noProperties
-	    this.children = children || noChildren
-	    this.key = key != null ? String(key) : undefined
-	    this.namespace = (typeof namespace === "string") ? namespace : null
-
-	    var count = (children && children.length) || 0
-	    var descendants = 0
-	    var hasWidgets = false
-
-	    for (var i = 0; i < count; i++) {
-	        var child = children[i]
-	        if (isVNode(child)) {
-	            descendants += child.count || 0
-
-	            if (!hasWidgets && child.hasWidgets) {
-	                hasWidgets = true
-	            }
-	        } else if (!hasWidgets && isWidget(child)) {
-	            if (typeof child.destroy === "function") {
-	                hasWidgets = true
-	            }
-	        }
-	    }
-
-	    this.count = count + descendants
-	    this.hasWidgets = hasWidgets
-	}
-
-	VirtualNode.prototype.version = version
-	VirtualNode.prototype.type = "VirtualNode"
-
-
-/***/ },
-/* 21 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(39)
-
-	module.exports = VirtualText
-
-	function VirtualText(text) {
-	    this.text = String(text)
-	}
-
-	VirtualText.prototype.version = version
-	VirtualText.prototype.type = "VirtualText"
-
-
-/***/ },
-/* 22 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(39)
-
-	module.exports = isVirtualNode
-
-	function isVirtualNode(x) {
-	    return x && x.type === "VirtualNode" && x.version === version
-	}
-
-
-/***/ },
-/* 23 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(39)
-
-	module.exports = isVirtualText
-
-	function isVirtualText(x) {
-	    return x && x.type === "VirtualText" && x.version === version
-	}
-
-
-/***/ },
-/* 24 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isWidget
-
-	function isWidget(w) {
-	    return w && w.type === "Widget"
-	}
-
-
-/***/ },
-/* 25 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isHook
-
-	function isHook(hook) {
-	    return hook && typeof hook.hook === "function" &&
-	        !hook.hasOwnProperty("hook")
-	}
-
-
-/***/ },
-/* 26 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isThunk
-
-	function isThunk(t) {
-	    return t && t.type === "Thunk"
-	}
-
-
-/***/ },
-/* 27 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var slice = Array.prototype.slice
-
-	var addListener = __webpack_require__(32)
-	var setNonEnumerable = __webpack_require__(50);
-
-	module.exports = splice
-
-	// `obs.splice` is a mutable implementation of `splice()`
-	// that mutates both `list` and the internal `valueList` that
-	// is the current value of `obs` itself
-	function splice(index, amount) {
-	    var obs = this
-	    var args = slice.call(arguments, 0)
-	    var valueList = obs().slice()
-
-	    // generate a list of args to mutate the internal
-	    // list of only obs
-	    var valueArgs = args.map(function (value, index) {
-	        if (index === 0 || index === 1) {
-	            return value
-	        }
-
-	        // must unpack observables that we are adding
-	        return typeof value === "function" ? value() : value
-	    })
-
-	    valueList.splice.apply(valueList, valueArgs)
-	    // we remove the observs that we remove
-	    var removed = obs._list.splice.apply(obs._list, args)
-
-	    var extraRemoveListeners = args.slice(2).map(function (observ) {
-	        return typeof observ === "function" ?
-	            addListener(obs, observ) :
-	            null
-	    })
-	    extraRemoveListeners.unshift(args[0], args[1])
-	    var removedListeners = obs._removeListeners.splice
-	        .apply(obs._removeListeners, extraRemoveListeners)
-
-	    removedListeners.forEach(function (removeObservListener) {
-	        if (removeObservListener) {
-	            removeObservListener()
-	        }
-	    })
-
-	    setNonEnumerable(valueList, "_diff", [valueArgs])
-
-	    obs._observSet(valueList)
-	    return removed
-	}
-
-
-/***/ },
-/* 28 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var addListener = __webpack_require__(32)
-	var setNonEnumerable = __webpack_require__(50);
-
-	module.exports = put
-
-	// `obs.put` is a mutable implementation of `array[index] = value`
-	// that mutates both `list` and the internal `valueList` that
-	// is the current value of `obs` itself
-	function put(index, value) {
-	    var obs = this
-	    var valueList = obs().slice()
-
-	    var originalLength = valueList.length
-	    valueList[index] = typeof value === "function" ? value() : value
-
-	    obs._list[index] = value
-
-	    // remove past value listener if was observ
-	    var removeListener = obs._removeListeners[index]
-	    if (removeListener){
-	        removeListener()
-	    }
-
-	    // add listener to value if observ
-	    obs._removeListeners[index] = typeof value === "function" ?
-	        addListener(obs, value) :
-	        null
-
-	    // fake splice diff
-	    var valueArgs = index < originalLength ? 
-	        [index, 1, valueList[index]] :
-	        [index, 0, valueList[index]]
-
-	    setNonEnumerable(valueList, "_diff", [valueArgs])
-
-	    obs._observSet(valueList)
-	    return value
-	}
-
-/***/ },
-/* 29 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var addListener = __webpack_require__(32)
-	var setNonEnumerable = __webpack_require__(50)
-	var adiff = __webpack_require__(55)
-
-	module.exports = set
-
-	function set(rawList) {
-	    if (!Array.isArray(rawList)) rawList = []
-	        
-	    var obs = this
-	    var changes = adiff.diff(obs._list, rawList)
-	    var valueList = obs().slice()
-
-	    var valueChanges = changes.map(applyPatch.bind(obs, valueList))
-
-	    setNonEnumerable(valueList, "_diff", valueChanges)
-
-	    obs._observSet(valueList)
-	    return changes
-	}
-
-	function applyPatch (valueList, args) {
-	    var obs = this
-	    var valueArgs = args.map(unpack)
-
-	    valueList.splice.apply(valueList, valueArgs)
-	    obs._list.splice.apply(obs._list, args)
-
-	    var extraRemoveListeners = args.slice(2).map(function (observ) {
-	        return typeof observ === "function" ?
-	            addListener(obs, observ) :
-	            null
-	    })
-
-	    extraRemoveListeners.unshift(args[0], args[1])
-	    var removedListeners = obs._removeListeners.splice
-	        .apply(obs._removeListeners, extraRemoveListeners)
-
-	    removedListeners.forEach(function (removeObservListener) {
-	        if (removeObservListener) {
-	            removeObservListener()
-	        }
-	    })
-
-	    return valueArgs
-	}
-
-	function unpack(value, index){
-	    if (index === 0 || index === 1) {
-	        return value
-	    }
-	    return typeof value === "function" ? value() : value
-	}
-
-/***/ },
-/* 30 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = transaction
-
-	function transaction (func) {
-	    var obs = this
-	    var rawList = obs._list.slice()
-
-	    if (func(rawList) !== false){ // allow cancel
-	        return obs.set(rawList)
-	    }
-
-	}
-
-/***/ },
-/* 31 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var ObservArray = __webpack_require__(14)
-
-	var slice = Array.prototype.slice
-
-	var ARRAY_METHODS = [
-	    "concat", "slice", "every", "filter", "forEach", "indexOf",
-	    "join", "lastIndexOf", "map", "reduce", "reduceRight",
-	    "some", "toString", "toLocaleString"
-	]
-
-	var methods = ARRAY_METHODS.map(function (name) {
-	    return [name, function () {
-	        var res = this._list[name].apply(this._list, arguments)
-
-	        if (res && Array.isArray(res)) {
-	            res = ObservArray(res)
-	        }
-
-	        return res
-	    }]
-	})
-
-	module.exports = ArrayMethods
-
-	function ArrayMethods(obs) {
-	    obs.push = observArrayPush
-	    obs.pop = observArrayPop
-	    obs.shift = observArrayShift
-	    obs.unshift = observArrayUnshift
-	    obs.reverse = notImplemented
-	    obs.sort = notImplemented
-
-	    methods.forEach(function (tuple) {
-	        obs[tuple[0]] = tuple[1]
-	    })
-	    return obs
-	}
-
-
-
-	function observArrayPush() {
-	    var args = slice.call(arguments)
-	    args.unshift(this._list.length, 0)
-	    this.splice.apply(this, args)
-
-	    return this._list.length
-	}
-	function observArrayPop() {
-	    return this.splice(this._list.length - 1, 1)[0]
-	}
-	function observArrayShift() {
-	    return this.splice(0, 1)[0]
-	}
-	function observArrayUnshift() {
-	    var args = slice.call(arguments)
-	    args.unshift(0, 0)
-	    this.splice.apply(this, args)
-
-	    return this._list.length
-	}
-
-
-	function notImplemented() {
-	    throw new Error("Pull request welcome")
-	}
-
-
-/***/ },
-/* 32 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var setNonEnumerable = __webpack_require__(50);
-
-	module.exports = addListener
-
-	function addListener(observArray, observ) {
-	    var list = observArray._list
-
-	    return observ(function (value) {
-	        var valueList =  observArray().slice()
-	        var index = list.indexOf(observ)
-
-	        // This code path should never hit. If this happens
-	        // there's a bug in the cleanup code
-	        if (index === -1) {
-	            var message = "observ-array: Unremoved observ listener"
-	            var err = new Error(message)
-	            err.list = list
-	            err.index = index
-	            err.observ = observ
-	            throw err
-	        }
-
-	        valueList.splice(index, 1, value)
-	        setNonEnumerable(valueList, "_diff", [ [index, 1, value] ])
-
-	        observArray._observSet(valueList)
-	    })
-	}
-
-
-/***/ },
-/* 33 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = function(module) {
-		if(!module.webpackPolyfill) {
-			module.deprecate = function() {};
-			module.paths = [];
-			// module.parent = undefined by default
-			module.children = [];
-			module.webpackPolyfill = 1;
-		}
-		return module;
-	}
-
-
-/***/ },
-/* 34 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var isArray = __webpack_require__(53)
-	var isObject = __webpack_require__(54)
-
-	var VPatch = __webpack_require__(41)
-	var isVNode = __webpack_require__(42)
-	var isVText = __webpack_require__(43)
-	var isWidget = __webpack_require__(44)
-	var isThunk = __webpack_require__(45)
-	var handleThunk = __webpack_require__(46)
+	var isArray = __webpack_require__(49)
+	var isObject = __webpack_require__(50)
+
+	var VPatch = __webpack_require__(40)
+	var isVNode = __webpack_require__(16)
+	var isVText = __webpack_require__(17)
+	var isWidget = __webpack_require__(18)
+	var isThunk = __webpack_require__(34)
+	var isHook = __webpack_require__(35)
+	var handleThunk = __webpack_require__(41)
 
 	module.exports = diff
 
@@ -8831,11 +8363,6 @@ module.exports =
 
 	function walk(a, b, patch, index) {
 	    if (a === b) {
-	        if (isThunk(a) || isThunk(b)) {
-	            thunks(a, b, patch, index)
-	        } else {
-	            hooks(b, patch, index)
-	        }
 	        return
 	    }
 
@@ -8851,7 +8378,7 @@ module.exports =
 	            if (a.tagName === b.tagName &&
 	                a.namespace === b.namespace &&
 	                a.key === b.key) {
-	                var propsPatch = diffProps(a.properties, b.properties, b.hooks)
+	                var propsPatch = diffProps(a.properties, b.properties)
 	                if (propsPatch) {
 	                    apply = appendPatch(apply,
 	                        new VPatch(VPatch.PROPS, a, propsPatch))
@@ -8885,7 +8412,7 @@ module.exports =
 	    }
 	}
 
-	function diffProps(a, b, hooks) {
+	function diffProps(a, b) {
 	    var diff
 
 	    for (var aKey in a) {
@@ -8897,25 +8424,23 @@ module.exports =
 	        var aValue = a[aKey]
 	        var bValue = b[aKey]
 
-	        if (hooks && aKey in hooks) {
-	            diff = diff || {}
-	            diff[aKey] = bValue
-	        } else {
-	            if (isObject(aValue) && isObject(bValue)) {
-	                if (getPrototype(bValue) !== getPrototype(aValue)) {
-	                    diff = diff || {}
-	                    diff[aKey] = bValue
-	                } else {
-	                    var objectDiff = diffProps(aValue, bValue)
-	                    if (objectDiff) {
-	                        diff = diff || {}
-	                        diff[aKey] = objectDiff
-	                    }
-	                }
-	            } else if (aValue !== bValue) {
+	        if (isObject(aValue) && isObject(bValue)) {
+	            if (getPrototype(bValue) !== getPrototype(aValue)) {
 	                diff = diff || {}
 	                diff[aKey] = bValue
+	            } else if (isHook(bValue)) {
+	                diff = diff || {}
+	                diff[aKey] = bValue
+	            } else {
+	                var objectDiff = diffProps(aValue, bValue)
+	                if (objectDiff) {
+	                    diff = diff || {}
+	                    diff[aKey] = objectDiff
+	                }
 	            }
+	        } else if (aValue !== bValue) {
+	            diff = diff || {}
+	            diff[aKey] = bValue
 	        }
 	    }
 
@@ -9021,30 +8546,6 @@ module.exports =
 	    }
 
 	    return false;
-	}
-
-	// Execute hooks when two nodes are identical
-	function hooks(vNode, patch, index) {
-	    if (isVNode(vNode)) {
-	        if (vNode.hooks) {
-	            patch[index] = new VPatch(VPatch.PROPS, vNode.hooks, vNode.hooks)
-	        }
-
-	        if (vNode.descendantHooks) {
-	            var children = vNode.children
-	            var len = children.length
-	            for (var i = 0; i < len; i++) {
-	                var child = children[i]
-	                index += 1
-
-	                hooks(child, patch, index)
-
-	                if (isVNode(child) && child.count) {
-	                    index += child.count
-	                }
-	            }
-	        }
-	    }
 	}
 
 	// List diff, naive left to right reordering
@@ -9158,14 +8659,509 @@ module.exports =
 
 
 /***/ },
+/* 20 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var camelize = __webpack_require__(55)
+	var template = __webpack_require__(52)
+	var extend = __webpack_require__(56)
+
+	module.exports = TypedError
+
+	function TypedError(args) {
+	    if (!args) {
+	        throw new Error("args is required");
+	    }
+	    if (!args.type) {
+	        throw new Error("args.type is required");
+	    }
+	    if (!args.message) {
+	        throw new Error("args.message is required");
+	    }
+
+	    var message = args.message
+
+	    if (args.type && !args.name) {
+	        var errorName = camelize(args.type) + "Error"
+	        args.name = errorName[0].toUpperCase() + errorName.substr(1)
+	    }
+
+	    createError.type = args.type;
+	    createError._name = args.name;
+
+	    return createError;
+
+	    function createError(opts) {
+	        var result = new Error()
+
+	        Object.defineProperty(result, "type", {
+	            value: result.type,
+	            enumerable: true,
+	            writable: true,
+	            configurable: true
+	        })
+
+	        var options = extend({}, args, opts)
+
+	        extend(result, options)
+	        result.message = template(message, options)
+
+	        return result
+	    }
+	}
+
+
+
+/***/ },
+/* 21 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(43)
+	var isVNode = __webpack_require__(23)
+	var isWidget = __webpack_require__(25)
+	var isVHook = __webpack_require__(26)
+
+	module.exports = VirtualNode
+
+	var noProperties = {}
+	var noChildren = []
+
+	function VirtualNode(tagName, properties, children, key, namespace) {
+	    this.tagName = tagName
+	    this.properties = properties || noProperties
+	    this.children = children || noChildren
+	    this.key = key != null ? String(key) : undefined
+	    this.namespace = (typeof namespace === "string") ? namespace : null
+
+	    var count = (children && children.length) || 0
+	    var descendants = 0
+	    var hasWidgets = false
+
+	    for (var i = 0; i < count; i++) {
+	        var child = children[i]
+	        if (isVNode(child)) {
+	            descendants += child.count || 0
+
+	            if (!hasWidgets && child.hasWidgets) {
+	                hasWidgets = true
+	            }
+	        } else if (!hasWidgets && isWidget(child)) {
+	            if (typeof child.destroy === "function") {
+	                hasWidgets = true
+	            }
+	        }
+	    }
+
+	    this.count = count + descendants
+	    this.hasWidgets = hasWidgets
+	}
+
+	VirtualNode.prototype.version = version
+	VirtualNode.prototype.type = "VirtualNode"
+
+
+/***/ },
+/* 22 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(43)
+
+	module.exports = VirtualText
+
+	function VirtualText(text) {
+	    this.text = String(text)
+	}
+
+	VirtualText.prototype.version = version
+	VirtualText.prototype.type = "VirtualText"
+
+
+/***/ },
+/* 23 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(43)
+
+	module.exports = isVirtualNode
+
+	function isVirtualNode(x) {
+	    return x && x.type === "VirtualNode" && x.version === version
+	}
+
+
+/***/ },
+/* 24 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(43)
+
+	module.exports = isVirtualText
+
+	function isVirtualText(x) {
+	    return x && x.type === "VirtualText" && x.version === version
+	}
+
+
+/***/ },
+/* 25 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isWidget
+
+	function isWidget(w) {
+	    return w && w.type === "Widget"
+	}
+
+
+/***/ },
+/* 26 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isHook
+
+	function isHook(hook) {
+	    return hook && typeof hook.hook === "function" &&
+	        !hook.hasOwnProperty("hook")
+	}
+
+
+/***/ },
+/* 27 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isThunk
+
+	function isThunk(t) {
+	    return t && t.type === "Thunk"
+	}
+
+
+/***/ },
+/* 28 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var slice = Array.prototype.slice
+
+	var addListener = __webpack_require__(33)
+	var setNonEnumerable = __webpack_require__(48);
+
+	module.exports = splice
+
+	// `obs.splice` is a mutable implementation of `splice()`
+	// that mutates both `list` and the internal `valueList` that
+	// is the current value of `obs` itself
+	function splice(index, amount) {
+	    var obs = this
+	    var args = slice.call(arguments, 0)
+	    var valueList = obs().slice()
+
+	    // generate a list of args to mutate the internal
+	    // list of only obs
+	    var valueArgs = args.map(function (value, index) {
+	        if (index === 0 || index === 1) {
+	            return value
+	        }
+
+	        // must unpack observables that we are adding
+	        return typeof value === "function" ? value() : value
+	    })
+
+	    valueList.splice.apply(valueList, valueArgs)
+	    // we remove the observs that we remove
+	    var removed = obs._list.splice.apply(obs._list, args)
+
+	    var extraRemoveListeners = args.slice(2).map(function (observ) {
+	        return typeof observ === "function" ?
+	            addListener(obs, observ) :
+	            null
+	    })
+	    extraRemoveListeners.unshift(args[0], args[1])
+	    var removedListeners = obs._removeListeners.splice
+	        .apply(obs._removeListeners, extraRemoveListeners)
+
+	    removedListeners.forEach(function (removeObservListener) {
+	        if (removeObservListener) {
+	            removeObservListener()
+	        }
+	    })
+
+	    setNonEnumerable(valueList, "_diff", [valueArgs])
+
+	    obs._observSet(valueList)
+	    return removed
+	}
+
+
+/***/ },
+/* 29 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var addListener = __webpack_require__(33)
+	var setNonEnumerable = __webpack_require__(48);
+
+	module.exports = put
+
+	// `obs.put` is a mutable implementation of `array[index] = value`
+	// that mutates both `list` and the internal `valueList` that
+	// is the current value of `obs` itself
+	function put(index, value) {
+	    var obs = this
+	    var valueList = obs().slice()
+
+	    var originalLength = valueList.length
+	    valueList[index] = typeof value === "function" ? value() : value
+
+	    obs._list[index] = value
+
+	    // remove past value listener if was observ
+	    var removeListener = obs._removeListeners[index]
+	    if (removeListener){
+	        removeListener()
+	    }
+
+	    // add listener to value if observ
+	    obs._removeListeners[index] = typeof value === "function" ?
+	        addListener(obs, value) :
+	        null
+
+	    // fake splice diff
+	    var valueArgs = index < originalLength ? 
+	        [index, 1, valueList[index]] :
+	        [index, 0, valueList[index]]
+
+	    setNonEnumerable(valueList, "_diff", [valueArgs])
+
+	    obs._observSet(valueList)
+	    return value
+	}
+
+/***/ },
+/* 30 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var addListener = __webpack_require__(33)
+	var setNonEnumerable = __webpack_require__(48)
+	var adiff = __webpack_require__(54)
+
+	module.exports = set
+
+	function set(rawList) {
+	    if (!Array.isArray(rawList)) rawList = []
+	        
+	    var obs = this
+	    var changes = adiff.diff(obs._list, rawList)
+	    var valueList = obs().slice()
+
+	    var valueChanges = changes.map(applyPatch.bind(obs, valueList))
+
+	    setNonEnumerable(valueList, "_diff", valueChanges)
+
+	    obs._observSet(valueList)
+	    return changes
+	}
+
+	function applyPatch (valueList, args) {
+	    var obs = this
+	    var valueArgs = args.map(unpack)
+
+	    valueList.splice.apply(valueList, valueArgs)
+	    obs._list.splice.apply(obs._list, args)
+
+	    var extraRemoveListeners = args.slice(2).map(function (observ) {
+	        return typeof observ === "function" ?
+	            addListener(obs, observ) :
+	            null
+	    })
+
+	    extraRemoveListeners.unshift(args[0], args[1])
+	    var removedListeners = obs._removeListeners.splice
+	        .apply(obs._removeListeners, extraRemoveListeners)
+
+	    removedListeners.forEach(function (removeObservListener) {
+	        if (removeObservListener) {
+	            removeObservListener()
+	        }
+	    })
+
+	    return valueArgs
+	}
+
+	function unpack(value, index){
+	    if (index === 0 || index === 1) {
+	        return value
+	    }
+	    return typeof value === "function" ? value() : value
+	}
+
+/***/ },
+/* 31 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = transaction
+
+	function transaction (func) {
+	    var obs = this
+	    var rawList = obs._list.slice()
+
+	    if (func(rawList) !== false){ // allow cancel
+	        return obs.set(rawList)
+	    }
+
+	}
+
+/***/ },
+/* 32 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var ObservArray = __webpack_require__(14)
+
+	var slice = Array.prototype.slice
+
+	var ARRAY_METHODS = [
+	    "concat", "slice", "every", "filter", "forEach", "indexOf",
+	    "join", "lastIndexOf", "map", "reduce", "reduceRight",
+	    "some", "toString", "toLocaleString"
+	]
+
+	var methods = ARRAY_METHODS.map(function (name) {
+	    return [name, function () {
+	        var res = this._list[name].apply(this._list, arguments)
+
+	        if (res && Array.isArray(res)) {
+	            res = ObservArray(res)
+	        }
+
+	        return res
+	    }]
+	})
+
+	module.exports = ArrayMethods
+
+	function ArrayMethods(obs) {
+	    obs.push = observArrayPush
+	    obs.pop = observArrayPop
+	    obs.shift = observArrayShift
+	    obs.unshift = observArrayUnshift
+	    obs.reverse = notImplemented
+	    obs.sort = notImplemented
+
+	    methods.forEach(function (tuple) {
+	        obs[tuple[0]] = tuple[1]
+	    })
+	    return obs
+	}
+
+
+
+	function observArrayPush() {
+	    var args = slice.call(arguments)
+	    args.unshift(this._list.length, 0)
+	    this.splice.apply(this, args)
+
+	    return this._list.length
+	}
+	function observArrayPop() {
+	    return this.splice(this._list.length - 1, 1)[0]
+	}
+	function observArrayShift() {
+	    return this.splice(0, 1)[0]
+	}
+	function observArrayUnshift() {
+	    var args = slice.call(arguments)
+	    args.unshift(0, 0)
+	    this.splice.apply(this, args)
+
+	    return this._list.length
+	}
+
+
+	function notImplemented() {
+	    throw new Error("Pull request welcome")
+	}
+
+
+/***/ },
+/* 33 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var setNonEnumerable = __webpack_require__(48);
+
+	module.exports = addListener
+
+	function addListener(observArray, observ) {
+	    var list = observArray._list
+
+	    return observ(function (value) {
+	        var valueList =  observArray().slice()
+	        var index = list.indexOf(observ)
+
+	        // This code path should never hit. If this happens
+	        // there's a bug in the cleanup code
+	        if (index === -1) {
+	            var message = "observ-array: Unremoved observ listener"
+	            var err = new Error(message)
+	            err.list = list
+	            err.index = index
+	            err.observ = observ
+	            throw err
+	        }
+
+	        valueList.splice(index, 1, value)
+	        setNonEnumerable(valueList, "_diff", [ [index, 1, value] ])
+
+	        observArray._observSet(valueList)
+	    })
+	}
+
+
+/***/ },
+/* 34 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isThunk
+
+	function isThunk(t) {
+	    return t && t.type === "Thunk"
+	}
+
+
+/***/ },
 /* 35 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var document = __webpack_require__(61)
+	module.exports = isHook
+
+	function isHook(hook) {
+	    return hook && typeof hook.hook === "function" &&
+	        !hook.hasOwnProperty("hook")
+	}
+
+
+/***/ },
+/* 36 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = function(module) {
+		if(!module.webpackPolyfill) {
+			module.deprecate = function() {};
+			module.paths = [];
+			// module.parent = undefined by default
+			module.children = [];
+			module.webpackPolyfill = 1;
+		}
+		return module;
+	}
+
+
+/***/ },
+/* 37 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var document = __webpack_require__(58)
 	var isArray = __webpack_require__(53)
 
-	var domIndex = __webpack_require__(48)
-	var patchOp = __webpack_require__(49)
+	var domIndex = __webpack_require__(46)
+	var patchOp = __webpack_require__(47)
 	module.exports = patch
 
 	function patch(rootNode, patches) {
@@ -9240,17 +9236,17 @@ module.exports =
 
 
 /***/ },
-/* 36 */
+/* 38 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var document = __webpack_require__(61)
+	var document = __webpack_require__(58)
 
-	var applyProperties = __webpack_require__(47)
+	var applyProperties = __webpack_require__(45)
 
-	var isVNode = __webpack_require__(42)
-	var isVText = __webpack_require__(43)
-	var isWidget = __webpack_require__(44)
-	var handleThunk = __webpack_require__(46)
+	var isVNode = __webpack_require__(16)
+	var isVText = __webpack_require__(17)
+	var isWidget = __webpack_require__(18)
+	var handleThunk = __webpack_require__(41)
 
 	module.exports = createElement
 
@@ -9292,37 +9288,6 @@ module.exports =
 
 
 /***/ },
-/* 37 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = "1"
-
-
-/***/ },
-/* 38 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var createStore = __webpack_require__(63)
-	var Individual = __webpack_require__(62)
-
-	var createHash = __webpack_require__(51)
-
-	var hashStore = Individual("__DATA_SET_WEAKMAP@3", createStore())
-
-	module.exports = DataSet
-
-	function DataSet(elem) {
-	    var store = hashStore(elem)
-
-	    if (!store.hash) {
-	        store.hash = createHash(elem)
-	    }
-
-	    return store.hash
-	}
-
-
-/***/ },
 /* 39 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -9333,30 +9298,7 @@ module.exports =
 /* 40 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = extend
-
-	function extend() {
-	    var target = {}
-
-	    for (var i = 0; i < arguments.length; i++) {
-	        var source = arguments[i]
-
-	        for (var key in source) {
-	            if (source.hasOwnProperty(key)) {
-	                target[key] = source[key]
-	            }
-	        }
-	    }
-
-	    return target
-	}
-
-
-/***/ },
-/* 41 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(58)
+	var version = __webpack_require__(39)
 
 	VirtualPatch.NONE = 0
 	VirtualPatch.VTEXT = 1
@@ -9381,61 +9323,13 @@ module.exports =
 
 
 /***/ },
-/* 42 */
+/* 41 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(58)
-
-	module.exports = isVirtualNode
-
-	function isVirtualNode(x) {
-	    return x && x.type === "VirtualNode" && x.version === version
-	}
-
-
-/***/ },
-/* 43 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(58)
-
-	module.exports = isVirtualText
-
-	function isVirtualText(x) {
-	    return x && x.type === "VirtualText" && x.version === version
-	}
-
-
-/***/ },
-/* 44 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isWidget
-
-	function isWidget(w) {
-	    return w && w.type === "Widget"
-	}
-
-
-/***/ },
-/* 45 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isThunk
-
-	function isThunk(t) {
-	    return t && t.type === "Thunk"
-	}
-
-
-/***/ },
-/* 46 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var isVNode = __webpack_require__(42)
-	var isVText = __webpack_require__(43)
-	var isWidget = __webpack_require__(44)
-	var isThunk = __webpack_require__(45)
+	var isVNode = __webpack_require__(16)
+	var isVText = __webpack_require__(17)
+	var isWidget = __webpack_require__(18)
+	var isThunk = __webpack_require__(34)
 
 	module.exports = handleThunk
 
@@ -9475,11 +9369,65 @@ module.exports =
 
 
 /***/ },
-/* 47 */
+/* 42 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isObject = __webpack_require__(54)
-	var isHook = __webpack_require__(59)
+	var createStore = __webpack_require__(60)
+	var Individual = __webpack_require__(59)
+
+	var createHash = __webpack_require__(51)
+
+	var hashStore = Individual("__DATA_SET_WEAKMAP@3", createStore())
+
+	module.exports = DataSet
+
+	function DataSet(elem) {
+	    var store = hashStore(elem)
+
+	    if (!store.hash) {
+	        store.hash = createHash(elem)
+	    }
+
+	    return store.hash
+	}
+
+
+/***/ },
+/* 43 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = "1"
+
+
+/***/ },
+/* 44 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = extend
+
+	function extend() {
+	    var target = {}
+
+	    for (var i = 0; i < arguments.length; i++) {
+	        var source = arguments[i]
+
+	        for (var key in source) {
+	            if (source.hasOwnProperty(key)) {
+	                target[key] = source[key]
+	            }
+	        }
+	    }
+
+	    return target
+	}
+
+
+/***/ },
+/* 45 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var isObject = __webpack_require__(61)
+	var isHook = __webpack_require__(35)
 
 	module.exports = applyProperties
 
@@ -9573,7 +9521,7 @@ module.exports =
 
 
 /***/ },
-/* 48 */
+/* 46 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Maps a virtual DOM tree onto a real DOM tree in an efficient manner.
@@ -9664,16 +9612,16 @@ module.exports =
 
 
 /***/ },
-/* 49 */
+/* 47 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var applyProperties = __webpack_require__(47)
+	var applyProperties = __webpack_require__(45)
 
-	var isWidget = __webpack_require__(44)
-	var VPatch = __webpack_require__(41)
+	var isWidget = __webpack_require__(18)
+	var VPatch = __webpack_require__(40)
 
-	var render = __webpack_require__(36)
-	var updateWidget = __webpack_require__(60)
+	var render = __webpack_require__(38)
+	var updateWidget = __webpack_require__(57)
 
 	module.exports = applyPatch
 
@@ -9838,7 +9786,7 @@ module.exports =
 
 
 /***/ },
-/* 50 */
+/* 48 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = setNonEnumerable;
@@ -9850,6 +9798,31 @@ module.exports =
 	        configurable: true,
 	        enumerable: false
 	    });
+	}
+
+
+/***/ },
+/* 49 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var nativeIsArray = Array.isArray
+	var toString = Object.prototype.toString
+
+	module.exports = nativeIsArray || isArray
+
+	function isArray(obj) {
+	    return toString.call(obj) === "[object Array]"
+	}
+
+
+/***/ },
+/* 50 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isObject
+
+	function isObject(x) {
+	    return typeof x === "object" && x !== null
 	}
 
 
@@ -9937,17 +9910,6 @@ module.exports =
 
 /***/ },
 /* 54 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isObject
-
-	function isObject(x) {
-	    return typeof x === "object" && x !== null
-	}
-
-
-/***/ },
-/* 55 */
 /***/ function(module, exports, __webpack_require__) {
 
 	function head (a) {
@@ -10254,7 +10216,7 @@ module.exports =
 
 
 /***/ },
-/* 56 */
+/* 55 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = function(obj) {
@@ -10319,7 +10281,7 @@ module.exports =
 
 
 /***/ },
-/* 57 */
+/* 56 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = extend
@@ -10340,29 +10302,10 @@ module.exports =
 
 
 /***/ },
-/* 58 */
+/* 57 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = "1"
-
-
-/***/ },
-/* 59 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isHook
-
-	function isHook(hook) {
-	    return hook && typeof hook.hook === "function" &&
-	        !hook.hasOwnProperty("hook")
-	}
-
-
-/***/ },
-/* 60 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var isWidget = __webpack_require__(44)
+	var isWidget = __webpack_require__(18)
 
 	module.exports = updateWidget
 
@@ -10380,12 +10323,12 @@ module.exports =
 
 
 /***/ },
-/* 61 */
+/* 58 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {var topLevel = typeof global !== 'undefined' ? global :
 	    typeof window !== 'undefined' ? window : {}
-	var minDoc = __webpack_require__(64);
+	var minDoc = __webpack_require__(62);
 
 	if (typeof document !== 'undefined') {
 	    module.exports = document;
@@ -10402,7 +10345,7 @@ module.exports =
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 62 */
+/* 59 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {var root = typeof window !== 'undefined' ?
@@ -10427,10 +10370,10 @@ module.exports =
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 63 */
+/* 60 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var hiddenStore = __webpack_require__(65);
+	var hiddenStore = __webpack_require__(63);
 
 	module.exports = createStore;
 
@@ -10450,13 +10393,24 @@ module.exports =
 
 
 /***/ },
-/* 64 */
+/* 61 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isObject
+
+	function isObject(x) {
+	    return typeof x === "object" && x !== null
+	}
+
+
+/***/ },
+/* 62 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* (ignored) */
 
 /***/ },
-/* 65 */
+/* 63 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = hiddenStore;
