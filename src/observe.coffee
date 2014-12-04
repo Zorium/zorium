@@ -13,9 +13,7 @@ observePromise = (observable, promise) ->
   this._set._pending = promise
 
   promise.then (val) =>
-    console.log 'PROMISE RESOLVED', val
     if this._set._pending is promise
-      console.log 'SETTING VALUE'
       this._set val
 
   for key in Object.keys promise
