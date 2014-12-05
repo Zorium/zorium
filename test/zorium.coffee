@@ -733,15 +733,15 @@ describe 'router', ->
       root = document.createElement 'div'
 
       z.router.setRoot root
-      z.router.add '/test', App
-      z.router.add '/test2', App2
+      z.router.add '/testa1', App
+      z.router.add '/testa2', App2
 
       result1 = '<div><div>Hello World</div></div>'
       result2 = '<div><div>World Hello</div></div>'
 
-      z.router.go '/test'
+      z.router.go '/testa1'
       root.isEqualNode(htmlToNode(result1)).should.be true
-      z.router.go '/test2'
+      z.router.go '/testa2'
       root.isEqualNode(htmlToNode(result2)).should.be true
 
   it 'updates location hash', ->
@@ -786,39 +786,7 @@ describe 'router', ->
     z.router.go '/test2'
     window.location.pathname.should.be '/test2'
 
-  it 'default routes hash', ->
-    class App
-      render: ->
-        z 'div', 'Hello World'
-
-    root = document.createElement 'div'
-
-    z.router.setRoot root
-    z.router.add '/test', App
-
-    z.router.setMode 'hash'
-
-    window.location.hash = '/test'
-    z.router.go()
-    window.location.hash.should.be '#/test'
-
-  it 'default routes pathname', ->
-    class App
-      render: ->
-        z 'div', 'Hello World'
-
-    root = document.createElement 'div'
-
-    z.router.setRoot root
-    z.router.add '/test', App
-
-    z.router.setMode 'pathname'
-
-    window.history.pushState null, null, '/test'
-    z.router.go()
-    window.location.pathname.should.be '/test'
-
-  it 'responds to hashchange', ->
+  it 'responds to hashchange', (done) ->
     class App
       render: ->
         z 'div', 'Hello World'
@@ -839,16 +807,18 @@ describe 'router', ->
     z.router.setMode 'hash'
 
     window.location.hash = '/test'
-    z.router.go()
-    root.isEqualNode(htmlToNode(result1)).should.be true
+    setTimeout ->
+      root.isEqualNode(htmlToNode(result1)).should.be true
 
-    window.location.hash = '/test2'
-    z.router.go()
-    root.isEqualNode(htmlToNode(result2)).should.be true
+      window.location.hash = '/test2'
+      setTimeout ->
+        root.isEqualNode(htmlToNode(result2)).should.be true
 
-    window.location.hash = '/test'
-    window.location.hash.should.be '#/test'
-    root.isEqualNode(htmlToNode(result1)).should.be true
+        window.location.hash = '/test'
+        window.location.hash.should.be '#/test'
+        setTimeout ->
+          root.isEqualNode(htmlToNode(result1)).should.be true
+          done()
 
   it 'responds to popstate', (done) ->
     class App
@@ -862,28 +832,26 @@ describe 'router', ->
     root = document.createElement 'div'
 
     z.router.setRoot root
-    z.router.add '/test', App
-    z.router.add '/test2', App2
+    z.router.add '/testa', App
+    z.router.add '/testb', App2
 
     result1 = '<div><div>Hello World</div></div>'
     result2 = '<div><div>World Hello</div></div>'
 
     z.router.setMode 'pathname'
 
-    window.history.pushState null, null, '/test'
-    z.router.go()
-    root.isEqualNode(htmlToNode(result1)).should.be true
-
-    window.history.pushState null, null, '/test2'
-    z.router.go()
-    root.isEqualNode(htmlToNode(result2)).should.be true
-
+    window.history.pushState null, null, '/testa'
+    window.history.pushState null, null, '/testa'
     window.history.back()
     setTimeout ->
-      window.location.pathname.should.be '/test'
       root.isEqualNode(htmlToNode(result1)).should.be true
-      done()
-    , 160
+      window.history.pushState null, null, '/testb'
+      window.history.pushState null, null, '/testb'
+      window.history.back()
+      setTimeout ->
+        root.isEqualNode(htmlToNode(result2)).should.be true
+        window.location.pathname.should.be '/testb'
+        done()
 
   it 'passes params', ->
     class App
@@ -902,3 +870,54 @@ describe 'router', ->
     z.router.go('/test/world')
 
     root.isEqualNode(htmlToNode(result)).should.be true
+
+
+  it 'emits route events (hash mode)', (done) ->
+    class App
+      render: ->
+        z 'div', 'Hello World'
+
+    root = document.createElement 'div'
+
+    z.router.setRoot root
+    z.router.add '/test3', App
+
+    z.router.setMode 'hash'
+
+    callbackCalled = 0
+    listener = (path) ->
+      callbackCalled += 1
+      path.should.be '/test3'
+
+    z.router.on('route', listener)
+    z.router.go '/test3'
+    z.router.off('route', listener)
+
+    setTimeout ->
+      callbackCalled.should.be 1
+      done()
+
+  it 'emits route events (path mode)', (done) ->
+    class App
+      render: ->
+        z 'div', 'Hello World'
+
+    root = document.createElement 'div'
+
+    z.router.setRoot root
+    z.router.add '/test4', App
+
+    z.router.setMode 'pathname'
+
+    callbackCalled = 0
+    listener = (path) ->
+      callbackCalled += 1
+      path.should.be '/test4'
+
+    z.router.on('route', listener)
+    z.router.go '/test4'
+    z.router.off('route', listener)
+
+    setTimeout ->
+      callbackCalled.should.be 1
+      done()

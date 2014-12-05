@@ -228,14 +228,25 @@ module.exports =
 
 	ZoriumRouter = (function() {
 	  function ZoriumRouter() {
+	    this.off = __bind(this.off, this);
+	    this.emit = __bind(this.emit, this);
+	    this.on = __bind(this.on, this);
 	    this.go = __bind(this.go, this);
 	    this.setMode = __bind(this.setMode, this);
 	    this.setRoot = __bind(this.setRoot, this);
+	    this.events = {};
 	    this.routesRoot = null;
 	    this.mode = 'hash';
+	    this.currentPath = null;
 	    window.addEventListener('popstate', (function(_this) {
 	      return function(e) {
-	        return _this.go();
+	        return setTimeout(function() {
+	          var hash, path, pathname;
+	          pathname = window.location.pathname;
+	          hash = window.location.hash.slice(1);
+	          path = _this.mode === 'pathname' ? pathname || hash : hash || pathname;
+	          return _this.go(path);
+	        });
 	      };
 	    })(this));
 	  }
@@ -267,27 +278,39 @@ module.exports =
 	  };
 
 	  ZoriumRouter.prototype.go = function(path) {
-	    var componentClass, hash, pathname, route;
-	    if (!this.routesRoot) {
+	    var componentClass, route;
+	    if (!(path && this.routesRoot && path !== this.currentPath)) {
 	      return;
-	    }
-	    if (path) {
-	      if (this.mode === 'pathname') {
-	        window.history.pushState(null, null, path);
-	      } else {
-	        window.location.hash = path;
-	      }
-	    } else {
-	      pathname = window.location.pathname;
-	      hash = window.location.hash.slice(1);
-	      path = this.mode === 'pathname' ? pathname || hash : hash || pathname;
 	    }
 	    route = router.match(path);
 	    if (!route) {
 	      return;
 	    }
+	    this.currentPath = path;
+	    if (this.mode === 'pathname') {
+	      window.history.pushState(null, null, path);
+	    } else {
+	      window.location.hash = path;
+	    }
+	    this.emit('route', path);
 	    componentClass = route.fn();
 	    return z.render(this.routesRoot, new componentClass(route.params));
+	  };
+
+	  ZoriumRouter.prototype.on = function(name, fn) {
+	    return (this.events[name] = this.events[name] || []).push(fn);
+	  };
+
+	  ZoriumRouter.prototype.emit = function(name) {
+	    var args;
+	    args = _.rest(arguments);
+	    return _.map(this.events[name], function(fn) {
+	      return fn.apply(null, args);
+	    });
+	  };
+
+	  ZoriumRouter.prototype.off = function(name, fn) {
+	    return this.events[name] = _.without(this.events[name], fn);
 	  };
 
 	  return ZoriumRouter;
@@ -8220,12 +8243,12 @@ module.exports =
 	// circular dep between ArrayMethods & this file
 	module.exports = ObservArray
 
-	var splice = __webpack_require__(28)
-	var put = __webpack_require__(29)
-	var set = __webpack_require__(30)
-	var transaction = __webpack_require__(31)
-	var ArrayMethods = __webpack_require__(32)
-	var addListener = __webpack_require__(33)
+	var splice = __webpack_require__(30)
+	var put = __webpack_require__(31)
+	var set = __webpack_require__(32)
+	var transaction = __webpack_require__(33)
+	var ArrayMethods = __webpack_require__(34)
+	var addListener = __webpack_require__(35)
 
 
 	/*  ObservArray := (Array<T>) => Observ<
@@ -8377,14 +8400,14 @@ module.exports =
 /***/ function(module, exports, __webpack_require__) {
 
 	var isArray = __webpack_require__(49)
-	var isObject = __webpack_require__(50)
+	var isObject = __webpack_require__(48)
 
 	var VPatch = __webpack_require__(40)
 	var isVNode = __webpack_require__(16)
 	var isVText = __webpack_require__(17)
 	var isWidget = __webpack_require__(18)
-	var isThunk = __webpack_require__(34)
-	var isHook = __webpack_require__(35)
+	var isThunk = __webpack_require__(28)
+	var isHook = __webpack_require__(29)
 	var handleThunk = __webpack_require__(41)
 
 	module.exports = diff
@@ -8874,10 +8897,33 @@ module.exports =
 /* 28 */
 /***/ function(module, exports, __webpack_require__) {
 
+	module.exports = isThunk
+
+	function isThunk(t) {
+	    return t && t.type === "Thunk"
+	}
+
+
+/***/ },
+/* 29 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isHook
+
+	function isHook(hook) {
+	    return hook && typeof hook.hook === "function" &&
+	        !hook.hasOwnProperty("hook")
+	}
+
+
+/***/ },
+/* 30 */
+/***/ function(module, exports, __webpack_require__) {
+
 	var slice = Array.prototype.slice
 
-	var addListener = __webpack_require__(33)
-	var setNonEnumerable = __webpack_require__(48);
+	var addListener = __webpack_require__(35)
+	var setNonEnumerable = __webpack_require__(50);
 
 	module.exports = splice
 
@@ -8927,11 +8973,11 @@ module.exports =
 
 
 /***/ },
-/* 29 */
+/* 31 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var addListener = __webpack_require__(33)
-	var setNonEnumerable = __webpack_require__(48);
+	var addListener = __webpack_require__(35)
+	var setNonEnumerable = __webpack_require__(50);
 
 	module.exports = put
 
@@ -8970,11 +9016,11 @@ module.exports =
 	}
 
 /***/ },
-/* 30 */
+/* 32 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var addListener = __webpack_require__(33)
-	var setNonEnumerable = __webpack_require__(48)
+	var addListener = __webpack_require__(35)
+	var setNonEnumerable = __webpack_require__(50)
 	var adiff = __webpack_require__(54)
 
 	module.exports = set
@@ -9028,7 +9074,7 @@ module.exports =
 	}
 
 /***/ },
-/* 31 */
+/* 33 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = transaction
@@ -9044,7 +9090,7 @@ module.exports =
 	}
 
 /***/ },
-/* 32 */
+/* 34 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var ObservArray = __webpack_require__(14)
@@ -9115,10 +9161,10 @@ module.exports =
 
 
 /***/ },
-/* 33 */
+/* 35 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var setNonEnumerable = __webpack_require__(48);
+	var setNonEnumerable = __webpack_require__(50);
 
 	module.exports = addListener
 
@@ -9149,29 +9195,6 @@ module.exports =
 
 
 /***/ },
-/* 34 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isThunk
-
-	function isThunk(t) {
-	    return t && t.type === "Thunk"
-	}
-
-
-/***/ },
-/* 35 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isHook
-
-	function isHook(hook) {
-	    return hook && typeof hook.hook === "function" &&
-	        !hook.hasOwnProperty("hook")
-	}
-
-
-/***/ },
 /* 36 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -9194,8 +9217,8 @@ module.exports =
 	var document = __webpack_require__(58)
 	var isArray = __webpack_require__(53)
 
-	var domIndex = __webpack_require__(45)
-	var patchOp = __webpack_require__(46)
+	var domIndex = __webpack_require__(46)
+	var patchOp = __webpack_require__(47)
 	module.exports = patch
 
 	function patch(rootNode, patches) {
@@ -9275,7 +9298,7 @@ module.exports =
 
 	var document = __webpack_require__(58)
 
-	var applyProperties = __webpack_require__(47)
+	var applyProperties = __webpack_require__(45)
 
 	var isVNode = __webpack_require__(16)
 	var isVText = __webpack_require__(17)
@@ -9363,7 +9386,7 @@ module.exports =
 	var isVNode = __webpack_require__(16)
 	var isVText = __webpack_require__(17)
 	var isWidget = __webpack_require__(18)
-	var isThunk = __webpack_require__(34)
+	var isThunk = __webpack_require__(28)
 
 	module.exports = handleThunk
 
@@ -9460,6 +9483,104 @@ module.exports =
 /* 45 */
 /***/ function(module, exports, __webpack_require__) {
 
+	var isObject = __webpack_require__(61)
+	var isHook = __webpack_require__(29)
+
+	module.exports = applyProperties
+
+	function applyProperties(node, props, previous) {
+	    for (var propName in props) {
+	        var propValue = props[propName]
+
+	        if (propValue === undefined) {
+	            removeProperty(node, props, previous, propName);
+	        } else if (isHook(propValue)) {
+	            propValue.hook(node,
+	                propName,
+	                previous ? previous[propName] : undefined)
+	        } else {
+	            if (isObject(propValue)) {
+	                patchObject(node, props, previous, propName, propValue);
+	            } else if (propValue !== undefined) {
+	                node[propName] = propValue
+	            }
+	        }
+	    }
+	}
+
+	function removeProperty(node, props, previous, propName) {
+	    if (previous) {
+	        var previousValue = previous[propName]
+
+	        if (!isHook(previousValue)) {
+	            if (propName === "attributes") {
+	                for (var attrName in previousValue) {
+	                    node.removeAttribute(attrName)
+	                }
+	            } else if (propName === "style") {
+	                for (var i in previousValue) {
+	                    node.style[i] = ""
+	                }
+	            } else if (typeof previousValue === "string") {
+	                node[propName] = ""
+	            } else {
+	                node[propName] = null
+	            }
+	        }
+	    }
+	}
+
+	function patchObject(node, props, previous, propName, propValue) {
+	    var previousValue = previous ? previous[propName] : undefined
+
+	    // Set attributes
+	    if (propName === "attributes") {
+	        for (var attrName in propValue) {
+	            var attrValue = propValue[attrName]
+
+	            if (attrValue === undefined) {
+	                node.removeAttribute(attrName)
+	            } else {
+	                node.setAttribute(attrName, attrValue)
+	            }
+	        }
+
+	        return
+	    }
+
+	    if(previousValue && isObject(previousValue) &&
+	        getPrototype(previousValue) !== getPrototype(propValue)) {
+	        node[propName] = propValue
+	        return
+	    }
+
+	    if (!isObject(node[propName])) {
+	        node[propName] = {}
+	    }
+
+	    var replacer = propName === "style" ? "" : undefined
+
+	    for (var k in propValue) {
+	        var value = propValue[k]
+	        node[propName][k] = (value === undefined) ? replacer : value
+	    }
+	}
+
+	function getPrototype(value) {
+	    if (Object.getPrototypeOf) {
+	        return Object.getPrototypeOf(value)
+	    } else if (value.__proto__) {
+	        return value.__proto__
+	    } else if (value.constructor) {
+	        return value.constructor.prototype
+	    }
+	}
+
+
+/***/ },
+/* 46 */
+/***/ function(module, exports, __webpack_require__) {
+
 	// Maps a virtual DOM tree onto a real DOM tree in an efficient manner.
 	// We don't want to read all of the DOM nodes in the tree so we use
 	// the in-order tree indexing to eliminate recursion down certain branches.
@@ -9548,10 +9669,10 @@ module.exports =
 
 
 /***/ },
-/* 46 */
+/* 47 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var applyProperties = __webpack_require__(47)
+	var applyProperties = __webpack_require__(45)
 
 	var isWidget = __webpack_require__(18)
 	var VPatch = __webpack_require__(40)
@@ -9722,116 +9843,13 @@ module.exports =
 
 
 /***/ },
-/* 47 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var isObject = __webpack_require__(61)
-	var isHook = __webpack_require__(35)
-
-	module.exports = applyProperties
-
-	function applyProperties(node, props, previous) {
-	    for (var propName in props) {
-	        var propValue = props[propName]
-
-	        if (propValue === undefined) {
-	            removeProperty(node, props, previous, propName);
-	        } else if (isHook(propValue)) {
-	            propValue.hook(node,
-	                propName,
-	                previous ? previous[propName] : undefined)
-	        } else {
-	            if (isObject(propValue)) {
-	                patchObject(node, props, previous, propName, propValue);
-	            } else if (propValue !== undefined) {
-	                node[propName] = propValue
-	            }
-	        }
-	    }
-	}
-
-	function removeProperty(node, props, previous, propName) {
-	    if (previous) {
-	        var previousValue = previous[propName]
-
-	        if (!isHook(previousValue)) {
-	            if (propName === "attributes") {
-	                for (var attrName in previousValue) {
-	                    node.removeAttribute(attrName)
-	                }
-	            } else if (propName === "style") {
-	                for (var i in previousValue) {
-	                    node.style[i] = ""
-	                }
-	            } else if (typeof previousValue === "string") {
-	                node[propName] = ""
-	            } else {
-	                node[propName] = null
-	            }
-	        }
-	    }
-	}
-
-	function patchObject(node, props, previous, propName, propValue) {
-	    var previousValue = previous ? previous[propName] : undefined
-
-	    // Set attributes
-	    if (propName === "attributes") {
-	        for (var attrName in propValue) {
-	            var attrValue = propValue[attrName]
-
-	            if (attrValue === undefined) {
-	                node.removeAttribute(attrName)
-	            } else {
-	                node.setAttribute(attrName, attrValue)
-	            }
-	        }
-
-	        return
-	    }
-
-	    if(previousValue && isObject(previousValue) &&
-	        getPrototype(previousValue) !== getPrototype(propValue)) {
-	        node[propName] = propValue
-	        return
-	    }
-
-	    if (!isObject(node[propName])) {
-	        node[propName] = {}
-	    }
-
-	    var replacer = propName === "style" ? "" : undefined
-
-	    for (var k in propValue) {
-	        var value = propValue[k]
-	        node[propName][k] = (value === undefined) ? replacer : value
-	    }
-	}
-
-	function getPrototype(value) {
-	    if (Object.getPrototypeOf) {
-	        return Object.getPrototypeOf(value)
-	    } else if (value.__proto__) {
-	        return value.__proto__
-	    } else if (value.constructor) {
-	        return value.constructor.prototype
-	    }
-	}
-
-
-/***/ },
 /* 48 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = setNonEnumerable;
+	module.exports = isObject
 
-	function setNonEnumerable(object, key, value) {
-	    Object.defineProperty(object, key, {
-	        value: value,
-	        writable: true,
-	        configurable: true,
-	        enumerable: false
-	    });
+	function isObject(x) {
+	    return typeof x === "object" && x !== null
 	}
 
 
@@ -9853,10 +9871,15 @@ module.exports =
 /* 50 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = isObject
+	module.exports = setNonEnumerable;
 
-	function isObject(x) {
-	    return typeof x === "object" && x !== null
+	function setNonEnumerable(object, key, value) {
+	    Object.defineProperty(object, key, {
+	        value: value,
+	        writable: true,
+	        configurable: true,
+	        enumerable: false
+	    });
 	}
 
 

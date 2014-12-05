@@ -164,9 +164,19 @@ z.redraw = ->
 
 class ZoriumRouter
   constructor: ->
+    @events = {}
     @routesRoot = null
     @mode = 'hash'
-    window.addEventListener 'popstate', (e) => @go()
+    @currentPath = null
+
+    window.addEventListener 'popstate', (e) =>
+      setTimeout =>
+        pathname = window.location.pathname
+        hash = window.location.hash.slice(1)
+        path = if @mode is 'pathname' then pathname or hash \
+               else hash or pathname
+        @go(path)
+
 
   setRoot: ($root) =>
     @routesRoot = $root
@@ -192,28 +202,36 @@ class ZoriumRouter
     z tagName, props, children
 
   go: (path) =>
-    unless @routesRoot
+    unless path and @routesRoot and path isnt @currentPath
       return
-
-    if path
-      if @mode is 'pathname'
-        window.history.pushState null, null, path
-      else
-        window.location.hash = path
-    else
-      pathname = window.location.pathname
-      hash = window.location.hash.slice(1)
-      path = if @mode is 'pathname' then pathname or hash \
-              else hash or pathname
 
     route = router.match(path)
 
     unless route
       return
 
+    @currentPath = path
+
+    if @mode is 'pathname'
+      window.history.pushState null, null, path
+    else
+      window.location.hash = path
+
+    @emit 'route', path
+
     componentClass = route.fn()
     z.render @routesRoot, new componentClass(route.params)
 
+  on: (name, fn) =>
+    (@events[name] = @events[name] or []).push(fn)
+
+  emit: (name) =>
+    args = _.rest arguments
+    _.map @events[name], (fn) ->
+      fn.apply null, args
+
+  off: (name, fn) =>
+    @events[name] = _.without(@events[name], fn)
 
 z.router = new ZoriumRouter()
 
