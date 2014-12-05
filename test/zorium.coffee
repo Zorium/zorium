@@ -852,6 +852,8 @@ describe 'router', ->
         root.isEqualNode(htmlToNode(result2)).should.be true
         window.location.pathname.should.be '/testb'
         done()
+      , 90
+    , 90
 
   it 'passes params', ->
     class App
