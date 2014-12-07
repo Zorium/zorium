@@ -202,6 +202,14 @@ class ZoriumRouter
     z tagName, props, children
 
   go: (path) =>
+
+    # default path to current location
+    unless path
+      pathname = window.location.pathname
+      hash = window.location.hash.slice(1)
+      path = if @mode is 'pathname' then pathname or hash \
+             else hash or pathname
+
     unless path and @routesRoot and path isnt @currentPath
       return
 

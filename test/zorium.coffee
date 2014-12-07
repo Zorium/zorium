@@ -786,6 +786,28 @@ describe 'router', ->
     z.router.go '/test2'
     window.location.pathname.should.be '/test2'
 
+  it 'routes to default current path', ->
+    class App
+      render: ->
+        z 'div', 'Hello World'
+
+    root = document.createElement 'div'
+
+    result1 = '<div></div>'
+    result2 = '<div><div>Hello World</div></div>'
+
+    window.history.pushState null, null, '/test-pre'
+
+    z.router.setRoot root
+    z.router.add '/test-pre', App
+
+    z.router.setMode 'pathname'
+    root.isEqualNode(htmlToNode(result1)).should.be true
+    z.router.go()
+    root.isEqualNode(htmlToNode(result2)).should.be true
+    window.location.pathname.should.be '/test-pre'
+
+
   it 'responds to hashchange', (done) ->
     class App
       render: ->
