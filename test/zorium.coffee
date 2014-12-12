@@ -718,6 +718,18 @@ describe 'z.state', ->
       app.state().p.should.be 'abc'
       cnt.should.be 2
 
+  it 'allows overriding of promised params', ->
+    p = new Promise (@resolve) => null
+    state = z.state
+      p: z.observe p
+
+    state.set
+      p: 'y'
+
+    p.resolve('p')
+    p.then ->
+      state().p.should.be 'y'
+
 
 describe 'router', ->
   describe 'route()', ->

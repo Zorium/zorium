@@ -62,8 +62,8 @@ observe = (obj) ->
       promise = diff
       observed._promise = diff
 
-      promise.then (val) =>
-        if this._promise is promise
+      promise.then (val) ->
+        if observed._promise is promise
           _set val
 
       for key in Object.keys promise
@@ -72,6 +72,7 @@ observe = (obj) ->
 
       _set null
     else
+      observed._promise = null
       _set diff
 
   return observed
