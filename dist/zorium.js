@@ -405,13 +405,11 @@ module.exports =
 	    if (isPromise(diff)) {
 	      promise = diff;
 	      observed._promise = diff;
-	      promise.then((function(_this) {
-	        return function(val) {
-	          if (_this._promise === promise) {
-	            return _set(val);
-	          }
-	        };
-	      })(this));
+	      promise.then(function(val) {
+	        if (observed._promise === promise) {
+	          return _set(val);
+	        }
+	      });
 	      _ref = Object.keys(promise);
 	      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
 	        key = _ref[_i];
@@ -421,6 +419,7 @@ module.exports =
 	      }
 	      return _set(null);
 	    } else {
+	      observed._promise = null;
 	      return _set(diff);
 	    }
 	  };
@@ -8402,8 +8401,8 @@ module.exports =
 /* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isArray = __webpack_require__(50)
-	var isObject = __webpack_require__(49)
+	var isArray = __webpack_require__(49)
+	var isObject = __webpack_require__(50)
 
 	var VPatch = __webpack_require__(40)
 	var isVNode = __webpack_require__(16)
@@ -9220,8 +9219,8 @@ module.exports =
 	var document = __webpack_require__(58)
 	var isArray = __webpack_require__(53)
 
-	var domIndex = __webpack_require__(45)
-	var patchOp = __webpack_require__(46)
+	var domIndex = __webpack_require__(46)
+	var patchOp = __webpack_require__(47)
 	module.exports = patch
 
 	function patch(rootNode, patches) {
@@ -9301,7 +9300,7 @@ module.exports =
 
 	var document = __webpack_require__(58)
 
-	var applyProperties = __webpack_require__(47)
+	var applyProperties = __webpack_require__(45)
 
 	var isVNode = __webpack_require__(16)
 	var isVText = __webpack_require__(17)
@@ -9486,6 +9485,104 @@ module.exports =
 /* 45 */
 /***/ function(module, exports, __webpack_require__) {
 
+	var isObject = __webpack_require__(61)
+	var isHook = __webpack_require__(35)
+
+	module.exports = applyProperties
+
+	function applyProperties(node, props, previous) {
+	    for (var propName in props) {
+	        var propValue = props[propName]
+
+	        if (propValue === undefined) {
+	            removeProperty(node, props, previous, propName);
+	        } else if (isHook(propValue)) {
+	            propValue.hook(node,
+	                propName,
+	                previous ? previous[propName] : undefined)
+	        } else {
+	            if (isObject(propValue)) {
+	                patchObject(node, props, previous, propName, propValue);
+	            } else if (propValue !== undefined) {
+	                node[propName] = propValue
+	            }
+	        }
+	    }
+	}
+
+	function removeProperty(node, props, previous, propName) {
+	    if (previous) {
+	        var previousValue = previous[propName]
+
+	        if (!isHook(previousValue)) {
+	            if (propName === "attributes") {
+	                for (var attrName in previousValue) {
+	                    node.removeAttribute(attrName)
+	                }
+	            } else if (propName === "style") {
+	                for (var i in previousValue) {
+	                    node.style[i] = ""
+	                }
+	            } else if (typeof previousValue === "string") {
+	                node[propName] = ""
+	            } else {
+	                node[propName] = null
+	            }
+	        }
+	    }
+	}
+
+	function patchObject(node, props, previous, propName, propValue) {
+	    var previousValue = previous ? previous[propName] : undefined
+
+	    // Set attributes
+	    if (propName === "attributes") {
+	        for (var attrName in propValue) {
+	            var attrValue = propValue[attrName]
+
+	            if (attrValue === undefined) {
+	                node.removeAttribute(attrName)
+	            } else {
+	                node.setAttribute(attrName, attrValue)
+	            }
+	        }
+
+	        return
+	    }
+
+	    if(previousValue && isObject(previousValue) &&
+	        getPrototype(previousValue) !== getPrototype(propValue)) {
+	        node[propName] = propValue
+	        return
+	    }
+
+	    if (!isObject(node[propName])) {
+	        node[propName] = {}
+	    }
+
+	    var replacer = propName === "style" ? "" : undefined
+
+	    for (var k in propValue) {
+	        var value = propValue[k]
+	        node[propName][k] = (value === undefined) ? replacer : value
+	    }
+	}
+
+	function getPrototype(value) {
+	    if (Object.getPrototypeOf) {
+	        return Object.getPrototypeOf(value)
+	    } else if (value.__proto__) {
+	        return value.__proto__
+	    } else if (value.constructor) {
+	        return value.constructor.prototype
+	    }
+	}
+
+
+/***/ },
+/* 46 */
+/***/ function(module, exports, __webpack_require__) {
+
 	// Maps a virtual DOM tree onto a real DOM tree in an efficient manner.
 	// We don't want to read all of the DOM nodes in the tree so we use
 	// the in-order tree indexing to eliminate recursion down certain branches.
@@ -9574,10 +9671,10 @@ module.exports =
 
 
 /***/ },
-/* 46 */
+/* 47 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var applyProperties = __webpack_require__(47)
+	var applyProperties = __webpack_require__(45)
 
 	var isWidget = __webpack_require__(18)
 	var VPatch = __webpack_require__(40)
@@ -9748,104 +9845,6 @@ module.exports =
 
 
 /***/ },
-/* 47 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var isObject = __webpack_require__(61)
-	var isHook = __webpack_require__(35)
-
-	module.exports = applyProperties
-
-	function applyProperties(node, props, previous) {
-	    for (var propName in props) {
-	        var propValue = props[propName]
-
-	        if (propValue === undefined) {
-	            removeProperty(node, props, previous, propName);
-	        } else if (isHook(propValue)) {
-	            propValue.hook(node,
-	                propName,
-	                previous ? previous[propName] : undefined)
-	        } else {
-	            if (isObject(propValue)) {
-	                patchObject(node, props, previous, propName, propValue);
-	            } else if (propValue !== undefined) {
-	                node[propName] = propValue
-	            }
-	        }
-	    }
-	}
-
-	function removeProperty(node, props, previous, propName) {
-	    if (previous) {
-	        var previousValue = previous[propName]
-
-	        if (!isHook(previousValue)) {
-	            if (propName === "attributes") {
-	                for (var attrName in previousValue) {
-	                    node.removeAttribute(attrName)
-	                }
-	            } else if (propName === "style") {
-	                for (var i in previousValue) {
-	                    node.style[i] = ""
-	                }
-	            } else if (typeof previousValue === "string") {
-	                node[propName] = ""
-	            } else {
-	                node[propName] = null
-	            }
-	        }
-	    }
-	}
-
-	function patchObject(node, props, previous, propName, propValue) {
-	    var previousValue = previous ? previous[propName] : undefined
-
-	    // Set attributes
-	    if (propName === "attributes") {
-	        for (var attrName in propValue) {
-	            var attrValue = propValue[attrName]
-
-	            if (attrValue === undefined) {
-	                node.removeAttribute(attrName)
-	            } else {
-	                node.setAttribute(attrName, attrValue)
-	            }
-	        }
-
-	        return
-	    }
-
-	    if(previousValue && isObject(previousValue) &&
-	        getPrototype(previousValue) !== getPrototype(propValue)) {
-	        node[propName] = propValue
-	        return
-	    }
-
-	    if (!isObject(node[propName])) {
-	        node[propName] = {}
-	    }
-
-	    var replacer = propName === "style" ? "" : undefined
-
-	    for (var k in propValue) {
-	        var value = propValue[k]
-	        node[propName][k] = (value === undefined) ? replacer : value
-	    }
-	}
-
-	function getPrototype(value) {
-	    if (Object.getPrototypeOf) {
-	        return Object.getPrototypeOf(value)
-	    } else if (value.__proto__) {
-	        return value.__proto__
-	    } else if (value.constructor) {
-	        return value.constructor.prototype
-	    }
-	}
-
-
-/***/ },
 /* 48 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -9865,17 +9864,6 @@ module.exports =
 /* 49 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = isObject
-
-	function isObject(x) {
-	    return typeof x === "object" && x !== null
-	}
-
-
-/***/ },
-/* 50 */
-/***/ function(module, exports, __webpack_require__) {
-
 	var nativeIsArray = Array.isArray
 	var toString = Object.prototype.toString
 
@@ -9883,6 +9871,17 @@ module.exports =
 
 	function isArray(obj) {
 	    return toString.call(obj) === "[object Array]"
+	}
+
+
+/***/ },
+/* 50 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isObject
+
+	function isObject(x) {
+	    return typeof x === "object" && x !== null
 	}
 
 
