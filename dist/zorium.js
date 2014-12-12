@@ -346,16 +346,14 @@ module.exports =
 	};
 
 	observePromise = function(observable, promise) {
-	  var key, _i, _len, _ref;
-	  this._set = observable.set.bind(observable);
-	  this._set._pending = promise;
-	  promise.then((function(_this) {
-	    return function(val) {
-	      if (_this._set._pending === promise) {
-	        return _this._set(val);
-	      }
-	    };
-	  })(this));
+	  var key, _i, _len, _ref, _set;
+	  _set = observable.set.bind(observable);
+	  observable._pending = promise;
+	  promise.then(function(val) {
+	    if (observable._pending === promise) {
+	      return _set(val);
+	    }
+	  });
 	  _ref = Object.keys(promise);
 	  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
 	    key = _ref[_i];
@@ -386,7 +384,7 @@ module.exports =
 	};
 
 	observe = function(obj) {
-	  var observed;
+	  var observed, _set;
 	  observed = (function() {
 	    switch (false) {
 	      case !_.isFunction(obj):
@@ -401,16 +399,16 @@ module.exports =
 	        return observ(obj);
 	    }
 	  })();
-	  observed._set = observed.set.bind(observed);
+	  _set = observed.set.bind(observed);
 	  observed.set = function(diff) {
 	    var key, promise, _i, _len, _ref;
 	    if (isPromise(diff)) {
 	      promise = diff;
-	      this._promise = diff;
+	      observed._promise = diff;
 	      promise.then((function(_this) {
 	        return function(val) {
 	          if (_this._promise === promise) {
-	            return _this.set(val);
+	            return _set(val);
 	          }
 	        };
 	      })(this));
@@ -418,12 +416,12 @@ module.exports =
 	      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
 	        key = _ref[_i];
 	        if (_.isFunction(promise[key])) {
-	          this[key] = promise[key].bind(promise);
+	          observed[key] = promise[key].bind(promise);
 	        }
 	      }
-	      return this.set(null);
+	      return _set(null);
 	    } else {
-	      return this._set(diff);
+	      return _set(diff);
 	    }
 	  };
 	  return observed;
@@ -8404,8 +8402,8 @@ module.exports =
 /* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isArray = __webpack_require__(49)
-	var isObject = __webpack_require__(50)
+	var isArray = __webpack_require__(50)
+	var isObject = __webpack_require__(49)
 
 	var VPatch = __webpack_require__(40)
 	var isVNode = __webpack_require__(16)
@@ -9867,13 +9865,10 @@ module.exports =
 /* 49 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var nativeIsArray = Array.isArray
-	var toString = Object.prototype.toString
+	module.exports = isObject
 
-	module.exports = nativeIsArray || isArray
-
-	function isArray(obj) {
-	    return toString.call(obj) === "[object Array]"
+	function isObject(x) {
+	    return typeof x === "object" && x !== null
 	}
 
 
@@ -9881,10 +9876,13 @@ module.exports =
 /* 50 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = isObject
+	var nativeIsArray = Array.isArray
+	var toString = Object.prototype.toString
 
-	function isObject(x) {
-	    return typeof x === "object" && x !== null
+	module.exports = nativeIsArray || isArray
+
+	function isArray(obj) {
+	    return toString.call(obj) === "[object Array]"
 	}
 
 

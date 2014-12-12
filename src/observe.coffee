@@ -7,21 +7,19 @@ isPromise = (obj) ->
   _.isObject(obj) and _.isFunction(obj.then)
 
 
-# coffeelint: disable=missing_fat_arrows
 observePromise = (observable, promise) ->
-  this._set = observable.set.bind observable
-  this._set._pending = promise
+  _set = observable.set.bind observable
+  observable._pending = promise
 
-  promise.then (val) =>
-    if this._set._pending is promise
-      this._set val
+  promise.then (val) ->
+    if observable._pending is promise
+      _set val
 
   for key in Object.keys promise
     if _.isFunction promise[key]
       observable[key] = promise[key].bind promise
 
   return observable
-# coffeelint: enable=missing_fat_arrows
 
 
 observePromise = (promise) ->
@@ -57,26 +55,24 @@ observe = (obj) ->
     else
       observ obj
 
-  observed._set = observed.set.bind observed
+  _set = observed.set.bind observed
 
-  # coffeelint: disable=missing_fat_arrows
   observed.set = (diff) ->
     if isPromise diff
       promise = diff
-      this._promise = diff
+      observed._promise = diff
 
       promise.then (val) =>
         if this._promise is promise
-          this.set val
+          _set val
 
       for key in Object.keys promise
         if _.isFunction promise[key]
-          this[key] = promise[key].bind promise
+          observed[key] = promise[key].bind promise
 
-      this.set null
+      _set null
     else
-      this._set diff
-  # coffeelint: enable=missing_fat_arrows
+      _set diff
 
   return observed
 

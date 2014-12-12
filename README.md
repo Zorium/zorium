@@ -170,7 +170,7 @@ class App
       key: params.key or 'none'
 
   render: =>
-    z 'div', 'Hello ' + @state().key()
+    z 'div', 'Hello ' + @state().key
 
 root = document.createElement 'div'
 
