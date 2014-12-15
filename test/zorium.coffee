@@ -249,6 +249,7 @@ describe 'Virtual DOM', ->
       preventDefaultCalled = 0
       goCalled = 0
       e = {
+        target: $el
         preventDefault: ->
           preventDefaultCalled += 1
       }
@@ -275,6 +276,7 @@ describe 'Virtual DOM', ->
       preventDefaultCalled = 0
       goCalled = 0
       e = {
+        target: $el
         preventDefault: ->
           preventDefaultCalled += 1
       }
@@ -300,6 +302,7 @@ describe 'Virtual DOM', ->
       preventDefaultCalled = 0
       goCalled = 0
       e = {
+        target: $el
         preventDefault: ->
           preventDefaultCalled += 1
       }
@@ -327,6 +330,7 @@ describe 'Virtual DOM', ->
       preventDefaultCalled = 0
       goCalled = 0
       e = {
+        target: $el
         preventDefault: ->
           preventDefaultCalled += 1
       }

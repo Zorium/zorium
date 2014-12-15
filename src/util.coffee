@@ -40,6 +40,9 @@ parseZfuncArgs = (tagName, children...) ->
   if _.isArray tagName
     return {tagName: null, props, children: tagName}
 
+  if _.isObject tagName
+    return {child: tagName, props}
+
   return {tagName, props, children}
 
 module.exports = {
