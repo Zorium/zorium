@@ -24,7 +24,7 @@ unless Function::bind
 # coffeelint: enable=missing_fat_arrows
 
 _ = require 'lodash'
-h = require 'virtual-hyperscript'
+h = require 'virtual-dom/h'
 diff = require 'virtual-dom/diff'
 patch = require 'virtual-dom/patch'
 createElement = require 'virtual-dom/create-element'
@@ -34,7 +34,6 @@ observe = require './observe'
 util = require './util'
 
 router = new routes()
-renderedComponents = []
 registeredRoots = {}
 
 z = ->
@@ -78,6 +77,8 @@ renderChild = (child) ->
     if _.isArray tree
       tree = z 'div', tree
 
+    tree.hooks ?= {}
+
     if not child.zorium_hasBeenMounted and _.isFunction child.onMount
       class OnMountHook
         hook: ($el, propName) ->
@@ -85,7 +86,21 @@ renderChild = (child) ->
             child.onMount $el
 
       child.zorium_hasBeenMounted = true
-      tree.properties['ev-zorium-onmount'] = new OnMountHook()
+
+      hook = new OnMountHook()
+      tree.properties['zorium-onmount'] = hook
+      tree.hooks['zorium-onmount'] = hook
+
+    if _.isFunction child.onBeforeUnmount
+      class OnBeforeUnmountHook
+        hook: -> null
+        unhook: ->
+          child.onBeforeUnmount()
+          child.zorium_hasBeenMounted = false
+
+      hook = new OnBeforeUnmountHook()
+      tree.properties['zorium-onbeforeunmount'] = hook
+      tree.hooks['zorium-onbeforeunmount'] = hook
 
     if not child.zorium_isWatchingState and _.isFunction child.state
       child.state ->
@@ -93,8 +108,6 @@ renderChild = (child) ->
 
       child.zorium_isWatchingState = true
 
-    if _.isFunction child.onBeforeUnmount
-      renderedComponents.push child
     return tree
 
   if _.isNumber(child)
@@ -118,21 +131,10 @@ z.render = do ->
     id += 1
 
   return ($root, tree) ->
-    renderedComponents = []
-
     renderedTree = renderChild tree
 
     if $root._zoriumId
       root = registeredRoots[$root._zoriumId]
-
-      lastRendered = root.lastRendered
-
-      for component in lastRendered
-        unless component in renderedComponents
-          component.onBeforeUnmount()
-          component.zorium_hasBeenMounted = false
-
-      root.lastRendered = renderedComponents
 
       patches = diff root.renderedTree, renderedTree
       root.node = patch root.node, patches
@@ -151,11 +153,9 @@ z.render = do ->
       node: $el
       tree: tree
       renderedTree: renderedTree
-      lastRendered: renderedComponents
 
     $root.appendChild $el
 
-    renderedComponents = []
     return $root
 
 z.redraw = ->

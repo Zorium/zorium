@@ -451,9 +451,7 @@ describe 'Lifecycle Callbacks', ->
         onBeforeUnmount: ->
           done()
         render: ->
-          z 'div',
-            z 'span', 'Hello World'
-            z 'span', 'Goodbye'
+          z 'div'
 
       class ContainerComponent
         constructor: ->
