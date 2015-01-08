@@ -67,7 +67,7 @@ module.exports =
 	  };
 	}
 
-	_ = __webpack_require__(6);
+	_ = __webpack_require__(5);
 
 	z = __webpack_require__(1);
 
@@ -102,11 +102,11 @@ module.exports =
 
 	var getChildSerializedState, h, renderChild, util, z, _;
 
-	_ = __webpack_require__(6);
+	_ = __webpack_require__(5);
 
 	h = __webpack_require__(10);
 
-	util = __webpack_require__(5);
+	util = __webpack_require__(6);
 
 	module.exports = z = function() {
 	  var attributes, child, children, props, tag, tagName, _ref;
@@ -209,7 +209,7 @@ module.exports =
 
 	var isPromise, observ, observArray, observStruct, observe, observePromise, _;
 
-	_ = __webpack_require__(6);
+	_ = __webpack_require__(5);
 
 	observStruct = __webpack_require__(7);
 
@@ -316,7 +316,7 @@ module.exports =
 
 	z = __webpack_require__(1);
 
-	util = __webpack_require__(5);
+	util = __webpack_require__(6);
 
 	renderer = __webpack_require__(4);
 
@@ -370,16 +370,20 @@ module.exports =
 	    }
 	    if (!props.onclick) {
 	      props.onclick = (function(_this) {
-	        return function(e) {
-	          var $el, isLocal;
-	          $el = e.target;
-	          isLocal = $el.hostname === window.location.hostname;
-	          if (isLocal) {
-	            e.preventDefault();
-	            return _this.go($el.pathname);
-	          }
+	        return function() {
+	          var router;
+	          router = _this;
+	          return function(e) {
+	            var $el, isLocal;
+	            $el = this;
+	            isLocal = $el.hostname === window.location.hostname;
+	            if (isLocal) {
+	              e.preventDefault();
+	              return router.go($el.pathname);
+	            }
+	          };
 	        };
-	      })(this);
+	      })(this)();
 	    }
 	    return z(tagName, props, children);
 	  };
@@ -503,85 +507,6 @@ module.exports =
 
 /***/ },
 /* 5 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var getTagAttributes, isChild, isChildren, isComponent, isVNode, isVText, isWidget, parseZfuncArgs,
-	  __slice = [].slice;
-
-	isVNode = __webpack_require__(21);
-
-	isVText = __webpack_require__(22);
-
-	isWidget = __webpack_require__(23);
-
-	isComponent = function(x) {
-	  return _.isObject(x) && _.isFunction(x.render);
-	};
-
-	isChild = function(x) {
-	  return isVNode(x) || isVText(x) || isWidget(x) || isComponent(x);
-	};
-
-	isChildren = function(x) {
-	  return _.isArray(x) || _.isString(x) || _.isNumber(x) || isChild(x);
-	};
-
-	getTagAttributes = function(tagName) {
-	  var match, props, re;
-	  re = /\[([^=\]]+)=?([^\]]+)?\]/g;
-	  match = re.exec(tagName);
-	  props = {};
-	  while (match != null) {
-	    if (match[2]) {
-	      props[match[1]] = match[2];
-	    } else {
-	      props[match[1]] = true;
-	    }
-	    match = re.exec(tagName);
-	  }
-	  return props;
-	};
-
-	parseZfuncArgs = function() {
-	  var children, props, tagName;
-	  tagName = arguments[0], children = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
-	  props = {};
-	  if (children[0] && !isChildren(children[0])) {
-	    props = children[0];
-	    children.shift();
-	  }
-	  if (children[0] && _.isArray(children[0])) {
-	    children = children[0];
-	  }
-	  if (_.isArray(tagName)) {
-	    return {
-	      tagName: null,
-	      props: props,
-	      children: tagName
-	    };
-	  }
-	  if (_.isObject(tagName)) {
-	    return {
-	      child: tagName,
-	      props: props
-	    };
-	  }
-	  return {
-	    tagName: tagName,
-	    props: props,
-	    children: children
-	  };
-	};
-
-	module.exports = {
-	  isComponent: isComponent,
-	  getTagAttributes: getTagAttributes,
-	  parseZfuncArgs: parseZfuncArgs
-	};
-
-
-/***/ },
-/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(module, global) {/**
@@ -7745,6 +7670,85 @@ module.exports =
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(24)(module), (function() { return this; }())))
 
 /***/ },
+/* 6 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var getTagAttributes, isChild, isChildren, isComponent, isVNode, isVText, isWidget, parseZfuncArgs,
+	  __slice = [].slice;
+
+	isVNode = __webpack_require__(21);
+
+	isVText = __webpack_require__(22);
+
+	isWidget = __webpack_require__(23);
+
+	isComponent = function(x) {
+	  return _.isObject(x) && _.isFunction(x.render);
+	};
+
+	isChild = function(x) {
+	  return isVNode(x) || isVText(x) || isWidget(x) || isComponent(x);
+	};
+
+	isChildren = function(x) {
+	  return _.isArray(x) || _.isString(x) || _.isNumber(x) || isChild(x);
+	};
+
+	getTagAttributes = function(tagName) {
+	  var match, props, re;
+	  re = /\[([^=\]]+)=?([^\]]+)?\]/g;
+	  match = re.exec(tagName);
+	  props = {};
+	  while (match != null) {
+	    if (match[2]) {
+	      props[match[1]] = match[2];
+	    } else {
+	      props[match[1]] = true;
+	    }
+	    match = re.exec(tagName);
+	  }
+	  return props;
+	};
+
+	parseZfuncArgs = function() {
+	  var children, props, tagName;
+	  tagName = arguments[0], children = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+	  props = {};
+	  if (children[0] && !isChildren(children[0])) {
+	    props = children[0];
+	    children.shift();
+	  }
+	  if (children[0] && _.isArray(children[0])) {
+	    children = children[0];
+	  }
+	  if (_.isArray(tagName)) {
+	    return {
+	      tagName: null,
+	      props: props,
+	      children: tagName
+	    };
+	  }
+	  if (_.isObject(tagName)) {
+	    return {
+	      child: tagName,
+	      props: props
+	    };
+	  }
+	  return {
+	    tagName: tagName,
+	    props: props,
+	    children: children
+	  };
+	};
+
+	module.exports = {
+	  isComponent: isComponent,
+	  getTagAttributes: getTagAttributes,
+	  parseZfuncArgs: parseZfuncArgs
+	};
+
+
+/***/ },
 /* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -8651,8 +8655,8 @@ module.exports =
 /* 26 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isArray = __webpack_require__(49)
-	var isObject = __webpack_require__(50)
+	var isArray = __webpack_require__(50)
+	var isObject = __webpack_require__(49)
 
 	var VPatch = __webpack_require__(43)
 	var isVNode = __webpack_require__(38)
@@ -9034,7 +9038,7 @@ module.exports =
 /***/ function(module, exports, __webpack_require__) {
 
 	var document = __webpack_require__(53)
-	var isArray = __webpack_require__(49)
+	var isArray = __webpack_require__(50)
 
 	var domIndex = __webpack_require__(33)
 	var patchOp = __webpack_require__(34)
@@ -9535,7 +9539,7 @@ module.exports =
 /* 35 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isObject = __webpack_require__(50)
+	var isObject = __webpack_require__(49)
 	var isHook = __webpack_require__(41)
 
 	module.exports = applyProperties
@@ -9884,7 +9888,7 @@ module.exports =
 /* 46 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var DataSet = __webpack_require__(55)
+	var DataSet = __webpack_require__(56)
 
 	module.exports = DataSetHook;
 
@@ -9908,7 +9912,7 @@ module.exports =
 /* 47 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var DataSet = __webpack_require__(55)
+	var DataSet = __webpack_require__(56)
 
 	module.exports = DataSetHook;
 
@@ -10246,13 +10250,10 @@ module.exports =
 /* 49 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var nativeIsArray = Array.isArray
-	var toString = Object.prototype.toString
+	module.exports = isObject
 
-	module.exports = nativeIsArray || isArray
-
-	function isArray(obj) {
-	    return toString.call(obj) === "[object Array]"
+	function isObject(x) {
+	    return typeof x === "object" && x !== null
 	}
 
 
@@ -10260,10 +10261,13 @@ module.exports =
 /* 50 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = isObject
+	var nativeIsArray = Array.isArray
+	var toString = Object.prototype.toString
 
-	function isObject(x) {
-	    return typeof x === "object" && x !== null
+	module.exports = nativeIsArray || isArray
+
+	function isArray(obj) {
+	    return toString.call(obj) === "[object Array]"
 	}
 
 
@@ -10348,7 +10352,7 @@ module.exports =
 
 	/* WEBPACK VAR INJECTION */(function(global) {var topLevel = typeof global !== 'undefined' ? global :
 	    typeof window !== 'undefined' ? window : {}
-	var minDoc = __webpack_require__(56);
+	var minDoc = __webpack_require__(55);
 
 	if (typeof document !== 'undefined') {
 	    module.exports = document;
@@ -10375,6 +10379,12 @@ module.exports =
 /* 55 */
 /***/ function(module, exports, __webpack_require__) {
 
+	/* (ignored) */
+
+/***/ },
+/* 56 */
+/***/ function(module, exports, __webpack_require__) {
+
 	var createStore = __webpack_require__(62)
 	var Individual = __webpack_require__(61)
 
@@ -10394,12 +10404,6 @@ module.exports =
 	    return store.hash
 	}
 
-
-/***/ },
-/* 56 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/* (ignored) */
 
 /***/ },
 /* 57 */
