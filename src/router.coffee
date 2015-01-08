@@ -40,13 +40,17 @@ class Router
       tagName = 'a' + tagName
 
     unless props.onclick
-      props.onclick = (e) =>
-        $el = e.target
-        isLocal = $el.hostname is window.location.hostname
+      props.onclick = do =>
+        router = this
+        # coffeelint: disable=missing_fat_arrows
+        (e) ->
+          $el = this
+          isLocal = $el.hostname is window.location.hostname
 
-        if isLocal
-          e.preventDefault()
-          @go $el.pathname
+          if isLocal
+            e.preventDefault()
+            router.go $el.pathname
+        # coffeelint: enable=missing_fat_arrows
 
     z tagName, props, children
 
