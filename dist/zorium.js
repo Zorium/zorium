@@ -45,9 +45,7 @@ module.exports =
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var ZoriumRouter, createElement, diff, h, observe, onAnchorClick, patch, registeredRoots, renderChild, renderedComponents, router, routes, util, z, _,
-	  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
-	  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+	var observe, renderer, router, z, _;
 
 	if (!Function.prototype.bind) {
 	  Function.prototype.bind = function(oThis) {
@@ -69,31 +67,53 @@ module.exports =
 	  };
 	}
 
-	_ = __webpack_require__(7);
+	_ = __webpack_require__(6);
 
-	h = __webpack_require__(3);
+	z = __webpack_require__(1);
 
-	diff = __webpack_require__(4);
+	observe = __webpack_require__(2);
 
-	patch = __webpack_require__(5);
+	router = __webpack_require__(3);
 
-	createElement = __webpack_require__(6);
+	renderer = __webpack_require__(4);
 
-	routes = __webpack_require__(8);
+	_.extend(z, {
+	  render: renderer.render,
+	  redraw: renderer.redraw,
+	  router: router,
+	  observe: observe,
+	  state: function(obj) {
+	    var observed, _set;
+	    observed = observe(obj);
+	    _set = observed.set.bind(observed);
+	    observed.set = function(diff) {
+	      return _set(_.defaults(diff, observed()));
+	    };
+	    return observed;
+	  }
+	});
 
-	observe = __webpack_require__(1);
+	module.exports = z;
 
-	util = __webpack_require__(2);
 
-	router = new routes();
+/***/ },
+/* 1 */
+/***/ function(module, exports, __webpack_require__) {
 
-	renderedComponents = [];
+	var getChildSerializedState, h, renderChild, util, z, _;
 
-	registeredRoots = {};
+	_ = __webpack_require__(6);
 
-	z = function() {
-	  var attributes, children, props, tag, tagName, _ref;
-	  _ref = util.parseZfuncArgs.apply(null, arguments), tagName = _ref.tagName, props = _ref.props, children = _ref.children;
+	h = __webpack_require__(10);
+
+	util = __webpack_require__(5);
+
+	module.exports = z = function() {
+	  var attributes, child, children, props, tag, tagName, _ref;
+	  _ref = util.parseZfuncArgs.apply(null, arguments), child = _ref.child, tagName = _ref.tagName, props = _ref.props, children = _ref.children;
+	  if (child) {
+	    return renderChild(child);
+	  }
 	  if (_.isNull(tagName)) {
 	    return z('div', children);
 	  }
@@ -109,27 +129,26 @@ module.exports =
 	  return h(tagName, props, _.map(_.filter(children), renderChild));
 	};
 
-	z.observe = observe;
-
-	z.state = function(obj) {
-	  var observed, _set;
-	  observed = observe(obj);
-	  _set = observed.set.bind(observed);
-	  observed.set = function(diff) {
-	    return _set(_.defaults(diff, observed()));
-	  };
-	  return observed;
+	getChildSerializedState = function(child) {
+	  if (_.isFunction(child.state)) {
+	    return child.state();
+	  } else {
+	    return {};
+	  }
 	};
 
 	renderChild = function(child) {
-	  var OnMountHook, tree;
+	  var OnBeforeUnmountHook, OnMountHook, hook, tree;
 	  if (util.isComponent(child)) {
-	    tree = child.render();
+	    tree = child.render(getChildSerializedState(child));
 	    if (!tree) {
 	      tree = z('div');
 	    }
 	    if (_.isArray(tree)) {
 	      tree = z('div', tree);
+	    }
+	    if (tree.hooks == null) {
+	      tree.hooks = {};
 	    }
 	    if (!child.zorium_hasBeenMounted && _.isFunction(child.onMount)) {
 	      OnMountHook = (function() {
@@ -145,16 +164,35 @@ module.exports =
 
 	      })();
 	      child.zorium_hasBeenMounted = true;
-	      tree.properties['ev-zorium-onmount'] = new OnMountHook();
+	      hook = new OnMountHook();
+	      tree.properties['zorium-onmount'] = hook;
+	      tree.hooks['zorium-onmount'] = hook;
+	    }
+	    if (_.isFunction(child.onBeforeUnmount)) {
+	      OnBeforeUnmountHook = (function() {
+	        function OnBeforeUnmountHook() {}
+
+	        OnBeforeUnmountHook.prototype.hook = function() {
+	          return null;
+	        };
+
+	        OnBeforeUnmountHook.prototype.unhook = function() {
+	          child.onBeforeUnmount();
+	          return child.zorium_hasBeenMounted = false;
+	        };
+
+	        return OnBeforeUnmountHook;
+
+	      })();
+	      hook = new OnBeforeUnmountHook();
+	      tree.properties['zorium-onbeforeunmount'] = hook;
+	      tree.hooks['zorium-onbeforeunmount'] = hook;
 	    }
 	    if (!child.zorium_isWatchingState && _.isFunction(child.state)) {
 	      child.state(function() {
 	        return z.redraw();
 	      });
 	      child.zorium_isWatchingState = true;
-	    }
-	    if (_.isFunction(child.onBeforeUnmount)) {
-	      renderedComponents.push(child);
 	    }
 	    return tree;
 	  }
@@ -164,182 +202,20 @@ module.exports =
 	  return child;
 	};
 
-	onAnchorClick = function(e) {
-	  var isLocal, _ref;
-	  isLocal = this.hostname === window.location.hostname;
-	  if (isLocal) {
-	    e.preventDefault();
-	    return (_ref = z.router) != null ? _ref.go(this.pathname) : void 0;
-	  }
-	};
-
-	z.render = (function() {
-	  var id, nextRootId;
-	  id = 0;
-	  nextRootId = function() {
-	    return id += 1;
-	  };
-	  return function($root, tree) {
-	    var $el, component, lastRendered, patches, renderedTree, root, _i, _len;
-	    renderedComponents = [];
-	    renderedTree = renderChild(tree);
-	    if ($root._zoriumId) {
-	      root = registeredRoots[$root._zoriumId];
-	      lastRendered = root.lastRendered;
-	      for (_i = 0, _len = lastRendered.length; _i < _len; _i++) {
-	        component = lastRendered[_i];
-	        if (__indexOf.call(renderedComponents, component) < 0) {
-	          component.onBeforeUnmount();
-	          component.zorium_hasBeenMounted = false;
-	        }
-	      }
-	      root.lastRendered = renderedComponents;
-	      patches = diff(root.renderedTree, renderedTree);
-	      root.node = patch(root.node, patches);
-	      root.tree = tree;
-	      root.renderedTree = renderedTree;
-	      return $root;
-	    }
-	    $el = createElement(renderedTree);
-	    id = nextRootId();
-	    $root._zoriumId = id;
-	    registeredRoots[id] = {
-	      $root: $root,
-	      node: $el,
-	      tree: tree,
-	      renderedTree: renderedTree,
-	      lastRendered: renderedComponents
-	    };
-	    $root.appendChild($el);
-	    renderedComponents = [];
-	    return $root;
-	  };
-	})();
-
-	z.redraw = function() {
-	  var id, root, _results;
-	  _results = [];
-	  for (id in registeredRoots) {
-	    root = registeredRoots[id];
-	    _results.push(z.render(root.$root, root.tree));
-	  }
-	  return _results;
-	};
-
-	ZoriumRouter = (function() {
-	  function ZoriumRouter() {
-	    this.off = __bind(this.off, this);
-	    this.emit = __bind(this.emit, this);
-	    this.on = __bind(this.on, this);
-	    this.go = __bind(this.go, this);
-	    this.setMode = __bind(this.setMode, this);
-	    this.setRoot = __bind(this.setRoot, this);
-	    this.events = {};
-	    this.routesRoot = null;
-	    this.mode = 'hash';
-	    this.currentPath = null;
-	    window.addEventListener('popstate', (function(_this) {
-	      return function(e) {
-	        return setTimeout(function() {
-	          var hash, path, pathname;
-	          pathname = window.location.pathname;
-	          hash = window.location.hash.slice(1);
-	          path = _this.mode === 'pathname' ? pathname || hash : hash || pathname;
-	          return _this.go(path);
-	        });
-	      };
-	    })(this));
-	  }
-
-	  ZoriumRouter.prototype.setRoot = function($root) {
-	    return this.routesRoot = $root;
-	  };
-
-	  ZoriumRouter.prototype.add = function(path, componentClass) {
-	    return router.addRoute(path, function() {
-	      return componentClass;
-	    });
-	  };
-
-	  ZoriumRouter.prototype.setMode = function(mode) {
-	    return this.mode = mode === 'pathname' && window.history.pushState ? 'pathname' : 'hash';
-	  };
-
-	  ZoriumRouter.prototype.a = function() {
-	    var children, props, tagName, _ref;
-	    _ref = util.parseZfuncArgs.apply(null, arguments), tagName = _ref.tagName, props = _ref.props, children = _ref.children;
-	    if (tagName[0] !== 'a') {
-	      tagName = 'a' + tagName;
-	    }
-	    if (!props.onclick) {
-	      props.onclick = onAnchorClick;
-	    }
-	    return z(tagName, props, children);
-	  };
-
-	  ZoriumRouter.prototype.go = function(path) {
-	    var componentClass, hash, pathname, route;
-	    if (!path) {
-	      pathname = window.location.pathname;
-	      hash = window.location.hash.slice(1);
-	      path = this.mode === 'pathname' ? pathname || hash : hash || pathname;
-	    }
-	    if (!(path && this.routesRoot && path !== this.currentPath)) {
-	      return;
-	    }
-	    route = router.match(path);
-	    if (!route) {
-	      return;
-	    }
-	    this.currentPath = path;
-	    if (this.mode === 'pathname') {
-	      window.history.pushState(null, null, path);
-	    } else {
-	      window.location.hash = path;
-	    }
-	    this.emit('route', path);
-	    componentClass = route.fn();
-	    return z.render(this.routesRoot, new componentClass(route.params));
-	  };
-
-	  ZoriumRouter.prototype.on = function(name, fn) {
-	    return (this.events[name] = this.events[name] || []).push(fn);
-	  };
-
-	  ZoriumRouter.prototype.emit = function(name) {
-	    var args;
-	    args = _.rest(arguments);
-	    return _.map(this.events[name], function(fn) {
-	      return fn.apply(null, args);
-	    });
-	  };
-
-	  ZoriumRouter.prototype.off = function(name, fn) {
-	    return this.events[name] = _.without(this.events[name], fn);
-	  };
-
-	  return ZoriumRouter;
-
-	})();
-
-	z.router = new ZoriumRouter();
-
-	module.exports = z;
-
 
 /***/ },
-/* 1 */
+/* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var isPromise, observ, observArray, observStruct, observe, observePromise, _;
 
-	_ = __webpack_require__(7);
+	_ = __webpack_require__(6);
 
-	observStruct = __webpack_require__(13);
+	observStruct = __webpack_require__(7);
 
-	observArray = __webpack_require__(14);
+	observArray = __webpack_require__(8);
 
-	observ = __webpack_require__(15);
+	observ = __webpack_require__(9);
 
 	isPromise = function(obj) {
 	  return _.isObject(obj) && _.isFunction(obj.then);
@@ -430,17 +306,213 @@ module.exports =
 
 
 /***/ },
-/* 2 */
+/* 3 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Router, renderer, routes, util, z,
+	  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+	routes = __webpack_require__(14);
+
+	z = __webpack_require__(1);
+
+	util = __webpack_require__(5);
+
+	renderer = __webpack_require__(4);
+
+	Router = (function() {
+	  function Router() {
+	    this.off = __bind(this.off, this);
+	    this.emit = __bind(this.emit, this);
+	    this.on = __bind(this.on, this);
+	    this.go = __bind(this.go, this);
+	    this.a = __bind(this.a, this);
+	    this.setMode = __bind(this.setMode, this);
+	    this.add = __bind(this.add, this);
+	    this.setRoot = __bind(this.setRoot, this);
+	    this.router = new routes();
+	    this.events = {};
+	    this.routesRoot = null;
+	    this.mode = 'hash';
+	    this.currentPath = null;
+	    window.addEventListener('popstate', (function(_this) {
+	      return function(e) {
+	        return setTimeout(function() {
+	          var hash, path, pathname;
+	          pathname = window.location.pathname;
+	          hash = window.location.hash.slice(1);
+	          path = _this.mode === 'pathname' ? pathname || hash : hash || pathname;
+	          return _this.go(path);
+	        });
+	      };
+	    })(this));
+	  }
+
+	  Router.prototype.setRoot = function($root) {
+	    return this.routesRoot = $root;
+	  };
+
+	  Router.prototype.add = function(path, componentClass) {
+	    return this.router.addRoute(path, function() {
+	      return componentClass;
+	    });
+	  };
+
+	  Router.prototype.setMode = function(mode) {
+	    return this.mode = mode === 'pathname' && window.history.pushState ? 'pathname' : 'hash';
+	  };
+
+	  Router.prototype.a = function() {
+	    var children, props, tagName, _ref;
+	    _ref = util.parseZfuncArgs.apply(null, arguments), tagName = _ref.tagName, props = _ref.props, children = _ref.children;
+	    if (tagName[0] !== 'a') {
+	      tagName = 'a' + tagName;
+	    }
+	    if (!props.onclick) {
+	      props.onclick = (function(_this) {
+	        return function(e) {
+	          var $el, isLocal;
+	          $el = e.target;
+	          isLocal = $el.hostname === window.location.hostname;
+	          if (isLocal) {
+	            e.preventDefault();
+	            return _this.go($el.pathname);
+	          }
+	        };
+	      })(this);
+	    }
+	    return z(tagName, props, children);
+	  };
+
+	  Router.prototype.go = function(path) {
+	    var componentClass, hash, pathname, route;
+	    if (!path) {
+	      pathname = window.location.pathname;
+	      hash = window.location.hash.slice(1);
+	      path = this.mode === 'pathname' ? pathname || hash : hash || pathname;
+	    }
+	    if (!(path && this.routesRoot && path !== this.currentPath)) {
+	      return;
+	    }
+	    route = this.router.match(path);
+	    if (!route) {
+	      return;
+	    }
+	    this.currentPath = path;
+	    if (this.mode === 'pathname') {
+	      window.history.pushState(null, null, path);
+	    } else {
+	      window.location.hash = path;
+	    }
+	    this.emit('route', path);
+	    componentClass = route.fn();
+	    return renderer.render(this.routesRoot, new componentClass(route.params));
+	  };
+
+	  Router.prototype.on = function(name, fn) {
+	    return (this.events[name] = this.events[name] || []).push(fn);
+	  };
+
+	  Router.prototype.emit = function(name) {
+	    var args;
+	    args = _.rest(arguments);
+	    return _.map(this.events[name], function(fn) {
+	      return fn.apply(null, args);
+	    });
+	  };
+
+	  Router.prototype.off = function(name, fn) {
+	    return this.events[name] = _.without(this.events[name], fn);
+	  };
+
+	  return Router;
+
+	})();
+
+	module.exports = new Router();
+
+
+/***/ },
+/* 4 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Renderer, createElement, diff, patch, z,
+	  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+	diff = __webpack_require__(11);
+
+	patch = __webpack_require__(12);
+
+	createElement = __webpack_require__(13);
+
+	z = __webpack_require__(1);
+
+	Renderer = (function() {
+	  function Renderer() {
+	    this.redraw = __bind(this.redraw, this);
+	    this.render = __bind(this.render, this);
+	    var id;
+	    this.registeredRoots = {};
+	    id = 0;
+	    this.nextRootId = function() {
+	      return id += 1;
+	    };
+	  }
+
+	  Renderer.prototype.render = function($root, tree) {
+	    var $el, id, patches, renderedTree, root;
+	    renderedTree = z(tree);
+	    if ($root._zoriumId) {
+	      root = this.registeredRoots[$root._zoriumId];
+	      patches = diff(root.renderedTree, renderedTree);
+	      root.node = patch(root.node, patches);
+	      root.tree = tree;
+	      root.renderedTree = renderedTree;
+	      return $root;
+	    }
+	    $el = createElement(renderedTree);
+	    id = this.nextRootId();
+	    $root._zoriumId = id;
+	    this.registeredRoots[id] = {
+	      $root: $root,
+	      node: $el,
+	      tree: tree,
+	      renderedTree: renderedTree
+	    };
+	    $root.appendChild($el);
+	    return $root;
+	  };
+
+	  Renderer.prototype.redraw = function() {
+	    var id, root, _ref, _results;
+	    _ref = this.registeredRoots;
+	    _results = [];
+	    for (id in _ref) {
+	      root = _ref[id];
+	      _results.push(this.render(root.$root, root.tree));
+	    }
+	    return _results;
+	  };
+
+	  return Renderer;
+
+	})();
+
+	module.exports = new Renderer();
+
+
+/***/ },
+/* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var getTagAttributes, isChild, isChildren, isComponent, isVNode, isVText, isWidget, parseZfuncArgs,
 	  __slice = [].slice;
 
-	isVNode = __webpack_require__(16);
+	isVNode = __webpack_require__(21);
 
-	isVText = __webpack_require__(17);
+	isVText = __webpack_require__(22);
 
-	isWidget = __webpack_require__(18);
+	isWidget = __webpack_require__(23);
 
 	isComponent = function(x) {
 	  return _.isObject(x) && _.isFunction(x.render);
@@ -488,6 +560,12 @@ module.exports =
 	      children: tagName
 	    };
 	  }
+	  if (_.isObject(tagName)) {
+	    return {
+	      child: tagName,
+	      props: props
+	    };
+	  }
 	  return {
 	    tagName: tagName,
 	    props: props,
@@ -503,167 +581,7 @@ module.exports =
 
 
 /***/ },
-/* 3 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var TypedError = __webpack_require__(20)
-
-	var VNode = __webpack_require__(21)
-	var VText = __webpack_require__(22)
-	var isVNode = __webpack_require__(23)
-	var isVText = __webpack_require__(24)
-	var isWidget = __webpack_require__(25)
-	var isHook = __webpack_require__(26)
-	var isVThunk = __webpack_require__(27)
-
-	var parseTag = __webpack_require__(9)
-	var softSetHook = __webpack_require__(10)
-	var dataSetHook = __webpack_require__(11)
-	var evHook = __webpack_require__(12)
-
-	var UnexpectedVirtualElement = TypedError({
-	    type: "virtual-hyperscript.unexpected.virtual-element",
-	    message: "Unexpected virtual child passed to h().\n" +
-	        "Expected a VNode / Vthunk / VWidget / string but:\n" +
-	        "got a {foreignObjectStr}.\n" +
-	        "The parent vnode is {parentVnodeStr}.\n" +
-	        "Suggested fix: change your `h(..., [ ... ])` callsite.",
-	    foreignObjectStr: null,
-	    parentVnodeStr: null,
-	    foreignObject: null,
-	    parentVnode: null
-	})
-
-	module.exports = h
-
-	function h(tagName, properties, children) {
-	    var childNodes = []
-	    var tag, props, key, namespace
-
-	    if (!children && isChildren(properties)) {
-	        children = properties
-	        props = {}
-	    }
-
-	    props = props || properties || {}
-	    tag = parseTag(tagName, props)
-
-	    // support keys
-	    if ("key" in props) {
-	        key = props.key
-	        props.key = undefined
-	    }
-
-	    // support namespace
-	    if ("namespace" in props) {
-	        namespace = props.namespace
-	        props.namespace = undefined
-	    }
-
-	    // fix cursor bug
-	    if (tag === "input" &&
-	        "value" in props &&
-	        props.value !== undefined &&
-	        !isHook(props.value)
-	    ) {
-	        props.value = softSetHook(props.value)
-	    }
-
-	    var keys = Object.keys(props)
-	    var propName, value
-	    for (var j = 0; j < keys.length; j++) {
-	        propName = keys[j]
-	        value = props[propName]
-	        if (isHook(value)) {
-	            continue
-	        }
-
-	        // add data-foo support
-	        if (propName.substr(0, 5) === "data-") {
-	            props[propName] = dataSetHook(value)
-	        }
-
-	        // add ev-foo support
-	        if (propName.substr(0, 3) === "ev-") {
-	            props[propName] = evHook(value)
-	        }
-	    }
-
-	    if (children !== undefined && children !== null) {
-	        addChild(children, childNodes, tag, props)
-	    }
-
-
-	    var node = new VNode(tag, props, childNodes, key, namespace)
-
-	    return node
-	}
-
-	function addChild(c, childNodes, tag, props) {
-	    if (typeof c === "string") {
-	        childNodes.push(new VText(c))
-	    } else if (isChild(c)) {
-	        childNodes.push(c)
-	    } else if (Array.isArray(c)) {
-	        for (var i = 0; i < c.length; i++) {
-	            addChild(c[i], childNodes, tag, props)
-	        }
-	    } else if (c === null || c === undefined) {
-	        return
-	    } else {
-	        throw UnexpectedVirtualElement({
-	            foreignObjectStr: JSON.stringify(c),
-	            foreignObject: c,
-	            parentVnodeStr: JSON.stringify({
-	                tagName: tag,
-	                properties: props
-	            }),
-	            parentVnode: {
-	                tagName: tag,
-	                properties: props
-	            }
-	        })
-	    }
-	}
-
-	function isChild(x) {
-	    return isVNode(x) || isVText(x) || isWidget(x) || isVThunk(x)
-	}
-
-	function isChildren(x) {
-	    return typeof x === "string" || Array.isArray(x) || isChild(x)
-	}
-
-
-/***/ },
-/* 4 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var diff = __webpack_require__(19)
-
-	module.exports = diff
-
-
-/***/ },
-/* 5 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var patch = __webpack_require__(37)
-
-	module.exports = patch
-
-
-/***/ },
 /* 6 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var createElement = __webpack_require__(38)
-
-	module.exports = createElement
-
-
-/***/ },
-/* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(module, global) {/**
@@ -7824,10 +7742,284 @@ module.exports =
 	  }
 	}.call(this));
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(36)(module), (function() { return this; }())))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(24)(module), (function() { return this; }())))
+
+/***/ },
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Observ = __webpack_require__(9)
+	var extend = __webpack_require__(29)
+
+	var blackList = {
+	    "length": "Clashes with `Function.prototype.length`.\n",
+	    "name": "Clashes with `Function.prototype.name`.\n",
+	    "_diff": "_diff is reserved key of observ-struct.\n",
+	    "_type": "_type is reserved key of observ-struct.\n",
+	    "_version": "_version is reserved key of observ-struct.\n"
+	}
+	var NO_TRANSACTION = {}
+
+	function setNonEnumerable(object, key, value) {
+	    Object.defineProperty(object, key, {
+	        value: value,
+	        writable: true,
+	        configurable: true,
+	        enumerable: false
+	    })
+	}
+
+	/* ObservStruct := (Object<String, Observ<T>>) =>
+	    Object<String, Observ<T>> &
+	        Observ<Object<String, T> & {
+	            _diff: Object<String, Any>
+	        }>
+
+	*/
+	module.exports = ObservStruct
+
+	function ObservStruct(struct) {
+	    var keys = Object.keys(struct)
+
+	    var initialState = {}
+	    var currentTransaction = NO_TRANSACTION
+	    var nestedTransaction = NO_TRANSACTION
+
+	    keys.forEach(function (key) {
+	        if (blackList.hasOwnProperty(key)) {
+	            throw new Error("cannot create an observ-struct " +
+	                "with a key named '" + key + "'.\n" +
+	                blackList[key]);
+	        }
+
+	        var observ = struct[key]
+	        initialState[key] = typeof observ === "function" ?
+	            observ() : observ
+	    })
+
+	    var obs = Observ(initialState)
+	    keys.forEach(function (key) {
+	        var observ = struct[key]
+	        obs[key] = observ
+
+	        if (typeof observ === "function") {
+	            observ(function (value) {
+	                if (nestedTransaction === value) {
+	                    return
+	                }
+
+	                var state = extend(obs())
+	                state[key] = value
+	                var diff = {}
+	                diff[key] = value && value._diff ?
+	                    value._diff : value
+
+	                setNonEnumerable(state, "_diff", diff)
+	                currentTransaction = state
+	                obs.set(state)
+	                currentTransaction = NO_TRANSACTION
+	            })
+	        }
+	    })
+	    var _set = obs.set
+	    obs.set = function trackDiff(value) {
+	        if (currentTransaction === value) {
+	            return _set(value)
+	        }
+
+	        var newState = extend(value)
+	        setNonEnumerable(newState, "_diff", value)
+	        _set(newState)
+	    }
+
+	    obs(function (newState) {
+	        if (currentTransaction === newState) {
+	            return
+	        }
+
+	        keys.forEach(function (key) {
+	            var observ = struct[key]
+	            var newObservValue = newState[key]
+
+	            if (typeof observ === "function" &&
+	                observ() !== newObservValue
+	            ) {
+	                nestedTransaction = newObservValue
+	                observ.set(newState[key])
+	                nestedTransaction = NO_TRANSACTION
+	            }
+	        })
+	    })
+
+	    obs._type = "observ-struct"
+	    obs._version = "5"
+
+	    return obs
+	}
+
 
 /***/ },
 /* 8 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Observ = __webpack_require__(9)
+
+	// circular dep between ArrayMethods & this file
+	module.exports = ObservArray
+
+	var splice = __webpack_require__(15)
+	var put = __webpack_require__(16)
+	var set = __webpack_require__(17)
+	var transaction = __webpack_require__(18)
+	var ArrayMethods = __webpack_require__(19)
+	var addListener = __webpack_require__(20)
+
+
+	/*  ObservArray := (Array<T>) => Observ<
+	        Array<T> & { _diff: Array }
+	    > & {
+	        splice: (index: Number, amount: Number, rest...: T) =>
+	            Array<T>,
+	        push: (values...: T) => Number,
+	        filter: (lambda: Function, thisValue: Any) => Array<T>,
+	        indexOf: (item: T, fromIndex: Number) => Number
+	    }
+
+	    Fix to make it more like ObservHash.
+
+	    I.e. you write observables into it.
+	        reading methods take plain JS objects to read
+	        and the value of the array is always an array of plain
+	        objsect.
+
+	        The observ array instance itself would have indexed
+	        properties that are the observables
+	*/
+	function ObservArray(initialList) {
+	    // list is the internal mutable list observ instances that
+	    // all methods on `obs` dispatch to.
+	    var list = initialList
+	    var initialState = []
+
+	    // copy state out of initialList into initialState
+	    list.forEach(function (observ, index) {
+	        initialState[index] = typeof observ === "function" ?
+	            observ() : observ
+	    })
+
+	    var obs = Observ(initialState)
+	    obs.splice = splice
+
+	    // override set and store original for later use
+	    obs._observSet = obs.set
+	    obs.set = set
+
+	    obs.get = get
+	    obs.getLength = getLength
+	    obs.put = put
+	    obs.transaction = transaction
+
+	    // you better not mutate this list directly
+	    // this is the list of observs instances
+	    obs._list = list
+
+	    var removeListeners = list.map(function (observ) {
+	        return typeof observ === "function" ?
+	            addListener(obs, observ) :
+	            null
+	    });
+	    // this is a list of removal functions that must be called
+	    // when observ instances are removed from `obs.list`
+	    // not calling this means we do not GC our observ change
+	    // listeners. Which causes rage bugs
+	    obs._removeListeners = removeListeners
+
+	    obs._type = "observ-array"
+	    obs._version = "3"
+
+	    return ArrayMethods(obs, list)
+	}
+
+	function get(index) {
+	    return this._list[index]
+	}
+
+	function getLength() {
+	    return this._list.length
+	}
+
+
+/***/ },
+/* 9 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = Observable
+
+	function Observable(value) {
+	    var listeners = []
+	    value = value === undefined ? null : value
+
+	    observable.set = function (v) {
+	        value = v
+	        listeners.forEach(function (f) {
+	            f(v)
+	        })
+	    }
+
+	    return observable
+
+	    function observable(listener) {
+	        if (!listener) {
+	            return value
+	        }
+
+	        listeners.push(listener)
+
+	        return function remove() {
+	            listeners.splice(listeners.indexOf(listener), 1)
+	        }
+	    }
+	}
+
+
+/***/ },
+/* 10 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var h = __webpack_require__(25)
+
+	module.exports = h
+
+
+/***/ },
+/* 11 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var diff = __webpack_require__(26)
+
+	module.exports = diff
+
+
+/***/ },
+/* 12 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var patch = __webpack_require__(27)
+
+	module.exports = patch
+
+
+/***/ },
+/* 13 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var createElement = __webpack_require__(28)
+
+	module.exports = createElement
+
+
+/***/ },
+/* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var require;var require;!function(e){if(true)module.exports=e();else if("function"==typeof define&&define.amd)define(e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.routes=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return require(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
@@ -7992,371 +8184,58 @@ module.exports =
 	});
 
 /***/ },
-/* 9 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var classIdSplit = /([\.#]?[a-zA-Z0-9_:-]+)/
-	var notClassId = /^\.|#/
-
-	module.exports = parseTag
-
-	function parseTag(tag, props) {
-	    if (!tag) {
-	        return "div"
-	    }
-
-	    var noId = !("id" in props)
-
-	    var tagParts = tag.split(classIdSplit)
-	    var tagName = null
-
-	    if (notClassId.test(tagParts[1])) {
-	        tagName = "div"
-	    }
-
-	    var classes, part, type, i
-	    for (i = 0; i < tagParts.length; i++) {
-	        part = tagParts[i]
-
-	        if (!part) {
-	            continue
-	        }
-
-	        type = part.charAt(0)
-
-	        if (!tagName) {
-	            tagName = part
-	        } else if (type === ".") {
-	            classes = classes || []
-	            classes.push(part.substring(1, part.length))
-	        } else if (type === "#" && noId) {
-	            props.id = part.substring(1, part.length)
-	        }
-	    }
-
-	    if (classes) {
-	        if (props.className) {
-	            classes.push(props.className)
-	        }
-
-	        props.className = classes.join(" ")
-	    }
-
-	    return tagName ? tagName.toLowerCase() : "div"
-	}
-
-
-/***/ },
-/* 10 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = SoftSetHook;
-
-	function SoftSetHook(value) {
-	    if (!(this instanceof SoftSetHook)) {
-	        return new SoftSetHook(value);
-	    }
-
-	    this.value = value;
-	}
-
-	SoftSetHook.prototype.hook = function (node, propertyName) {
-	    if (node[propertyName] !== this.value) {
-	        node[propertyName] = this.value;
-	    }
-	};
-
-
-/***/ },
-/* 11 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var DataSet = __webpack_require__(42)
-
-	module.exports = DataSetHook;
-
-	function DataSetHook(value) {
-	    if (!(this instanceof DataSetHook)) {
-	        return new DataSetHook(value);
-	    }
-
-	    this.value = value;
-	}
-
-	DataSetHook.prototype.hook = function (node, propertyName) {
-	    var ds = DataSet(node)
-	    var propName = propertyName.substr(5)
-
-	    ds[propName] = this.value;
-	};
-
-
-/***/ },
-/* 12 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var DataSet = __webpack_require__(42)
-
-	module.exports = DataSetHook;
-
-	function DataSetHook(value) {
-	    if (!(this instanceof DataSetHook)) {
-	        return new DataSetHook(value);
-	    }
-
-	    this.value = value;
-	}
-
-	DataSetHook.prototype.hook = function (node, propertyName) {
-	    var ds = DataSet(node)
-	    var propName = propertyName.substr(3)
-
-	    ds[propName] = this.value;
-	};
-
-	DataSetHook.prototype.unhook = function(node, propertyName) {
-	    var ds = DataSet(node);
-	    var propName = propertyName.substr(3);
-
-	    ds[propName] = undefined;
-	}
-
-
-/***/ },
-/* 13 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var Observ = __webpack_require__(15)
-	var extend = __webpack_require__(44)
-
-	var blackList = {
-	    "length": "Clashes with `Function.prototype.length`.\n",
-	    "name": "Clashes with `Function.prototype.name`.\n",
-	    "_diff": "_diff is reserved key of observ-struct.\n",
-	    "_type": "_type is reserved key of observ-struct.\n",
-	    "_version": "_version is reserved key of observ-struct.\n"
-	}
-	var NO_TRANSACTION = {}
-
-	function setNonEnumerable(object, key, value) {
-	    Object.defineProperty(object, key, {
-	        value: value,
-	        writable: true,
-	        configurable: true,
-	        enumerable: false
-	    })
-	}
-
-	/* ObservStruct := (Object<String, Observ<T>>) =>
-	    Object<String, Observ<T>> &
-	        Observ<Object<String, T> & {
-	            _diff: Object<String, Any>
-	        }>
-
-	*/
-	module.exports = ObservStruct
-
-	function ObservStruct(struct) {
-	    var keys = Object.keys(struct)
-
-	    var initialState = {}
-	    var currentTransaction = NO_TRANSACTION
-	    var nestedTransaction = NO_TRANSACTION
-
-	    keys.forEach(function (key) {
-	        if (blackList.hasOwnProperty(key)) {
-	            throw new Error("cannot create an observ-struct " +
-	                "with a key named '" + key + "'.\n" +
-	                blackList[key]);
-	        }
-
-	        var observ = struct[key]
-	        initialState[key] = typeof observ === "function" ?
-	            observ() : observ
-	    })
-
-	    var obs = Observ(initialState)
-	    keys.forEach(function (key) {
-	        var observ = struct[key]
-	        obs[key] = observ
-
-	        if (typeof observ === "function") {
-	            observ(function (value) {
-	                if (nestedTransaction === value) {
-	                    return
-	                }
-
-	                var state = extend(obs())
-	                state[key] = value
-	                var diff = {}
-	                diff[key] = value && value._diff ?
-	                    value._diff : value
-
-	                setNonEnumerable(state, "_diff", diff)
-	                currentTransaction = state
-	                obs.set(state)
-	                currentTransaction = NO_TRANSACTION
-	            })
-	        }
-	    })
-	    var _set = obs.set
-	    obs.set = function trackDiff(value) {
-	        if (currentTransaction === value) {
-	            return _set(value)
-	        }
-
-	        var newState = extend(value)
-	        setNonEnumerable(newState, "_diff", value)
-	        _set(newState)
-	    }
-
-	    obs(function (newState) {
-	        if (currentTransaction === newState) {
-	            return
-	        }
-
-	        keys.forEach(function (key) {
-	            var observ = struct[key]
-	            var newObservValue = newState[key]
-
-	            if (typeof observ === "function" &&
-	                observ() !== newObservValue
-	            ) {
-	                nestedTransaction = newObservValue
-	                observ.set(newState[key])
-	                nestedTransaction = NO_TRANSACTION
-	            }
-	        })
-	    })
-
-	    obs._type = "observ-struct"
-	    obs._version = "5"
-
-	    return obs
-	}
-
-
-/***/ },
-/* 14 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var Observ = __webpack_require__(15)
-
-	// circular dep between ArrayMethods & this file
-	module.exports = ObservArray
-
-	var splice = __webpack_require__(28)
-	var put = __webpack_require__(29)
-	var set = __webpack_require__(30)
-	var transaction = __webpack_require__(31)
-	var ArrayMethods = __webpack_require__(32)
-	var addListener = __webpack_require__(33)
-
-
-	/*  ObservArray := (Array<T>) => Observ<
-	        Array<T> & { _diff: Array }
-	    > & {
-	        splice: (index: Number, amount: Number, rest...: T) =>
-	            Array<T>,
-	        push: (values...: T) => Number,
-	        filter: (lambda: Function, thisValue: Any) => Array<T>,
-	        indexOf: (item: T, fromIndex: Number) => Number
-	    }
-
-	    Fix to make it more like ObservHash.
-
-	    I.e. you write observables into it.
-	        reading methods take plain JS objects to read
-	        and the value of the array is always an array of plain
-	        objsect.
-
-	        The observ array instance itself would have indexed
-	        properties that are the observables
-	*/
-	function ObservArray(initialList) {
-	    // list is the internal mutable list observ instances that
-	    // all methods on `obs` dispatch to.
-	    var list = initialList
-	    var initialState = []
-
-	    // copy state out of initialList into initialState
-	    list.forEach(function (observ, index) {
-	        initialState[index] = typeof observ === "function" ?
-	            observ() : observ
-	    })
-
-	    var obs = Observ(initialState)
-	    obs.splice = splice
-
-	    // override set and store original for later use
-	    obs._observSet = obs.set
-	    obs.set = set
-
-	    obs.get = get
-	    obs.getLength = getLength
-	    obs.put = put
-	    obs.transaction = transaction
-
-	    // you better not mutate this list directly
-	    // this is the list of observs instances
-	    obs._list = list
-
-	    var removeListeners = list.map(function (observ) {
-	        return typeof observ === "function" ?
-	            addListener(obs, observ) :
-	            null
-	    });
-	    // this is a list of removal functions that must be called
-	    // when observ instances are removed from `obs.list`
-	    // not calling this means we do not GC our observ change
-	    // listeners. Which causes rage bugs
-	    obs._removeListeners = removeListeners
-
-	    obs._type = "observ-array"
-	    obs._version = "3"
-
-	    return ArrayMethods(obs, list)
-	}
-
-	function get(index) {
-	    return this._list[index]
-	}
-
-	function getLength() {
-	    return this._list.length
-	}
-
-
-/***/ },
 /* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = Observable
+	var slice = Array.prototype.slice
 
-	function Observable(value) {
-	    var listeners = []
-	    value = value === undefined ? null : value
+	var addListener = __webpack_require__(20)
+	var setNonEnumerable = __webpack_require__(31);
 
-	    observable.set = function (v) {
-	        value = v
-	        listeners.forEach(function (f) {
-	            f(v)
-	        })
-	    }
+	module.exports = splice
 
-	    return observable
+	// `obs.splice` is a mutable implementation of `splice()`
+	// that mutates both `list` and the internal `valueList` that
+	// is the current value of `obs` itself
+	function splice(index, amount) {
+	    var obs = this
+	    var args = slice.call(arguments, 0)
+	    var valueList = obs().slice()
 
-	    function observable(listener) {
-	        if (!listener) {
+	    // generate a list of args to mutate the internal
+	    // list of only obs
+	    var valueArgs = args.map(function (value, index) {
+	        if (index === 0 || index === 1) {
 	            return value
 	        }
 
-	        listeners.push(listener)
+	        // must unpack observables that we are adding
+	        return typeof value === "function" ? value() : value
+	    })
 
-	        return function remove() {
-	            listeners.splice(listeners.indexOf(listener), 1)
+	    valueList.splice.apply(valueList, valueArgs)
+	    // we remove the observs that we remove
+	    var removed = obs._list.splice.apply(obs._list, args)
+
+	    var extraRemoveListeners = args.slice(2).map(function (observ) {
+	        return typeof observ === "function" ?
+	            addListener(obs, observ) :
+	            null
+	    })
+	    extraRemoveListeners.unshift(args[0], args[1])
+	    var removedListeners = obs._removeListeners.splice
+	        .apply(obs._removeListeners, extraRemoveListeners)
+
+	    removedListeners.forEach(function (removeObservListener) {
+	        if (removeObservListener) {
+	            removeObservListener()
 	        }
-	    }
+	    })
+
+	    setNonEnumerable(valueList, "_diff", [valueArgs])
+
+	    obs._observSet(valueList)
+	    return removed
 	}
 
 
@@ -8364,7 +8243,229 @@ module.exports =
 /* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(39)
+	var addListener = __webpack_require__(20)
+	var setNonEnumerable = __webpack_require__(31);
+
+	module.exports = put
+
+	// `obs.put` is a mutable implementation of `array[index] = value`
+	// that mutates both `list` and the internal `valueList` that
+	// is the current value of `obs` itself
+	function put(index, value) {
+	    var obs = this
+	    var valueList = obs().slice()
+
+	    var originalLength = valueList.length
+	    valueList[index] = typeof value === "function" ? value() : value
+
+	    obs._list[index] = value
+
+	    // remove past value listener if was observ
+	    var removeListener = obs._removeListeners[index]
+	    if (removeListener){
+	        removeListener()
+	    }
+
+	    // add listener to value if observ
+	    obs._removeListeners[index] = typeof value === "function" ?
+	        addListener(obs, value) :
+	        null
+
+	    // fake splice diff
+	    var valueArgs = index < originalLength ? 
+	        [index, 1, valueList[index]] :
+	        [index, 0, valueList[index]]
+
+	    setNonEnumerable(valueList, "_diff", [valueArgs])
+
+	    obs._observSet(valueList)
+	    return value
+	}
+
+/***/ },
+/* 17 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var addListener = __webpack_require__(20)
+	var setNonEnumerable = __webpack_require__(31)
+	var adiff = __webpack_require__(48)
+
+	module.exports = set
+
+	function set(rawList) {
+	    if (!Array.isArray(rawList)) rawList = []
+	        
+	    var obs = this
+	    var changes = adiff.diff(obs._list, rawList)
+	    var valueList = obs().slice()
+
+	    var valueChanges = changes.map(applyPatch.bind(obs, valueList))
+
+	    setNonEnumerable(valueList, "_diff", valueChanges)
+
+	    obs._observSet(valueList)
+	    return changes
+	}
+
+	function applyPatch (valueList, args) {
+	    var obs = this
+	    var valueArgs = args.map(unpack)
+
+	    valueList.splice.apply(valueList, valueArgs)
+	    obs._list.splice.apply(obs._list, args)
+
+	    var extraRemoveListeners = args.slice(2).map(function (observ) {
+	        return typeof observ === "function" ?
+	            addListener(obs, observ) :
+	            null
+	    })
+
+	    extraRemoveListeners.unshift(args[0], args[1])
+	    var removedListeners = obs._removeListeners.splice
+	        .apply(obs._removeListeners, extraRemoveListeners)
+
+	    removedListeners.forEach(function (removeObservListener) {
+	        if (removeObservListener) {
+	            removeObservListener()
+	        }
+	    })
+
+	    return valueArgs
+	}
+
+	function unpack(value, index){
+	    if (index === 0 || index === 1) {
+	        return value
+	    }
+	    return typeof value === "function" ? value() : value
+	}
+
+/***/ },
+/* 18 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = transaction
+
+	function transaction (func) {
+	    var obs = this
+	    var rawList = obs._list.slice()
+
+	    if (func(rawList) !== false){ // allow cancel
+	        return obs.set(rawList)
+	    }
+
+	}
+
+/***/ },
+/* 19 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var ObservArray = __webpack_require__(8)
+
+	var slice = Array.prototype.slice
+
+	var ARRAY_METHODS = [
+	    "concat", "slice", "every", "filter", "forEach", "indexOf",
+	    "join", "lastIndexOf", "map", "reduce", "reduceRight",
+	    "some", "toString", "toLocaleString"
+	]
+
+	var methods = ARRAY_METHODS.map(function (name) {
+	    return [name, function () {
+	        var res = this._list[name].apply(this._list, arguments)
+
+	        if (res && Array.isArray(res)) {
+	            res = ObservArray(res)
+	        }
+
+	        return res
+	    }]
+	})
+
+	module.exports = ArrayMethods
+
+	function ArrayMethods(obs) {
+	    obs.push = observArrayPush
+	    obs.pop = observArrayPop
+	    obs.shift = observArrayShift
+	    obs.unshift = observArrayUnshift
+	    obs.reverse = notImplemented
+	    obs.sort = notImplemented
+
+	    methods.forEach(function (tuple) {
+	        obs[tuple[0]] = tuple[1]
+	    })
+	    return obs
+	}
+
+
+
+	function observArrayPush() {
+	    var args = slice.call(arguments)
+	    args.unshift(this._list.length, 0)
+	    this.splice.apply(this, args)
+
+	    return this._list.length
+	}
+	function observArrayPop() {
+	    return this.splice(this._list.length - 1, 1)[0]
+	}
+	function observArrayShift() {
+	    return this.splice(0, 1)[0]
+	}
+	function observArrayUnshift() {
+	    var args = slice.call(arguments)
+	    args.unshift(0, 0)
+	    this.splice.apply(this, args)
+
+	    return this._list.length
+	}
+
+
+	function notImplemented() {
+	    throw new Error("Pull request welcome")
+	}
+
+
+/***/ },
+/* 20 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var setNonEnumerable = __webpack_require__(31);
+
+	module.exports = addListener
+
+	function addListener(observArray, observ) {
+	    var list = observArray._list
+
+	    return observ(function (value) {
+	        var valueList =  observArray().slice()
+	        var index = list.indexOf(observ)
+
+	        // This code path should never hit. If this happens
+	        // there's a bug in the cleanup code
+	        if (index === -1) {
+	            var message = "observ-array: Unremoved observ listener"
+	            var err = new Error(message)
+	            err.list = list
+	            err.index = index
+	            err.observ = observ
+	            throw err
+	        }
+
+	        valueList.splice(index, 1, value)
+	        setNonEnumerable(valueList, "_diff", [ [index, 1, value] ])
+
+	        observArray._observSet(valueList)
+	    })
+	}
+
+
+/***/ },
+/* 21 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(30)
 
 	module.exports = isVirtualNode
 
@@ -8374,10 +8475,10 @@ module.exports =
 
 
 /***/ },
-/* 17 */
+/* 22 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(39)
+	var version = __webpack_require__(30)
 
 	module.exports = isVirtualText
 
@@ -8387,7 +8488,7 @@ module.exports =
 
 
 /***/ },
-/* 18 */
+/* 23 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = isWidget
@@ -8398,19 +8499,168 @@ module.exports =
 
 
 /***/ },
-/* 19 */
+/* 24 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = function(module) {
+		if(!module.webpackPolyfill) {
+			module.deprecate = function() {};
+			module.paths = [];
+			// module.parent = undefined by default
+			module.children = [];
+			module.webpackPolyfill = 1;
+		}
+		return module;
+	}
+
+
+/***/ },
+/* 25 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var TypedError = __webpack_require__(52)
+
+	var VNode = __webpack_require__(36)
+	var VText = __webpack_require__(37)
+	var isVNode = __webpack_require__(38)
+	var isVText = __webpack_require__(39)
+	var isWidget = __webpack_require__(40)
+	var isHook = __webpack_require__(41)
+	var isVThunk = __webpack_require__(42)
+
+	var parseTag = __webpack_require__(32)
+	var softSetHook = __webpack_require__(45)
+	var dataSetHook = __webpack_require__(46)
+	var evHook = __webpack_require__(47)
+
+	var UnexpectedVirtualElement = TypedError({
+	    type: "virtual-hyperscript.unexpected.virtual-element",
+	    message: "Unexpected virtual child passed to h().\n" +
+	        "Expected a VNode / Vthunk / VWidget / string but:\n" +
+	        "got a {foreignObjectStr}.\n" +
+	        "The parent vnode is {parentVnodeStr}.\n" +
+	        "Suggested fix: change your `h(..., [ ... ])` callsite.",
+	    foreignObjectStr: null,
+	    parentVnodeStr: null,
+	    foreignObject: null,
+	    parentVnode: null
+	})
+
+	module.exports = h
+
+	function h(tagName, properties, children) {
+	    var childNodes = []
+	    var tag, props, key, namespace
+
+	    if (!children && isChildren(properties)) {
+	        children = properties
+	        props = {}
+	    }
+
+	    props = props || properties || {}
+	    tag = parseTag(tagName, props)
+
+	    // support keys
+	    if ("key" in props) {
+	        key = props.key
+	        props.key = undefined
+	    }
+
+	    // support namespace
+	    if ("namespace" in props) {
+	        namespace = props.namespace
+	        props.namespace = undefined
+	    }
+
+	    // fix cursor bug
+	    if (tag === "input" &&
+	        "value" in props &&
+	        props.value !== undefined &&
+	        !isHook(props.value)
+	    ) {
+	        props.value = softSetHook(props.value)
+	    }
+
+	    var keys = Object.keys(props)
+	    var propName, value
+	    for (var j = 0; j < keys.length; j++) {
+	        propName = keys[j]
+	        value = props[propName]
+	        if (isHook(value)) {
+	            continue
+	        }
+
+	        // add data-foo support
+	        if (propName.substr(0, 5) === "data-") {
+	            props[propName] = dataSetHook(value)
+	        }
+
+	        // add ev-foo support
+	        if (propName.substr(0, 3) === "ev-") {
+	            props[propName] = evHook(value)
+	        }
+	    }
+
+	    if (children !== undefined && children !== null) {
+	        addChild(children, childNodes, tag, props)
+	    }
+
+
+	    var node = new VNode(tag, props, childNodes, key, namespace)
+
+	    return node
+	}
+
+	function addChild(c, childNodes, tag, props) {
+	    if (typeof c === "string") {
+	        childNodes.push(new VText(c))
+	    } else if (isChild(c)) {
+	        childNodes.push(c)
+	    } else if (Array.isArray(c)) {
+	        for (var i = 0; i < c.length; i++) {
+	            addChild(c[i], childNodes, tag, props)
+	        }
+	    } else if (c === null || c === undefined) {
+	        return
+	    } else {
+	        throw UnexpectedVirtualElement({
+	            foreignObjectStr: JSON.stringify(c),
+	            foreignObject: c,
+	            parentVnodeStr: JSON.stringify({
+	                tagName: tag,
+	                properties: props
+	            }),
+	            parentVnode: {
+	                tagName: tag,
+	                properties: props
+	            }
+	        })
+	    }
+	}
+
+	function isChild(x) {
+	    return isVNode(x) || isVText(x) || isWidget(x) || isVThunk(x)
+	}
+
+	function isChildren(x) {
+	    return typeof x === "string" || Array.isArray(x) || isChild(x)
+	}
+
+
+/***/ },
+/* 26 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var isArray = __webpack_require__(49)
 	var isObject = __webpack_require__(50)
 
-	var VPatch = __webpack_require__(40)
-	var isVNode = __webpack_require__(16)
-	var isVText = __webpack_require__(17)
-	var isWidget = __webpack_require__(18)
-	var isThunk = __webpack_require__(34)
-	var isHook = __webpack_require__(35)
-	var handleThunk = __webpack_require__(41)
+	var VPatch = __webpack_require__(43)
+	var isVNode = __webpack_require__(38)
+	var isVText = __webpack_require__(39)
+	var isWidget = __webpack_require__(40)
+	var isThunk = __webpack_require__(42)
+	var isHook = __webpack_require__(41)
+	var handleThunk = __webpack_require__(44)
 
 	module.exports = diff
 
@@ -8427,11 +8677,19 @@ module.exports =
 
 	    var apply = patch[index]
 
-	    if (b == null) {
-	        apply = appendPatch(apply, new VPatch(VPatch.REMOVE, a, b))
-	        destroyWidgets(a, patch, index)
-	    } else if (isThunk(a) || isThunk(b)) {
+	    if (isThunk(a) || isThunk(b)) {
 	        thunks(a, b, patch, index)
+	    } else if (b == null) {
+
+	        // If a is a widget we will add a remove patch for it
+	        // Otherwise any child widgets/hooks must be destroyed.
+	        // This prevents adding two remove patches for a widget.
+	        if (!isWidget(a)) {
+	            clearState(a, patch, index)
+	            apply = patch[index]
+	        }
+
+	        apply = appendPatch(apply, new VPatch(VPatch.REMOVE, a, b))
 	    } else if (isVNode(b)) {
 	        if (isVNode(a)) {
 	            if (a.tagName === b.tagName &&
@@ -8444,26 +8702,30 @@ module.exports =
 	                }
 	                apply = diffChildren(a, b, patch, apply, index)
 	            } else {
+	                clearState(a, patch, index)
+	                apply = patch[index]
 	                apply = appendPatch(apply, new VPatch(VPatch.VNODE, a, b))
-	                destroyWidgets(a, patch, index)
 	            }
 	        } else {
+	            clearState(a, patch, index)
+	            apply = patch[index]
 	            apply = appendPatch(apply, new VPatch(VPatch.VNODE, a, b))
-	            destroyWidgets(a, patch, index)
 	        }
 	    } else if (isVText(b)) {
 	        if (!isVText(a)) {
+	            clearState(a, patch, index)
+	            apply = patch[index]
 	            apply = appendPatch(apply, new VPatch(VPatch.VTEXT, a, b))
-	            destroyWidgets(a, patch, index)
 	        } else if (a.text !== b.text) {
 	            apply = appendPatch(apply, new VPatch(VPatch.VTEXT, a, b))
 	        }
 	    } else if (isWidget(b)) {
-	        apply = appendPatch(apply, new VPatch(VPatch.WIDGET, a, b))
-
 	        if (!isWidget(a)) {
-	            destroyWidgets(a, patch, index)
+	            clearState(a, patch, index)
+	            apply = patch[index]
 	        }
+
+	        apply = appendPatch(apply, new VPatch(VPatch.WIDGET, a, b))
 	    }
 
 	    if (apply) {
@@ -8483,13 +8745,15 @@ module.exports =
 	        var aValue = a[aKey]
 	        var bValue = b[aKey]
 
-	        if (isObject(aValue) && isObject(bValue)) {
+	        if (aValue === bValue) {
+	            continue
+	        } else if (isObject(aValue) && isObject(bValue)) {
 	            if (getPrototype(bValue) !== getPrototype(aValue)) {
 	                diff = diff || {}
 	                diff[aKey] = bValue
 	            } else if (isHook(bValue)) {
-	                diff = diff || {}
-	                diff[aKey] = bValue
+	                 diff = diff || {}
+	                 diff[aKey] = bValue
 	            } else {
 	                var objectDiff = diffProps(aValue, bValue)
 	                if (objectDiff) {
@@ -8497,7 +8761,7 @@ module.exports =
 	                    diff[aKey] = objectDiff
 	                }
 	            }
-	        } else if (aValue !== bValue) {
+	        } else {
 	            diff = diff || {}
 	            diff[aKey] = bValue
 	        }
@@ -8542,12 +8806,6 @@ module.exports =
 	                apply = appendPatch(apply,
 	                    new VPatch(VPatch.INSERT, null, rightNode))
 	            }
-	        } else if (!rightNode) {
-	            if (leftNode) {
-	                // Excess nodes in a need to be removed
-	                patch[index] = new VPatch(VPatch.REMOVE, leftNode, null)
-	                destroyWidgets(leftNode, patch, index)
-	            }
 	        } else {
 	            walk(leftNode, rightNode, patch, index)
 	        }
@@ -8565,14 +8823,23 @@ module.exports =
 	    return apply
 	}
 
+	function clearState(vNode, patch, index) {
+	    // TODO: Make this a single walk, not two
+	    unhook(vNode, patch, index)
+	    destroyWidgets(vNode, patch, index)
+	}
+
 	// Patch records for all destroyed widgets must be added because we need
 	// a DOM node reference for the destroy function
 	function destroyWidgets(vNode, patch, index) {
 	    if (isWidget(vNode)) {
 	        if (typeof vNode.destroy === "function") {
-	            patch[index] = new VPatch(VPatch.REMOVE, vNode, null)
+	            patch[index] = appendPatch(
+	                patch[index],
+	                new VPatch(VPatch.REMOVE, vNode, null)
+	            )
 	        }
-	    } else if (isVNode(vNode) && vNode.hasWidgets) {
+	    } else if (isVNode(vNode) && (vNode.hasWidgets || vNode.hasThunks)) {
 	        var children = vNode.children
 	        var len = children.length
 	        for (var i = 0; i < len; i++) {
@@ -8585,6 +8852,8 @@ module.exports =
 	                index += child.count
 	            }
 	        }
+	    } else if (isThunk(vNode)) {
+	        thunks(vNode, null, patch, index)
 	    }
 	}
 
@@ -8607,6 +8876,49 @@ module.exports =
 	    return false;
 	}
 
+	// Execute hooks when two nodes are identical
+	function unhook(vNode, patch, index) {
+	    if (isVNode(vNode)) {
+	        if (vNode.hooks) {
+	            patch[index] = appendPatch(
+	                patch[index],
+	                new VPatch(
+	                    VPatch.PROPS,
+	                    vNode,
+	                    undefinedKeys(vNode.hooks)
+	                )
+	            )
+	        }
+
+	        if (vNode.descendantHooks || vNode.hasThunks) {
+	            var children = vNode.children
+	            var len = children.length
+	            for (var i = 0; i < len; i++) {
+	                var child = children[i]
+	                index += 1
+
+	                unhook(child, patch, index)
+
+	                if (isVNode(child) && child.count) {
+	                    index += child.count
+	                }
+	            }
+	        }
+	    } else if (isThunk(vNode)) {
+	        thunks(vNode, null, patch, index)
+	    }
+	}
+
+	function undefinedKeys(obj) {
+	    var result = {}
+
+	    for (var key in obj) {
+	        result[key] = undefined
+	    }
+
+	    return result
+	}
+
 	// List diff, naive left to right reordering
 	function reorder(aChildren, bChildren) {
 
@@ -8624,12 +8936,12 @@ module.exports =
 
 	    var bMatch = {}, aMatch = {}
 
-	    for (var key in bKeys) {
-	        bMatch[bKeys[key]] = aKeys[key]
+	    for (var aKey in bKeys) {
+	        bMatch[bKeys[aKey]] = aKeys[aKey]
 	    }
 
-	    for (var key in aKeys) {
-	        aMatch[aKeys[key]] = bKeys[key]
+	    for (var bKey in aKeys) {
+	        aMatch[aKeys[bKey]] = bKeys[bKey]
 	    }
 
 	    var aLen = aChildren.length
@@ -8718,509 +9030,14 @@ module.exports =
 
 
 /***/ },
-/* 20 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var camelize = __webpack_require__(55)
-	var template = __webpack_require__(52)
-	var extend = __webpack_require__(56)
-
-	module.exports = TypedError
-
-	function TypedError(args) {
-	    if (!args) {
-	        throw new Error("args is required");
-	    }
-	    if (!args.type) {
-	        throw new Error("args.type is required");
-	    }
-	    if (!args.message) {
-	        throw new Error("args.message is required");
-	    }
-
-	    var message = args.message
-
-	    if (args.type && !args.name) {
-	        var errorName = camelize(args.type) + "Error"
-	        args.name = errorName[0].toUpperCase() + errorName.substr(1)
-	    }
-
-	    createError.type = args.type;
-	    createError._name = args.name;
-
-	    return createError;
-
-	    function createError(opts) {
-	        var result = new Error()
-
-	        Object.defineProperty(result, "type", {
-	            value: result.type,
-	            enumerable: true,
-	            writable: true,
-	            configurable: true
-	        })
-
-	        var options = extend({}, args, opts)
-
-	        extend(result, options)
-	        result.message = template(message, options)
-
-	        return result
-	    }
-	}
-
-
-
-/***/ },
-/* 21 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(43)
-	var isVNode = __webpack_require__(23)
-	var isWidget = __webpack_require__(25)
-	var isVHook = __webpack_require__(26)
-
-	module.exports = VirtualNode
-
-	var noProperties = {}
-	var noChildren = []
-
-	function VirtualNode(tagName, properties, children, key, namespace) {
-	    this.tagName = tagName
-	    this.properties = properties || noProperties
-	    this.children = children || noChildren
-	    this.key = key != null ? String(key) : undefined
-	    this.namespace = (typeof namespace === "string") ? namespace : null
-
-	    var count = (children && children.length) || 0
-	    var descendants = 0
-	    var hasWidgets = false
-
-	    for (var i = 0; i < count; i++) {
-	        var child = children[i]
-	        if (isVNode(child)) {
-	            descendants += child.count || 0
-
-	            if (!hasWidgets && child.hasWidgets) {
-	                hasWidgets = true
-	            }
-	        } else if (!hasWidgets && isWidget(child)) {
-	            if (typeof child.destroy === "function") {
-	                hasWidgets = true
-	            }
-	        }
-	    }
-
-	    this.count = count + descendants
-	    this.hasWidgets = hasWidgets
-	}
-
-	VirtualNode.prototype.version = version
-	VirtualNode.prototype.type = "VirtualNode"
-
-
-/***/ },
-/* 22 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(43)
-
-	module.exports = VirtualText
-
-	function VirtualText(text) {
-	    this.text = String(text)
-	}
-
-	VirtualText.prototype.version = version
-	VirtualText.prototype.type = "VirtualText"
-
-
-/***/ },
-/* 23 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(43)
-
-	module.exports = isVirtualNode
-
-	function isVirtualNode(x) {
-	    return x && x.type === "VirtualNode" && x.version === version
-	}
-
-
-/***/ },
-/* 24 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(43)
-
-	module.exports = isVirtualText
-
-	function isVirtualText(x) {
-	    return x && x.type === "VirtualText" && x.version === version
-	}
-
-
-/***/ },
-/* 25 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isWidget
-
-	function isWidget(w) {
-	    return w && w.type === "Widget"
-	}
-
-
-/***/ },
-/* 26 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isHook
-
-	function isHook(hook) {
-	    return hook && typeof hook.hook === "function" &&
-	        !hook.hasOwnProperty("hook")
-	}
-
-
-/***/ },
 /* 27 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = isThunk
-
-	function isThunk(t) {
-	    return t && t.type === "Thunk"
-	}
-
-
-/***/ },
-/* 28 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var slice = Array.prototype.slice
-
-	var addListener = __webpack_require__(33)
-	var setNonEnumerable = __webpack_require__(48);
-
-	module.exports = splice
-
-	// `obs.splice` is a mutable implementation of `splice()`
-	// that mutates both `list` and the internal `valueList` that
-	// is the current value of `obs` itself
-	function splice(index, amount) {
-	    var obs = this
-	    var args = slice.call(arguments, 0)
-	    var valueList = obs().slice()
-
-	    // generate a list of args to mutate the internal
-	    // list of only obs
-	    var valueArgs = args.map(function (value, index) {
-	        if (index === 0 || index === 1) {
-	            return value
-	        }
-
-	        // must unpack observables that we are adding
-	        return typeof value === "function" ? value() : value
-	    })
-
-	    valueList.splice.apply(valueList, valueArgs)
-	    // we remove the observs that we remove
-	    var removed = obs._list.splice.apply(obs._list, args)
-
-	    var extraRemoveListeners = args.slice(2).map(function (observ) {
-	        return typeof observ === "function" ?
-	            addListener(obs, observ) :
-	            null
-	    })
-	    extraRemoveListeners.unshift(args[0], args[1])
-	    var removedListeners = obs._removeListeners.splice
-	        .apply(obs._removeListeners, extraRemoveListeners)
-
-	    removedListeners.forEach(function (removeObservListener) {
-	        if (removeObservListener) {
-	            removeObservListener()
-	        }
-	    })
-
-	    setNonEnumerable(valueList, "_diff", [valueArgs])
-
-	    obs._observSet(valueList)
-	    return removed
-	}
-
-
-/***/ },
-/* 29 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var addListener = __webpack_require__(33)
-	var setNonEnumerable = __webpack_require__(48);
-
-	module.exports = put
-
-	// `obs.put` is a mutable implementation of `array[index] = value`
-	// that mutates both `list` and the internal `valueList` that
-	// is the current value of `obs` itself
-	function put(index, value) {
-	    var obs = this
-	    var valueList = obs().slice()
-
-	    var originalLength = valueList.length
-	    valueList[index] = typeof value === "function" ? value() : value
-
-	    obs._list[index] = value
-
-	    // remove past value listener if was observ
-	    var removeListener = obs._removeListeners[index]
-	    if (removeListener){
-	        removeListener()
-	    }
-
-	    // add listener to value if observ
-	    obs._removeListeners[index] = typeof value === "function" ?
-	        addListener(obs, value) :
-	        null
-
-	    // fake splice diff
-	    var valueArgs = index < originalLength ? 
-	        [index, 1, valueList[index]] :
-	        [index, 0, valueList[index]]
-
-	    setNonEnumerable(valueList, "_diff", [valueArgs])
-
-	    obs._observSet(valueList)
-	    return value
-	}
-
-/***/ },
-/* 30 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var addListener = __webpack_require__(33)
-	var setNonEnumerable = __webpack_require__(48)
-	var adiff = __webpack_require__(54)
-
-	module.exports = set
-
-	function set(rawList) {
-	    if (!Array.isArray(rawList)) rawList = []
-	        
-	    var obs = this
-	    var changes = adiff.diff(obs._list, rawList)
-	    var valueList = obs().slice()
-
-	    var valueChanges = changes.map(applyPatch.bind(obs, valueList))
-
-	    setNonEnumerable(valueList, "_diff", valueChanges)
-
-	    obs._observSet(valueList)
-	    return changes
-	}
-
-	function applyPatch (valueList, args) {
-	    var obs = this
-	    var valueArgs = args.map(unpack)
-
-	    valueList.splice.apply(valueList, valueArgs)
-	    obs._list.splice.apply(obs._list, args)
-
-	    var extraRemoveListeners = args.slice(2).map(function (observ) {
-	        return typeof observ === "function" ?
-	            addListener(obs, observ) :
-	            null
-	    })
-
-	    extraRemoveListeners.unshift(args[0], args[1])
-	    var removedListeners = obs._removeListeners.splice
-	        .apply(obs._removeListeners, extraRemoveListeners)
-
-	    removedListeners.forEach(function (removeObservListener) {
-	        if (removeObservListener) {
-	            removeObservListener()
-	        }
-	    })
-
-	    return valueArgs
-	}
-
-	function unpack(value, index){
-	    if (index === 0 || index === 1) {
-	        return value
-	    }
-	    return typeof value === "function" ? value() : value
-	}
-
-/***/ },
-/* 31 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = transaction
-
-	function transaction (func) {
-	    var obs = this
-	    var rawList = obs._list.slice()
-
-	    if (func(rawList) !== false){ // allow cancel
-	        return obs.set(rawList)
-	    }
-
-	}
-
-/***/ },
-/* 32 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var ObservArray = __webpack_require__(14)
-
-	var slice = Array.prototype.slice
-
-	var ARRAY_METHODS = [
-	    "concat", "slice", "every", "filter", "forEach", "indexOf",
-	    "join", "lastIndexOf", "map", "reduce", "reduceRight",
-	    "some", "toString", "toLocaleString"
-	]
-
-	var methods = ARRAY_METHODS.map(function (name) {
-	    return [name, function () {
-	        var res = this._list[name].apply(this._list, arguments)
-
-	        if (res && Array.isArray(res)) {
-	            res = ObservArray(res)
-	        }
-
-	        return res
-	    }]
-	})
-
-	module.exports = ArrayMethods
-
-	function ArrayMethods(obs) {
-	    obs.push = observArrayPush
-	    obs.pop = observArrayPop
-	    obs.shift = observArrayShift
-	    obs.unshift = observArrayUnshift
-	    obs.reverse = notImplemented
-	    obs.sort = notImplemented
-
-	    methods.forEach(function (tuple) {
-	        obs[tuple[0]] = tuple[1]
-	    })
-	    return obs
-	}
-
-
-
-	function observArrayPush() {
-	    var args = slice.call(arguments)
-	    args.unshift(this._list.length, 0)
-	    this.splice.apply(this, args)
-
-	    return this._list.length
-	}
-	function observArrayPop() {
-	    return this.splice(this._list.length - 1, 1)[0]
-	}
-	function observArrayShift() {
-	    return this.splice(0, 1)[0]
-	}
-	function observArrayUnshift() {
-	    var args = slice.call(arguments)
-	    args.unshift(0, 0)
-	    this.splice.apply(this, args)
-
-	    return this._list.length
-	}
-
-
-	function notImplemented() {
-	    throw new Error("Pull request welcome")
-	}
-
-
-/***/ },
-/* 33 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var setNonEnumerable = __webpack_require__(48);
-
-	module.exports = addListener
-
-	function addListener(observArray, observ) {
-	    var list = observArray._list
-
-	    return observ(function (value) {
-	        var valueList =  observArray().slice()
-	        var index = list.indexOf(observ)
-
-	        // This code path should never hit. If this happens
-	        // there's a bug in the cleanup code
-	        if (index === -1) {
-	            var message = "observ-array: Unremoved observ listener"
-	            var err = new Error(message)
-	            err.list = list
-	            err.index = index
-	            err.observ = observ
-	            throw err
-	        }
-
-	        valueList.splice(index, 1, value)
-	        setNonEnumerable(valueList, "_diff", [ [index, 1, value] ])
-
-	        observArray._observSet(valueList)
-	    })
-	}
-
-
-/***/ },
-/* 34 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isThunk
-
-	function isThunk(t) {
-	    return t && t.type === "Thunk"
-	}
-
-
-/***/ },
-/* 35 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isHook
-
-	function isHook(hook) {
-	    return hook && typeof hook.hook === "function" &&
-	        !hook.hasOwnProperty("hook")
-	}
-
-
-/***/ },
-/* 36 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = function(module) {
-		if(!module.webpackPolyfill) {
-			module.deprecate = function() {};
-			module.paths = [];
-			// module.parent = undefined by default
-			module.children = [];
-			module.webpackPolyfill = 1;
-		}
-		return module;
-	}
-
-
-/***/ },
-/* 37 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var document = __webpack_require__(58)
-	var isArray = __webpack_require__(53)
-
-	var domIndex = __webpack_require__(46)
-	var patchOp = __webpack_require__(47)
+	var document = __webpack_require__(53)
+	var isArray = __webpack_require__(49)
+
+	var domIndex = __webpack_require__(33)
+	var patchOp = __webpack_require__(34)
 	module.exports = patch
 
 	function patch(rootNode, patches) {
@@ -9295,17 +9112,17 @@ module.exports =
 
 
 /***/ },
-/* 38 */
+/* 28 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var document = __webpack_require__(58)
+	var document = __webpack_require__(53)
 
-	var applyProperties = __webpack_require__(45)
+	var applyProperties = __webpack_require__(35)
 
-	var isVNode = __webpack_require__(16)
-	var isVText = __webpack_require__(17)
-	var isWidget = __webpack_require__(18)
-	var handleThunk = __webpack_require__(41)
+	var isVNode = __webpack_require__(38)
+	var isVText = __webpack_require__(39)
+	var isWidget = __webpack_require__(40)
+	var handleThunk = __webpack_require__(44)
 
 	module.exports = createElement
 
@@ -9347,119 +9164,7 @@ module.exports =
 
 
 /***/ },
-/* 39 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = "1"
-
-
-/***/ },
-/* 40 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(39)
-
-	VirtualPatch.NONE = 0
-	VirtualPatch.VTEXT = 1
-	VirtualPatch.VNODE = 2
-	VirtualPatch.WIDGET = 3
-	VirtualPatch.PROPS = 4
-	VirtualPatch.ORDER = 5
-	VirtualPatch.INSERT = 6
-	VirtualPatch.REMOVE = 7
-	VirtualPatch.THUNK = 8
-
-	module.exports = VirtualPatch
-
-	function VirtualPatch(type, vNode, patch) {
-	    this.type = Number(type)
-	    this.vNode = vNode
-	    this.patch = patch
-	}
-
-	VirtualPatch.prototype.version = version
-	VirtualPatch.prototype.type = "VirtualPatch"
-
-
-/***/ },
-/* 41 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var isVNode = __webpack_require__(16)
-	var isVText = __webpack_require__(17)
-	var isWidget = __webpack_require__(18)
-	var isThunk = __webpack_require__(34)
-
-	module.exports = handleThunk
-
-	function handleThunk(a, b) {
-	    var renderedA = a
-	    var renderedB = b
-
-	    if (isThunk(b)) {
-	        renderedB = renderThunk(b, a)
-	    }
-
-	    if (isThunk(a)) {
-	        renderedA = renderThunk(a, null)
-	    }
-
-	    return {
-	        a: renderedA,
-	        b: renderedB
-	    }
-	}
-
-	function renderThunk(thunk, previous) {
-	    var renderedThunk = thunk.vnode
-
-	    if (!renderedThunk) {
-	        renderedThunk = thunk.vnode = thunk.render(previous)
-	    }
-
-	    if (!(isVNode(renderedThunk) ||
-	            isVText(renderedThunk) ||
-	            isWidget(renderedThunk))) {
-	        throw new Error("thunk did not return a valid node");
-	    }
-
-	    return renderedThunk
-	}
-
-
-/***/ },
-/* 42 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var createStore = __webpack_require__(60)
-	var Individual = __webpack_require__(59)
-
-	var createHash = __webpack_require__(51)
-
-	var hashStore = Individual("__DATA_SET_WEAKMAP@3", createStore())
-
-	module.exports = DataSet
-
-	function DataSet(elem) {
-	    var store = hashStore(elem)
-
-	    if (!store.hash) {
-	        store.hash = createHash(elem)
-	    }
-
-	    return store.hash
-	}
-
-
-/***/ },
-/* 43 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = "1"
-
-
-/***/ },
-/* 44 */
+/* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = extend
@@ -9482,105 +9187,85 @@ module.exports =
 
 
 /***/ },
-/* 45 */
+/* 30 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isObject = __webpack_require__(61)
-	var isHook = __webpack_require__(35)
+	module.exports = "1"
 
-	module.exports = applyProperties
 
-	function applyProperties(node, props, previous) {
-	    for (var propName in props) {
-	        var propValue = props[propName]
+/***/ },
+/* 31 */
+/***/ function(module, exports, __webpack_require__) {
 
-	        if (propValue === undefined) {
-	            removeProperty(node, props, previous, propName);
-	        } else if (isHook(propValue)) {
-	            propValue.hook(node,
-	                propName,
-	                previous ? previous[propName] : undefined)
-	        } else {
-	            if (isObject(propValue)) {
-	                patchObject(node, props, previous, propName, propValue);
-	            } else if (propValue !== undefined) {
-	                node[propName] = propValue
-	            }
-	        }
-	    }
-	}
+	module.exports = setNonEnumerable;
 
-	function removeProperty(node, props, previous, propName) {
-	    if (previous) {
-	        var previousValue = previous[propName]
-
-	        if (!isHook(previousValue)) {
-	            if (propName === "attributes") {
-	                for (var attrName in previousValue) {
-	                    node.removeAttribute(attrName)
-	                }
-	            } else if (propName === "style") {
-	                for (var i in previousValue) {
-	                    node.style[i] = ""
-	                }
-	            } else if (typeof previousValue === "string") {
-	                node[propName] = ""
-	            } else {
-	                node[propName] = null
-	            }
-	        }
-	    }
-	}
-
-	function patchObject(node, props, previous, propName, propValue) {
-	    var previousValue = previous ? previous[propName] : undefined
-
-	    // Set attributes
-	    if (propName === "attributes") {
-	        for (var attrName in propValue) {
-	            var attrValue = propValue[attrName]
-
-	            if (attrValue === undefined) {
-	                node.removeAttribute(attrName)
-	            } else {
-	                node.setAttribute(attrName, attrValue)
-	            }
-	        }
-
-	        return
-	    }
-
-	    if(previousValue && isObject(previousValue) &&
-	        getPrototype(previousValue) !== getPrototype(propValue)) {
-	        node[propName] = propValue
-	        return
-	    }
-
-	    if (!isObject(node[propName])) {
-	        node[propName] = {}
-	    }
-
-	    var replacer = propName === "style" ? "" : undefined
-
-	    for (var k in propValue) {
-	        var value = propValue[k]
-	        node[propName][k] = (value === undefined) ? replacer : value
-	    }
-	}
-
-	function getPrototype(value) {
-	    if (Object.getPrototypeOf) {
-	        return Object.getPrototypeOf(value)
-	    } else if (value.__proto__) {
-	        return value.__proto__
-	    } else if (value.constructor) {
-	        return value.constructor.prototype
-	    }
+	function setNonEnumerable(object, key, value) {
+	    Object.defineProperty(object, key, {
+	        value: value,
+	        writable: true,
+	        configurable: true,
+	        enumerable: false
+	    });
 	}
 
 
 /***/ },
-/* 46 */
+/* 32 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var classIdSplit = /([\.#]?[a-zA-Z0-9_:-]+)/
+	var notClassId = /^\.|#/
+
+	module.exports = parseTag
+
+	function parseTag(tag, props) {
+	    if (!tag) {
+	        return "div"
+	    }
+
+	    var noId = !("id" in props)
+
+	    var tagParts = tag.split(classIdSplit)
+	    var tagName = null
+
+	    if (notClassId.test(tagParts[1])) {
+	        tagName = "div"
+	    }
+
+	    var classes, part, type, i
+	    for (i = 0; i < tagParts.length; i++) {
+	        part = tagParts[i]
+
+	        if (!part) {
+	            continue
+	        }
+
+	        type = part.charAt(0)
+
+	        if (!tagName) {
+	            tagName = part
+	        } else if (type === ".") {
+	            classes = classes || []
+	            classes.push(part.substring(1, part.length))
+	        } else if (type === "#" && noId) {
+	            props.id = part.substring(1, part.length)
+	        }
+	    }
+
+	    if (classes) {
+	        if (props.className) {
+	            classes.push(props.className)
+	        }
+
+	        props.className = classes.join(" ")
+	    }
+
+	    return tagName ? tagName.toLowerCase() : "div"
+	}
+
+
+/***/ },
+/* 33 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Maps a virtual DOM tree onto a real DOM tree in an efficient manner.
@@ -9671,16 +9356,16 @@ module.exports =
 
 
 /***/ },
-/* 47 */
+/* 34 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var applyProperties = __webpack_require__(45)
+	var applyProperties = __webpack_require__(35)
 
-	var isWidget = __webpack_require__(18)
-	var VPatch = __webpack_require__(40)
+	var isWidget = __webpack_require__(40)
+	var VPatch = __webpack_require__(43)
 
-	var render = __webpack_require__(38)
-	var updateWidget = __webpack_require__(57)
+	var render = __webpack_require__(28)
+	var updateWidget = __webpack_require__(51)
 
 	module.exports = applyPatch
 
@@ -9751,26 +9436,30 @@ module.exports =
 	        }
 	    }
 
-	    destroyWidget(domNode, leftVNode)
-
 	    return newNode
 	}
 
 	function widgetPatch(domNode, leftVNode, widget, renderOptions) {
-	    if (updateWidget(leftVNode, widget)) {
-	        return widget.update(leftVNode, domNode) || domNode
+	    var updating = updateWidget(leftVNode, widget)
+	    var newNode
+
+	    if (updating) {
+	        newNode = widget.update(leftVNode, domNode) || domNode
+	    } else {
+	        newNode = render(widget, renderOptions)
 	    }
 
 	    var parentNode = domNode.parentNode
-	    var newWidget = render(widget, renderOptions)
 
-	    if (parentNode) {
-	        parentNode.replaceChild(newWidget, domNode)
+	    if (parentNode && newNode !== domNode) {
+	        parentNode.replaceChild(newNode, domNode)
 	    }
 
-	    destroyWidget(domNode, leftVNode)
+	    if (!updating) {
+	        destroyWidget(domNode, leftVNode)
+	    }
 
-	    return newWidget
+	    return newNode
 	}
 
 	function vNodePatch(domNode, leftVNode, vNode, renderOptions) {
@@ -9780,8 +9469,6 @@ module.exports =
 	    if (parentNode) {
 	        parentNode.replaceChild(newNode, domNode)
 	    }
-
-	    destroyWidget(domNode, leftVNode)
 
 	    return newNode
 	}
@@ -9845,130 +9532,411 @@ module.exports =
 
 
 /***/ },
-/* 48 */
+/* 35 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = setNonEnumerable;
+	var isObject = __webpack_require__(50)
+	var isHook = __webpack_require__(41)
 
-	function setNonEnumerable(object, key, value) {
-	    Object.defineProperty(object, key, {
-	        value: value,
-	        writable: true,
-	        configurable: true,
-	        enumerable: false
-	    });
-	}
+	module.exports = applyProperties
 
+	function applyProperties(node, props, previous) {
+	    for (var propName in props) {
+	        var propValue = props[propName]
 
-/***/ },
-/* 49 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var nativeIsArray = Array.isArray
-	var toString = Object.prototype.toString
-
-	module.exports = nativeIsArray || isArray
-
-	function isArray(obj) {
-	    return toString.call(obj) === "[object Array]"
-	}
-
-
-/***/ },
-/* 50 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isObject
-
-	function isObject(x) {
-	    return typeof x === "object" && x !== null
-	}
-
-
-/***/ },
-/* 51 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = createHash
-
-	function createHash(elem) {
-	    var attributes = elem.attributes
-	    var hash = {}
-
-	    if (attributes === null || attributes === undefined) {
-	        return hash
+	        if (propValue === undefined) {
+	            removeProperty(node, props, previous, propName);
+	        } else if (isHook(propValue)) {
+	            propValue.hook(node,
+	                propName,
+	                previous ? previous[propName] : undefined)
+	        } else {
+	            if (isObject(propValue)) {
+	                patchObject(node, props, previous, propName, propValue);
+	            } else if (propValue !== undefined) {
+	                node[propName] = propValue
+	            }
+	        }
 	    }
+	}
 
-	    for (var i = 0; i < attributes.length; i++) {
-	        var attr = attributes[i]
+	function removeProperty(node, props, previous, propName) {
+	    if (previous) {
+	        var previousValue = previous[propName]
 
-	        if (attr.name.substr(0,5) !== "data-") {
-	            continue
+	        if (!isHook(previousValue)) {
+	            if (propName === "attributes") {
+	                for (var attrName in previousValue) {
+	                    node.removeAttribute(attrName)
+	                }
+	            } else if (propName === "style") {
+	                for (var i in previousValue) {
+	                    node.style[i] = ""
+	                }
+	            } else if (typeof previousValue === "string") {
+	                node[propName] = ""
+	            } else {
+	                node[propName] = null
+	            }
+	        } else if (previousValue.unhook) {
+	            previousValue.unhook(node, propName)
+	        }
+	    }
+	}
+
+	function patchObject(node, props, previous, propName, propValue) {
+	    var previousValue = previous ? previous[propName] : undefined
+
+	    // Set attributes
+	    if (propName === "attributes") {
+	        for (var attrName in propValue) {
+	            var attrValue = propValue[attrName]
+
+	            if (attrValue === undefined) {
+	                node.removeAttribute(attrName)
+	            } else {
+	                node.setAttribute(attrName, attrValue)
+	            }
 	        }
 
-	        hash[attr.name.substr(5)] = attr.value
+	        return
 	    }
 
-	    return hash
+	    if(previousValue && isObject(previousValue) &&
+	        getPrototype(previousValue) !== getPrototype(propValue)) {
+	        node[propName] = propValue
+	        return
+	    }
+
+	    if (!isObject(node[propName])) {
+	        node[propName] = {}
+	    }
+
+	    var replacer = propName === "style" ? "" : undefined
+
+	    for (var k in propValue) {
+	        var value = propValue[k]
+	        node[propName][k] = (value === undefined) ? replacer : value
+	    }
+	}
+
+	function getPrototype(value) {
+	    if (Object.getPrototypeOf) {
+	        return Object.getPrototypeOf(value)
+	    } else if (value.__proto__) {
+	        return value.__proto__
+	    } else if (value.constructor) {
+	        return value.constructor.prototype
+	    }
 	}
 
 
 /***/ },
-/* 52 */
+/* 36 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var nargs = /\{([0-9a-zA-Z]+)\}/g
-	var slice = Array.prototype.slice
+	var version = __webpack_require__(54)
+	var isVNode = __webpack_require__(38)
+	var isWidget = __webpack_require__(40)
+	var isThunk = __webpack_require__(42)
+	var isVHook = __webpack_require__(41)
 
-	module.exports = template
+	module.exports = VirtualNode
 
-	function template(string) {
-	    var args
+	var noProperties = {}
+	var noChildren = []
 
-	    if (arguments.length === 2 && typeof arguments[1] === "object") {
-	        args = arguments[1]
-	    } else {
-	        args = slice.call(arguments, 1)
+	function VirtualNode(tagName, properties, children, key, namespace) {
+	    this.tagName = tagName
+	    this.properties = properties || noProperties
+	    this.children = children || noChildren
+	    this.key = key != null ? String(key) : undefined
+	    this.namespace = (typeof namespace === "string") ? namespace : null
+
+	    var count = (children && children.length) || 0
+	    var descendants = 0
+	    var hasWidgets = false
+	    var hasThunks = false
+	    var descendantHooks = false
+	    var hooks
+
+	    for (var propName in properties) {
+	        if (properties.hasOwnProperty(propName)) {
+	            var property = properties[propName]
+	            if (isVHook(property) && property.unhook) {
+	                if (!hooks) {
+	                    hooks = {}
+	                }
+
+	                hooks[propName] = property
+	            }
+	        }
 	    }
 
-	    if (!args || !args.hasOwnProperty) {
-	        args = {}
-	    }
+	    for (var i = 0; i < count; i++) {
+	        var child = children[i]
+	        if (isVNode(child)) {
+	            descendants += child.count || 0
 
-	    return string.replace(nargs, function replaceArg(match, i, index) {
-	        var result
-
-	        if (string[index - 1] === "{" &&
-	            string[index + match.length] === "}") {
-	            return i
-	        } else {
-	            result = args.hasOwnProperty(i) ? args[i] : null
-	            if (result === null || result === undefined) {
-	                return ""
+	            if (!hasWidgets && child.hasWidgets) {
+	                hasWidgets = true
 	            }
 
-	            return result
+	            if (!hasThunks && child.hasThunks) {
+	                hasThunks = true
+	            }
+
+	            if (!descendantHooks && (child.hooks || child.descendantHooks)) {
+	                descendantHooks = true
+	            }
+	        } else if (!hasWidgets && isWidget(child)) {
+	            if (typeof child.destroy === "function") {
+	                hasWidgets = true
+	            }
+	        } else if (!hasThunks && isThunk(child)) {
+	            hasThunks = true;
 	        }
-	    })
+	    }
+
+	    this.count = count + descendants
+	    this.hasWidgets = hasWidgets
+	    this.hasThunks = hasThunks
+	    this.hooks = hooks
+	    this.descendantHooks = descendantHooks
 	}
+
+	VirtualNode.prototype.version = version
+	VirtualNode.prototype.type = "VirtualNode"
 
 
 /***/ },
-/* 53 */
+/* 37 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var nativeIsArray = Array.isArray
-	var toString = Object.prototype.toString
+	var version = __webpack_require__(54)
 
-	module.exports = nativeIsArray || isArray
+	module.exports = VirtualText
 
-	function isArray(obj) {
-	    return toString.call(obj) === "[object Array]"
+	function VirtualText(text) {
+	    this.text = String(text)
+	}
+
+	VirtualText.prototype.version = version
+	VirtualText.prototype.type = "VirtualText"
+
+
+/***/ },
+/* 38 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(54)
+
+	module.exports = isVirtualNode
+
+	function isVirtualNode(x) {
+	    return x && x.type === "VirtualNode" && x.version === version
 	}
 
 
 /***/ },
-/* 54 */
+/* 39 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(54)
+
+	module.exports = isVirtualText
+
+	function isVirtualText(x) {
+	    return x && x.type === "VirtualText" && x.version === version
+	}
+
+
+/***/ },
+/* 40 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isWidget
+
+	function isWidget(w) {
+	    return w && w.type === "Widget"
+	}
+
+
+/***/ },
+/* 41 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isHook
+
+	function isHook(hook) {
+	    return hook && typeof hook.hook === "function" &&
+	        !hook.hasOwnProperty("hook")
+	}
+
+
+/***/ },
+/* 42 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isThunk
+
+	function isThunk(t) {
+	    return t && t.type === "Thunk"
+	}
+
+
+/***/ },
+/* 43 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(54)
+
+	VirtualPatch.NONE = 0
+	VirtualPatch.VTEXT = 1
+	VirtualPatch.VNODE = 2
+	VirtualPatch.WIDGET = 3
+	VirtualPatch.PROPS = 4
+	VirtualPatch.ORDER = 5
+	VirtualPatch.INSERT = 6
+	VirtualPatch.REMOVE = 7
+	VirtualPatch.THUNK = 8
+
+	module.exports = VirtualPatch
+
+	function VirtualPatch(type, vNode, patch) {
+	    this.type = Number(type)
+	    this.vNode = vNode
+	    this.patch = patch
+	}
+
+	VirtualPatch.prototype.version = version
+	VirtualPatch.prototype.type = "VirtualPatch"
+
+
+/***/ },
+/* 44 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var isVNode = __webpack_require__(38)
+	var isVText = __webpack_require__(39)
+	var isWidget = __webpack_require__(40)
+	var isThunk = __webpack_require__(42)
+
+	module.exports = handleThunk
+
+	function handleThunk(a, b) {
+	    var renderedA = a
+	    var renderedB = b
+
+	    if (isThunk(b)) {
+	        renderedB = renderThunk(b, a)
+	    }
+
+	    if (isThunk(a)) {
+	        renderedA = renderThunk(a, null)
+	    }
+
+	    return {
+	        a: renderedA,
+	        b: renderedB
+	    }
+	}
+
+	function renderThunk(thunk, previous) {
+	    var renderedThunk = thunk.vnode
+
+	    if (!renderedThunk) {
+	        renderedThunk = thunk.vnode = thunk.render(previous)
+	    }
+
+	    if (!(isVNode(renderedThunk) ||
+	            isVText(renderedThunk) ||
+	            isWidget(renderedThunk))) {
+	        throw new Error("thunk did not return a valid node");
+	    }
+
+	    return renderedThunk
+	}
+
+
+/***/ },
+/* 45 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = SoftSetHook;
+
+	function SoftSetHook(value) {
+	    if (!(this instanceof SoftSetHook)) {
+	        return new SoftSetHook(value);
+	    }
+
+	    this.value = value;
+	}
+
+	SoftSetHook.prototype.hook = function (node, propertyName) {
+	    if (node[propertyName] !== this.value) {
+	        node[propertyName] = this.value;
+	    }
+	};
+
+
+/***/ },
+/* 46 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var DataSet = __webpack_require__(55)
+
+	module.exports = DataSetHook;
+
+	function DataSetHook(value) {
+	    if (!(this instanceof DataSetHook)) {
+	        return new DataSetHook(value);
+	    }
+
+	    this.value = value;
+	}
+
+	DataSetHook.prototype.hook = function (node, propertyName) {
+	    var ds = DataSet(node)
+	    var propName = propertyName.substr(5)
+
+	    ds[propName] = this.value;
+	};
+
+
+/***/ },
+/* 47 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var DataSet = __webpack_require__(55)
+
+	module.exports = DataSetHook;
+
+	function DataSetHook(value) {
+	    if (!(this instanceof DataSetHook)) {
+	        return new DataSetHook(value);
+	    }
+
+	    this.value = value;
+	}
+
+	DataSetHook.prototype.hook = function (node, propertyName) {
+	    var ds = DataSet(node)
+	    var propName = propertyName.substr(3)
+
+	    ds[propName] = this.value;
+	};
+
+	DataSetHook.prototype.unhook = function(node, propertyName) {
+	    var ds = DataSet(node);
+	    var propName = propertyName.substr(3);
+
+	    ds[propName] = undefined;
+	}
+
+
+/***/ },
+/* 48 */
 /***/ function(module, exports, __webpack_require__) {
 
 	function head (a) {
@@ -10275,7 +10243,234 @@ module.exports =
 
 
 /***/ },
+/* 49 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var nativeIsArray = Array.isArray
+	var toString = Object.prototype.toString
+
+	module.exports = nativeIsArray || isArray
+
+	function isArray(obj) {
+	    return toString.call(obj) === "[object Array]"
+	}
+
+
+/***/ },
+/* 50 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isObject
+
+	function isObject(x) {
+	    return typeof x === "object" && x !== null
+	}
+
+
+/***/ },
+/* 51 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var isWidget = __webpack_require__(40)
+
+	module.exports = updateWidget
+
+	function updateWidget(a, b) {
+	    if (isWidget(a) && isWidget(b)) {
+	        if ("name" in a && "name" in b) {
+	            return a.id === b.id
+	        } else {
+	            return a.init === b.init
+	        }
+	    }
+
+	    return false
+	}
+
+
+/***/ },
+/* 52 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var camelize = __webpack_require__(59)
+	var template = __webpack_require__(58)
+	var extend = __webpack_require__(60)
+
+	module.exports = TypedError
+
+	function TypedError(args) {
+	    if (!args) {
+	        throw new Error("args is required");
+	    }
+	    if (!args.type) {
+	        throw new Error("args.type is required");
+	    }
+	    if (!args.message) {
+	        throw new Error("args.message is required");
+	    }
+
+	    var message = args.message
+
+	    if (args.type && !args.name) {
+	        var errorName = camelize(args.type) + "Error"
+	        args.name = errorName[0].toUpperCase() + errorName.substr(1)
+	    }
+
+	    extend(createError, args);
+	    createError._name = args.name;
+
+	    return createError;
+
+	    function createError(opts) {
+	        var result = new Error()
+
+	        Object.defineProperty(result, "type", {
+	            value: result.type,
+	            enumerable: true,
+	            writable: true,
+	            configurable: true
+	        })
+
+	        var options = extend({}, args, opts)
+
+	        extend(result, options)
+	        result.message = template(message, options)
+
+	        return result
+	    }
+	}
+
+
+
+/***/ },
+/* 53 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(global) {var topLevel = typeof global !== 'undefined' ? global :
+	    typeof window !== 'undefined' ? window : {}
+	var minDoc = __webpack_require__(56);
+
+	if (typeof document !== 'undefined') {
+	    module.exports = document;
+	} else {
+	    var doccy = topLevel['__GLOBAL_DOCUMENT_CACHE@4'];
+
+	    if (!doccy) {
+	        doccy = topLevel['__GLOBAL_DOCUMENT_CACHE@4'] = minDoc;
+	    }
+
+	    module.exports = doccy;
+	}
+	
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
+
+/***/ },
+/* 54 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = "1"
+
+
+/***/ },
 /* 55 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var createStore = __webpack_require__(62)
+	var Individual = __webpack_require__(61)
+
+	var createHash = __webpack_require__(57)
+
+	var hashStore = Individual("__DATA_SET_WEAKMAP@3", createStore())
+
+	module.exports = DataSet
+
+	function DataSet(elem) {
+	    var store = hashStore(elem)
+
+	    if (!store.hash) {
+	        store.hash = createHash(elem)
+	    }
+
+	    return store.hash
+	}
+
+
+/***/ },
+/* 56 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* (ignored) */
+
+/***/ },
+/* 57 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = createHash
+
+	function createHash(elem) {
+	    var attributes = elem.attributes
+	    var hash = {}
+
+	    if (attributes === null || attributes === undefined) {
+	        return hash
+	    }
+
+	    for (var i = 0; i < attributes.length; i++) {
+	        var attr = attributes[i]
+
+	        if (attr.name.substr(0,5) !== "data-") {
+	            continue
+	        }
+
+	        hash[attr.name.substr(5)] = attr.value
+	    }
+
+	    return hash
+	}
+
+
+/***/ },
+/* 58 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var nargs = /\{([0-9a-zA-Z]+)\}/g
+	var slice = Array.prototype.slice
+
+	module.exports = template
+
+	function template(string) {
+	    var args
+
+	    if (arguments.length === 2 && typeof arguments[1] === "object") {
+	        args = arguments[1]
+	    } else {
+	        args = slice.call(arguments, 1)
+	    }
+
+	    if (!args || !args.hasOwnProperty) {
+	        args = {}
+	    }
+
+	    return string.replace(nargs, function replaceArg(match, i, index) {
+	        var result
+
+	        if (string[index - 1] === "{" &&
+	            string[index + match.length] === "}") {
+	            return i
+	        } else {
+	            result = args.hasOwnProperty(i) ? args[i] : null
+	            if (result === null || result === undefined) {
+	                return ""
+	            }
+
+	            return result
+	        }
+	    })
+	}
+
+
+/***/ },
+/* 59 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = function(obj) {
@@ -10340,7 +10535,7 @@ module.exports =
 
 
 /***/ },
-/* 56 */
+/* 60 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = extend
@@ -10361,50 +10556,7 @@ module.exports =
 
 
 /***/ },
-/* 57 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var isWidget = __webpack_require__(18)
-
-	module.exports = updateWidget
-
-	function updateWidget(a, b) {
-	    if (isWidget(a) && isWidget(b)) {
-	        if ("name" in a && "name" in b) {
-	            return a.id === b.id
-	        } else {
-	            return a.init === b.init
-	        }
-	    }
-
-	    return false
-	}
-
-
-/***/ },
-/* 58 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/* WEBPACK VAR INJECTION */(function(global) {var topLevel = typeof global !== 'undefined' ? global :
-	    typeof window !== 'undefined' ? window : {}
-	var minDoc = __webpack_require__(62);
-
-	if (typeof document !== 'undefined') {
-	    module.exports = document;
-	} else {
-	    var doccy = topLevel['__GLOBAL_DOCUMENT_CACHE@4'];
-
-	    if (!doccy) {
-	        doccy = topLevel['__GLOBAL_DOCUMENT_CACHE@4'] = minDoc;
-	    }
-
-	    module.exports = doccy;
-	}
-	
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
-
-/***/ },
-/* 59 */
+/* 61 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {var root = typeof window !== 'undefined' ?
@@ -10429,7 +10581,7 @@ module.exports =
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 60 */
+/* 62 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var hiddenStore = __webpack_require__(63);
@@ -10450,23 +10602,6 @@ module.exports =
 	    };
 	}
 
-
-/***/ },
-/* 61 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isObject
-
-	function isObject(x) {
-	    return typeof x === "object" && x !== null
-	}
-
-
-/***/ },
-/* 62 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/* (ignored) */
 
 /***/ },
 /* 63 */
