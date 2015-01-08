@@ -732,6 +732,21 @@ describe 'z.state', ->
     p.then ->
       state().p.should.be 'y'
 
+  it 'passes state into render fn', ->
+    class App
+      constructor: ->
+        @state = z.state
+          a: 'a'
+          b: 'b'
+      render: (state) ->
+        state.a.should.be 'a'
+        state.b.should.be 'b'
+        z 'div'
+
+    root = document.createElement 'div'
+    app = new App()
+    z.render root, app
+
 
 describe 'router', ->
   describe 'route()', ->

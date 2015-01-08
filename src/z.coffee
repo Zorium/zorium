@@ -27,9 +27,12 @@ module.exports = z = ->
 
   return h tagName, props, _.map _.filter(children), renderChild
 
+getChildSerializedState = (child) ->
+  if _.isFunction(child.state) then child.state() else {}
+
 renderChild = (child) ->
   if util.isComponent child
-    tree = child.render()
+    tree = child.render getChildSerializedState child
 
     unless tree
       tree = z 'div'
