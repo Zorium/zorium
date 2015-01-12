@@ -242,7 +242,7 @@ describe 'Virtual DOM', ->
 
   describe 'Anchor Tag', ->
     it 'defaults anchor tag onclick event to use router', ->
-      dom = z.router.a '[href=/pathname/here]'
+      dom = z.router.link z 'a[href=/pathname/here]'
       $el = createElement(dom)
 
       (typeof dom.properties.onclick).should.be 'function'
@@ -269,7 +269,7 @@ describe 'Virtual DOM', ->
 
 
     it 'doesn\'t default anchor tags with external path', ->
-      dom = z.router.a '[href=http://google.com]'
+      dom = z.router.link z 'a[href=http://google.com]'
       $el = createElement(dom)
 
       (typeof dom.properties.onclick).should.be 'function'
@@ -295,7 +295,7 @@ describe 'Virtual DOM', ->
 
 
     it 'writes if other properties exist', ->
-      dom = z.router.a '[href=/][name=test]', {onmousedown: -> null}
+      dom = z.router.link z 'a[href=/][name=test]', {onmousedown: -> null}
       $el = createElement(dom)
 
       (typeof dom.properties.onclick).should.be 'function'
@@ -321,36 +321,13 @@ describe 'Virtual DOM', ->
 
 
 
-    it 'doesn\'t override current onclick', ->
-      clickCalled = 0
-      dom = z.router.a '[href=/][name=test]', {onclick: -> clickCalled += 1}
-      $el = createElement(dom)
-
-      (typeof dom.properties.onclick).should.be 'function'
-      preventDefaultCalled = 0
-      goCalled = 0
-      e = {
-        target: $el
-        preventDefault: ->
-          preventDefaultCalled += 1
-      }
-
-      oldGo = z.router.go
-      z.router.go = (path) ->
-        goCalled += 1
-        path.should.be '/'
-
-      dom.properties.onclick.call($el, e)
-
-      z.router.go = oldGo
-
-      preventDefaultCalled.should.be 0
-      goCalled.should.be 0
-      clickCalled.should.be 1
-
-
-
-
+    it 'throws if attempted to override onclick', (done) ->
+      try
+        z.router.link z 'a[href=/][name=test]',
+          {onclick: -> clickCalled += 1}
+        done(new Error 'Error expected')
+      catch
+        done()
 
 describe 'render()', ->
   it 'renders to dom node', ->

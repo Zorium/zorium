@@ -33,26 +33,23 @@ class Router
       then 'pathname'
       else 'hash'
 
-  a: =>
-    {tagName, props, children} = util.parseZfuncArgs.apply null, arguments
+  link: (node) =>
+    if node.properties.onclick
+      throw new Error 'onclick already bound, invalid usage'
 
-    unless tagName[0] is 'a'
-      tagName = 'a' + tagName
+    node.properties.onclick = do =>
+      router = this
+      # coffeelint: disable=missing_fat_arrows
+      (e) ->
+        $el = this
+        isLocal = $el.hostname is window.location.hostname
 
-    unless props.onclick
-      props.onclick = do =>
-        router = this
-        # coffeelint: disable=missing_fat_arrows
-        (e) ->
-          $el = this
-          isLocal = $el.hostname is window.location.hostname
+        if isLocal
+          e.preventDefault()
+          router.go $el.pathname
+      # coffeelint: enable=missing_fat_arrows
 
-          if isLocal
-            e.preventDefault()
-            router.go $el.pathname
-        # coffeelint: enable=missing_fat_arrows
-
-    z tagName, props, children
+    return node
 
   go: (path) =>
 
