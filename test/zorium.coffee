@@ -1,6 +1,6 @@
 should = require('clay-chai').should()
 createElement = require 'virtual-dom/create-element'
-Promise = require 'promiz'
+Promise = window.Promise or require 'promiz'
 
 z = require 'zorium'
 
@@ -10,6 +10,17 @@ htmlToNode = (html) ->
   root = document.createElement 'div'
   root.innerHTML = html
   return root.firstChild
+
+deferred = ->
+  resolve = null
+  reject = null
+  promise = new Promise (_resolve, _reject) ->
+    resolve = _resolve
+    reject = _reject
+  promise.resolve = resolve
+  promise.reject = reject
+
+  return promise
 
 describe 'Virtual DOM', ->
   it 'creates basic DOM trees', ->
@@ -558,7 +569,7 @@ describe 'z.observe()', ->
       a.set change
 
   it 'observes promises', ->
-    promise = new Promise (@resolve, reject) => null
+    promise = deferred()
     p = z.observe promise
 
     (p() is null).should.be true
@@ -569,7 +580,7 @@ describe 'z.observe()', ->
       p().should.be 1
 
   it 'ignores rejected promises', ->
-    p = new Promise (_, @reject) => null
+    p = deferred()
 
     obj = z.observe p
 
@@ -581,7 +592,7 @@ describe 'z.observe()', ->
       (obj() is null).should.be true
 
   it 'sets promises correctly', ->
-    p = new Promise (@resolve) => null
+    p = deferred()
 
     obj = z.observe null
 
@@ -595,8 +606,8 @@ describe 'z.observe()', ->
       obj().should.be 'abc'
 
   it 'sets promises correctly against race conditions', ->
-    p1 = new Promise (@resolve) => null
-    p2 = new Promise (@resolve) => null
+    p1 = deferred()
+    p2 = deferred()
 
     obj = z.observe null
 
@@ -617,7 +628,7 @@ describe 'z.observe()', ->
 describe 'z.state', ->
   it 'observes state', ->
 
-    promise = new Promise (@resolve, reject) => null
+    promise = deferred()
 
     state = z.state
       a: 'abc'
@@ -675,8 +686,8 @@ describe 'z.state', ->
     cnt.should.be 5
 
   it 'redraws on promise resolution', ->
-    promise = new Promise (@resolve) => null
-    p2 = new Promise (@resolve) => null
+    promise = deferred()
+    p2 = deferred()
     cnt = 0
     class App
       constructor: ->
@@ -698,7 +709,7 @@ describe 'z.state', ->
       cnt.should.be 2
 
   it 'allows overriding of promised params', ->
-    p = new Promise (@resolve) => null
+    p = deferred()
     state = z.state
       p: z.observe p
 

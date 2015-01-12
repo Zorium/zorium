@@ -6,21 +6,24 @@ observ = require 'observ'
 isPromise = (obj) ->
   _.isObject(obj) and _.isFunction(obj.then)
 
+getAllProperties = (obj) ->
+  allProps = []
+  currentObject = obj
 
-observePromise = (observable, promise) ->
-  _set = observable.set.bind observable
-  observable._pending = promise
+  loop
+    props = Object.getOwnPropertyNames(currentObject)
+    allProps = _.uniq allProps.concat props
+    currentObject = Object.getPrototypeOf(currentObject)
+    unless currentObject
+      break
 
-  promise.then (val) ->
-    if observable._pending is promise
-      _set val
+  return allProps
 
-  for key in Object.keys promise
-    if _.isFunction promise[key]
-      observable[key] = promise[key].bind promise
-
-  return observable
-
+# TODO: don't do this...
+extendMethods = (obj, source) ->
+  _.each getAllProperties(source), (key) ->
+    if _.isFunction source[key]
+      obj[key] = source[key].bind source
 
 observePromise = (promise) ->
   observed = observ(null)
@@ -31,12 +34,8 @@ observePromise = (promise) ->
     if observed._promise is promise
       observed.set val
 
-  for key in Object.keys promise
-    if _.isFunction promise[key]
-      observed[key] = promise[key].bind promise
-
+  extendMethods observed, promise
   return observed
-
 
 observe = (obj) ->
   observed = switch
@@ -66,9 +65,7 @@ observe = (obj) ->
         if observed._promise is promise
           _set val
 
-      for key in Object.keys promise
-        if _.isFunction promise[key]
-          observed[key] = promise[key].bind promise
+      extendMethods observed, promise
 
       _set null
     else
