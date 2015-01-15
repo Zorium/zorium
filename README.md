@@ -1,7 +1,9 @@
 ![Zorium](./zorium.png)
 
+## Zorium - The CoffeeScript Web
+
 (╯°□°)╯︵ ┻━┻  
-v0.3.0
+v0.5.3
 
 ## Examples
 
@@ -18,70 +20,44 @@ class AppComponent
   clicker: (e) =>
     console.log 'Click!'
     @state.set
-      z: 'AllOfTheThings'
+      zoo: 'AllOfTheThings'
 
-  render: =>
+  render: ({zoo}) =>
     z 'a.zorium-link[href=/]',
-      z "img[src=#{@state().z}.png]", onclick: @clicker
+      z "img[src=#{zoo}.png]", onclick: @clicker
 
 z.render document.body, new AppComponent()
-```
-
-JavaScript
-
-```js
-z = require('zorium')
-function AppComponent(params) {
-  var state = z.state({z: 'Zorium'})
-
-  var clicker = function (e) {
-    console.log('Click!');
-    state.set({z: 'AllOfTheThings'})
-  }
-
-  return {
-    state: state,
-    render: function () {
-      return z('a.zorium-link[href=/]',
-        z('img[src=' + state().z + '.png]', {onclick: clicker})
-      )
-    }
-  }
-}
-
-z.render(document.body, new AppComponent())
 ```
 
 ## API
 
 ### z()
 
-```js
-z('.container') // <div class='container'></div>
+```coffee
+z '.container' # <div class='container'></div>
 
-z('#layout') // <div id='layout'></div>
+z '#layout' # <div id='layout'></div>
 
-z('a[name=top]') // <a name='top'></a>
+z 'a[name=top]' # <a name='top'></a>
 
-z('[contenteditable]') // <div contenteditable='true'></div>
+z '[contenteditable]' # <div contenteditable='true'></div>
 
-z('a#google.external[href=http://google.com]', 'Google') // <a id='google' class='external' href='http://google.com'>Google</a>
+z 'a#google.external[href=http://google.com]', 'Google' # <a id='google' class='external' href='http://google.com'>Google</a>
 
-z('div', {style: {border: '1px solid red'}})  // <div style='border:1px solid red;'></div>
+z 'div', {style: {border: '1px solid red'}}  # <div style='border:1px solid red;'></div>
 ```
 
-```js
-z('ul',
-  z('li', 'item 1'),
-  z('li', 'item 2')
-)
+```coffee
+z 'ul',
+  z 'li', 'item 1'
+  z 'li', 'item 2'
 
-/*
+###
 <ul>
     <li>item 1</li>
     <li>item 2</li>
 </ul>
-*/
+###
 ```
 
 ### Zorium Components
@@ -96,25 +72,9 @@ class HelloWorldComponent
   render: ->
     z 'span', 'Hello World'
 
-hello = new HelloWorldComponent()
+$hello = new HelloWorldComponent()
 
-z 'div', hello # <div><span>Hello World</span></div>
-```
-
-JavaScript
-
-```js
-function HelloWorldComponent() {
-  return {
-    render: function () {
-      return z('span', 'Hello World')
-    }
-  }
-}
-
-hello = new HelloWorldComponent()
-
-z('div', hello) // <div><span>Hello World</span></div>
+z 'div', $hello # <div><span>Hello World</span></div>
 ```
 
 #### Lifecycle Hooks
@@ -138,25 +98,6 @@ class BindComponent
       z 'span', 'Goodbye'
 ```
 
-JavaScript
-
-```js
-function HelloWorldComponent() {
-  return {
-    onMount: function ($el) {
-      // called after $el has been inserted into the DOM
-      // $el is the rendered DOM node
-    },
-    onBeforeUnmount: function () {
-      // called before the element is removed from the DOM
-    },
-    render: function () {
-      return z('span', 'Hello World')
-    }
-  }
-}
-```
-
 ### Routing
 
 #### Example
@@ -169,8 +110,8 @@ class App
     @state = z.state
       key: params.key or 'none'
 
-  render: =>
-    z 'div', 'Hello ' + @state().key
+  render: ({key}) ->
+    z 'div', 'Hello ' + key
 
 root = document.createElement 'div'
 
@@ -183,37 +124,12 @@ z.router.add '/test/:key', App
 z.router.go '/test'
 ```
 
-JavaScript
-
-```js
-function App(params) {
-  var state = z.state({key: params.key || 'none'})
-
-  return {
-    state: state,
-    render: function () {
-      return z('div', 'Hello ' + state().key)
-    }
-  }
-}
-
-var root = document.createElement('div');
-
-z.router.setMode('pathname');
-
-z.router.setRoot(root);
-z.router.add('/test', App);
-z.router.add('/test/:key', App);
-
-z.router.go('/test');
-```
-
 
 #### z.router.setMode()
 
 ```coffee
-z.router.setMode('hash') # (default) clay.io/#/path
-z.router.setMode('pathname') # clay.io/pathname
+z.router.setMode 'hash' # (default) clay.io/#/path
+z.router.setMode 'pathname' # clay.io/pathname
 ```
 
 
@@ -245,36 +161,22 @@ class App
   constructor: (params) ->
 ```
 
-JavaScript
-
-```js
-/*
-@param {String} path
-@param {ZoriumComponent} App
-*/
-z.router.add('/test/:key', App)
-
-function App(params) {
-  // ...
-}
-```
-
 #### z.router.go()
 
 Navigate to a route
 
 ```coffee
-z.router.go('/test/one')
+z.router.go '/test/one'
 ```
 
-### z.router.a()
+### z.router.link()
 
-automatically route anchor `<a>` tags
+automatically route anchor `<a>` tag elements
+It is a mistake to use `onclick` on the element
 
 ```coffee
-z('div',
-  z.router.a('.myclass[href=/abc]', 'click me')
-)
+z 'div',
+  z.router.link z 'a.myclass[href=/abc]', 'click me'
 ```
 
 
@@ -287,7 +189,7 @@ z('div',
 @param {HtmlElement} root
 @param {ZoriumComponent} App
 ###
-z.render(document.body, App)
+z.render document.body, App
 ```
 
 #### z.redraw()
@@ -297,7 +199,7 @@ This is called whenever a component's `state` is changed
 Call this whenever something changes the DOM state
 
 ```coffee
-z.render(document.body, z('div'))
+z.render document.body, z 'div'
 z.redraw()
 ```
 
@@ -309,41 +211,39 @@ Partial updating state object
 When set as a property of a Zorium Component, `z.redraw()` will automatically be called  
 If passed a `z.observe`, an update is triggered on child updates
 
-```js
+```coffee
 promise = new Promise()
 
-state = z.state({
-  a: 'abc',
-  b: 123,
-  c: [1, 2, 3],
-  d: z.observe(promise)
-})
+state = z.state
+  a: 'abc'
+  b: 123
+  c: [1, 2, 3]
+  d: z.observe promise
 
-state() == {
-  a: 'abc',
-  b: 123,
-  c: [1, 2, 3],
+state() is {
+  a: 'abc'
+  b: 123
+  c: [1, 2, 3]
   d: null
 }
 
 promise.resolve(123)
 
-// promise resolved
-state().d == 123
+# promise resolved
+state().d is 123
 
-// watch for changes
-state(function (state) {
-  state.b == 321
-})
+# watch for changes
+state (state) ->
+  state.b is 321
 
-// partial update
-state.set({
+# partial update
+state.set
   b: 321
-})
-state() == {
-  a: 'abc',
-  b: 123,
-  c: [1, 2, 3],
+
+state() is {
+  a: 'abc'
+  b: 123
+  c: [1, 2, 3]
   d: 123
 }
 ```
@@ -353,24 +253,23 @@ state() == {
 Create an observable  
 Promises observe to `null` until resolved (but still have promise methods)
 
-```js
-a = z.observe('a')
-a() == 'a'
+```coffee
+a = z.observe 'a'
+a() is 'a'
 
-a(function (change) {
-  change == 'b'
-})
+a (change) ->
+  change is 'b'
 
 a.set('b')
 
-promise = new Promise()
+resolve = null
+promise = new Promise (_resolve) -> resolve = _resolve
 p = z.observe(promise)
-p() == null
-promise.resolve(1)
+p() is null
+resolve(1)
 
-p.then(function () {
-  p() == 1
-})
+p.then ->
+  p() is 1
 
 ```
 
@@ -409,18 +308,6 @@ module.exports = class MyAbc
     # define view
 ```
 
-JavaScript
-
-```js
-module.exports = function MyAbc() {
-  return {
-    render: function () {
-      // z()
-    }
-  }
-}
-```
-
 ### Models
 
 Models are used for storing application state, as well as making resource API requests
@@ -435,16 +322,6 @@ class AbcModel
 module.exports = new AbcModel()
 ```
 
-JavaScript
-
-```js
-function AbcModel() {
-  // ...
-}
-
-module.exports = new AbcModel()
-```
-
 ### Pages
 
 Pages are components which are routed to via the router.  
@@ -454,36 +331,19 @@ components on the page.
 CoffeeScript
 
 ```coffee
+Nav = require('../components/nav')
+Body = require('../components/body')
+
 module.exports = class HomePage
   constructor: (params) ->
     @state = z.state
-      nav: new require('../components/nav')()
-      body: new require('../components/body')(params.key)
+      $nav: new Nav()
+      $body: new Body(params.key)
 
-  render: =>
+  render: ({$nav, $body}) =>
     z 'div',
-      @state().nav
-      @state().body
-```
-
-JavaScript
-
-```js
-module.exports = function HomePage(params) {
-  state = z.state({
-    nav: new require('../components/nav')(),
-    body: new require('../components/body')(params.key)
-  })
-
-  return {
-    render: function () {
-      z('div',
-        state().nav,
-        state().body
-      )
-    }
-  }
-}
+      $nav
+      $body
 ```
 
 ##### Page Extension
@@ -493,29 +353,27 @@ If extending a root page with sub-pages is desired, subclass.
 CoffeeScript
 
 ```coffee
+Nav = require('../components/nav')
+Footer = require('../components/footer')
+OtherFooter = require('../components/otherFooter')
+
 class RootPage
   constructor: ->
     @state = z.state
-        nav: new require('../components/nav')()
-        footer: new require('../components/footer')()
+        $nav: new Nav()
+        $footer: new Footer()
 
-  render: =>
+  render: ({$nav, $footer}) =>
     z 'div',
-      @state().nav
-      @state().footer
+      $nav
+      $footer
 
 class APage extends RootPage
-  constructor: (params) ->
-    super(params)
+  constructor: ->
+    super
 
     @state.set
-      footer: new require('../components/otherFooter')()
-```
-
-JavaScript
-
-```js
-// TODO
+      $footer: new OtherFooter()
 ```
 
 
@@ -528,16 +386,6 @@ CoffeeScript
 ```coffee
 class AbcService
   # define service methods
-
-module.exports = new AbcService()
-```
-
-JavaScript
-
-```js
-function AbcService() {
-  // ...
-}
 
 module.exports = new AbcService()
 ```
