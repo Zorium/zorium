@@ -250,6 +250,33 @@ describe 'Virtual DOM', ->
     (first is root.querySelector '#uniq').should.be true
     z.render root, dom, z 'd'
 
+  # FIXME: https://github.com/claydotio/zorium/issues/13
+  # it 'x', ->
+  #   unmountsCalled = 0
+  #
+  #   class A
+  #     onBeforeUnmount: ->
+  #       unmountsCalled += 1
+  #     render: ->
+  #       z 'div', 'x'
+  #
+  #   class B
+  #     onBeforeUnmount: ->
+  #       unmountsCalled += 1
+  #     render: ->
+  #       z 'div', 'x'
+  #
+  #   $a = new A()
+  #   $b = new B()
+  #
+  #   root = document.createElement 'div'
+  #
+  #   z.render root, $a
+  #   z.render root, $b
+  #   z.render root, z 'x'
+  #
+  #   unmountsCalled.should.be 2
+
 
   describe 'Anchor Tag', ->
     it 'defaults anchor tag onclick event to use router', ->
