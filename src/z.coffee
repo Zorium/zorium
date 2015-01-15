@@ -67,6 +67,7 @@ renderChild = (child) ->
 
     if not child.zorium_isWatchingState and _.isFunction child.state
       child.state ->
+        # TODO: Move this out, circular dependency with renderer
         z.redraw()
 
       child.zorium_isWatchingState = true
