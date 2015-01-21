@@ -146,7 +146,9 @@ z.router.setRoot(document.body)
 
 #### z.router.add()
 
-Variables will be passed into the component constructor
+Variables will be passed into the component constructor.  
+pathTransform will be called if provided, and may return a promise.
+If the path returned by pathTransform differs from the original route, a redirect to the new route will occur.
 
 CoffeeScript
 
@@ -154,11 +156,21 @@ CoffeeScript
 ###
 @param {String} path
 @param {ZoriumComponent} App
+@param {Function<String, Promise<String>>} [pathTransform=((path) -> path)]
 ###
-z.router.add '/test/:key', App
+z.router.add '/test/:key', App, pathTransform
 
 class App
-  constructor: (params) ->
+  constructor: (params) -> null
+
+pathTransform = (path) ->
+  isLoggedIn = new Promise (resolve) -> resolve false
+
+  return isLoggedIn.then (isLoggedIn) ->
+    unless isLoggedIn
+      return '/login'
+
+    return path
 ```
 
 #### z.router.go()

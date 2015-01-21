@@ -993,3 +993,77 @@ describe 'router', ->
     setTimeout ->
       callbackCalled.should.be 1
       done()
+
+  it 'allows redirect pathTransform', (done) ->
+    class App
+      render: ->
+        done(new Error 'Should not be called')
+        z 'div'
+
+    class Login
+      render: -> z 'div'
+
+    root = document.createElement 'div'
+
+    z.router.setRoot root
+    z.router.add '/test9', App, -> '/login1'
+    z.router.add '/login1', Login
+
+    z.router.setMode 'pathname'
+
+    z.router.go '/test9'
+
+    setTimeout ->
+      window.location.pathname.should.be '/login1'
+      done()
+  it 'allows redirect pathTransform with promise', (done) ->
+    class App
+      render: ->
+        done(new Error 'Should not be called')
+        z 'div'
+
+    class Login
+      render: -> z 'div'
+
+    root = document.createElement 'div'
+
+    z.router.setRoot root
+    z.router.add '/test10', App, ->
+      new Promise (resolve) ->
+        resolve '/login2'
+    z.router.add '/login2', Login
+
+    z.router.setMode 'pathname'
+
+    z.router.go '/test10'
+
+    setTimeout ->
+      window.location.pathname.should.be '/login2'
+      done()
+
+  it 'throws if pathTransform returns a failing promise', (done) ->
+    class App
+      render: ->
+        done(new Error 'Should not be called')
+        z 'div'
+
+    class Login
+      render: -> z 'div'
+
+    oldError = window.onerror
+    window.onerror = (e) ->
+      window.onerror = oldError
+      done()
+
+    root = document.createElement 'div'
+
+    z.router.setRoot root
+    z.router.add '/test11', App, ->
+      new Promise (resolve, reject) ->
+        reject new Error 'abc'
+
+    z.router.add '/login3', Login
+
+    z.router.setMode 'pathname'
+
+    z.router.go '/test11'

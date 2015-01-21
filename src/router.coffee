@@ -13,20 +13,15 @@ class Router
     @currentPath = null
 
     window.addEventListener 'popstate', (e) =>
-      setTimeout =>
-        pathname = window.location.pathname
-        hash = window.location.hash.slice(1)
-        path = if @mode is 'pathname' then pathname or hash \
-               else hash or pathname
-        @go(path)
+      setTimeout @go
 
 
   setRoot: ($root) =>
     @routesRoot = $root
 
-  add: (path, componentClass) =>
+  add: (path, componentClass, pathTransformFn = ((path) -> path)) =>
     @router.addRoute path, ->
-      return componentClass
+      return [componentClass, pathTransformFn]
 
   setMode: (mode) =>
     @mode = if mode is 'pathname' and window.history.pushState \
@@ -51,23 +46,7 @@ class Router
 
     return node
 
-  go: (path) =>
-
-    # default path to current location
-    unless path
-      pathname = window.location.pathname
-      hash = window.location.hash.slice(1)
-      path = if @mode is 'pathname' then pathname or hash \
-             else hash or pathname
-
-    unless path and @routesRoot and path isnt @currentPath
-      return
-
-    route = @router.match(path)
-
-    unless route
-      return
-
+  setPath: (path) =>
     @currentPath = path
 
     if @mode is 'pathname'
@@ -77,8 +56,44 @@ class Router
 
     @emit 'route', path
 
-    componentClass = route.fn()
-    renderer.render @routesRoot, new componentClass(route.params)
+  getCurrentPathname: =>
+    pathname = window.location.pathname
+    hash = window.location.hash.slice(1)
+    return if @mode is 'pathname' then pathname or hash \
+           else hash or pathname
+
+  go: (path) =>
+    # default path to current location
+    unless path
+      path = @getCurrentPathname()
+
+    unless path and @routesRoot and path isnt @currentPath
+      return
+
+    route = @router.match(path)
+
+    unless route
+      return
+
+    [componentClass, pathTransformFn] = route.fn()
+
+    transformedPath = pathTransformFn(path)
+
+    enter = (transformedPath) =>
+      if transformedPath isnt path
+        @go transformedPath
+      else
+        @setPath path
+        renderer.render @routesRoot, new componentClass(route.params)
+
+    if _.isFunction transformedPath?.then
+      transformedPath.then enter
+      # It is a mistake to pass a rejected promise
+      .catch (err) ->
+        setTimeout ->
+          throw err
+    else
+      enter(transformedPath)
 
   on: (name, fn) =>
     (@events[name] = @events[name] or []).push(fn)
