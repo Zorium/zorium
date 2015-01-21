@@ -507,11 +507,8 @@ describe 'Lifecycle Callbacks', ->
 
       root = document.createElement 'div'
       z.render root, bind
-      z.redraw()
-      unmountCalled.should.be 0
 
       setTimeout ->
-        z.redraw()
         mountCalled.should.be 1
         unmountCalled.should.be 0
         z.render root, z 'div'
@@ -827,15 +824,15 @@ describe 'router', ->
     root = document.createElement 'div'
 
     z.router.setRoot root
-    z.router.add '/test', App
-    z.router.add '/test2', App2
+    z.router.add '/test3', App
+    z.router.add '/test4', App2
 
     z.router.setMode 'pathname'
 
-    z.router.go '/test'
-    window.location.pathname.should.be '/test'
-    z.router.go '/test2'
-    window.location.pathname.should.be '/test2'
+    z.router.go '/test3'
+    window.location.pathname.should.be '/test3'
+    z.router.go '/test4'
+    window.location.pathname.should.be '/test4'
 
   it 'routes to default current path', ->
     class App
@@ -871,24 +868,24 @@ describe 'router', ->
     root = document.createElement 'div'
 
     z.router.setRoot root
-    z.router.add '/test', App
-    z.router.add '/test2', App2
+    z.router.add '/test5', App
+    z.router.add '/test6', App2
 
     result1 = '<div><div>Hello World</div></div>'
     result2 = '<div><div>World Hello</div></div>'
 
     z.router.setMode 'hash'
 
-    window.location.hash = '/test'
+    window.location.hash = '/test5'
     setTimeout ->
       root.isEqualNode(htmlToNode(result1)).should.be true
 
-      window.location.hash = '/test2'
+      window.location.hash = '/test6'
       setTimeout ->
         root.isEqualNode(htmlToNode(result2)).should.be true
 
-        window.location.hash = '/test'
-        window.location.hash.should.be '#/test'
+        window.location.hash = '/test5'
+        window.location.hash.should.be '#/test5'
         setTimeout ->
           root.isEqualNode(htmlToNode(result1)).should.be true
           done()
@@ -955,17 +952,17 @@ describe 'router', ->
     root = document.createElement 'div'
 
     z.router.setRoot root
-    z.router.add '/test3', App
+    z.router.add '/test7', App
 
     z.router.setMode 'hash'
 
     callbackCalled = 0
     listener = (path) ->
       callbackCalled += 1
-      path.should.be '/test3'
+      path.should.be '/test7'
 
     z.router.on('route', listener)
-    z.router.go '/test3'
+    z.router.go '/test7'
     z.router.off('route', listener)
 
     setTimeout ->
@@ -980,17 +977,17 @@ describe 'router', ->
     root = document.createElement 'div'
 
     z.router.setRoot root
-    z.router.add '/test4', App
+    z.router.add '/test8', App
 
     z.router.setMode 'pathname'
 
     callbackCalled = 0
     listener = (path) ->
       callbackCalled += 1
-      path.should.be '/test4'
+      path.should.be '/test8'
 
     z.router.on('route', listener)
-    z.router.go '/test4'
+    z.router.go '/test8'
     z.router.off('route', listener)
 
     setTimeout ->

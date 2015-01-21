@@ -1,7 +1,6 @@
-# TODO: make sure vtree isn't being included twice, as it's used by virtual-dom
-isVNode = require 'vtree/is-vnode'
-isVText = require 'vtree/is-vtext'
-isWidget = require 'vtree/is-widget'
+isVNode = require 'virtual-dom/vnode/is-vnode'
+isVText = require 'virtual-dom/vnode/is-vtext'
+isWidget = require 'virtual-dom/vnode/is-widget'
 
 isComponent = (x) ->
   _.isObject(x) and _.isFunction x.render

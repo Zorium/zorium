@@ -40,14 +40,12 @@
     "webpack": "1.4.13"
   },
   "dependencies": {
-    "coffee-script": "1.8.0",
-    "lodash": "2.4.1",
-    "observ": "0.2.0",
-    "observ-array": "3.1.0",
-    "observ-struct": "6.0.0",
-    "routes": "1.2.0",
-    "virtual-dom": "1.1.0",
-    "virtual-hyperscript": "4.6.0",
-    "vtree": "0.0.21"
+    "coffee-script": "^1.8.0",
+    "lodash": "^2.4.1",
+    "observ": "^0.2.0",
+    "observ-array": "^3.1.0",
+    "observ-struct": "^6.0.0",
+    "routes": "^2.0.0",
+    "virtual-dom": "^1.2.0"
   }
 }

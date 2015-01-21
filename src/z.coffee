@@ -56,7 +56,7 @@ renderChild = (child) ->
 
     if _.isFunction child.onBeforeUnmount
       class OnBeforeUnmountHook
-        # FIXME: https://github.com/Matt-Esch/virtual-dom/pull/171
+        # FIXME: https://github.com/Matt-Esch/virtual-dom/pull/175
         hook: -> null
         unhook: ->
           child.onBeforeUnmount()
