@@ -180,6 +180,10 @@ z 'div',
 ```
 
 
+### z.router.currentPath
+
+This value will be set to the currently routed path that the router has routed to.
+
 ### Rendering
 
 #### z.render()
