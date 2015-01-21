@@ -606,17 +606,24 @@ describe 'z.observe()', ->
     p.then ->
       p().should.be 1
 
-  it 'ignores rejected promises', ->
+  it 'observes promises', ->
+    p = z.observe new Promise (resolve) -> resolve 1
+    p.then (one) ->
+      one.should.be 1
+
+  it 'throws on rejected promises', (done) ->
     p = deferred()
 
     obj = z.observe p
 
     (obj() is null).should.be true
 
-    p.reject new Error 'abc'
+    oldError = window.onerror
+    window.onerror = (e) ->
+      window.onerror = oldError
+      done()
 
-    p.catch ->
-      (obj() is null).should.be true
+    p.reject new Error 'abc'
 
   it 'sets promises correctly', ->
     p = deferred()

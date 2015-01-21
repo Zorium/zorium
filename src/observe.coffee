@@ -34,7 +34,7 @@ observePromise = (promise) ->
     if observed._promise is promise
       observed.set val
   # It is a mistake to pass a rejected promise
-  .then null, (err) ->
+  .catch (err) ->
     setTimeout ->
       throw err
 
@@ -69,7 +69,7 @@ observe = (obj) ->
         if observed._promise is promise
           _set val
       # It is a mistake to pass a rejected promise
-      .then null, (err) ->
+      .catch (err) ->
         setTimeout ->
           throw err
 
