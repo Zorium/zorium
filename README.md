@@ -196,6 +196,18 @@ z 'div',
 
 This value will be set to the currently routed path that the router has routed to.
 
+### z.router.on()
+
+Listen for events. Currently the only event is `route`, which emits the path.
+
+```coffee
+###
+@param {String} key
+@param {Function} callback
+###
+z.router.on 'route', (path) -> null
+```
+
 ### Rendering
 
 #### z.render()
