@@ -768,6 +768,12 @@ describe 'z.state', ->
 
 
 describe 'router', ->
+  beforeEach (done) ->
+    # Allow routes to settle
+    setTimeout ->
+      done()
+    , 100
+
   describe 'route()', ->
     it 'renders updated DOM', ->
       class App
