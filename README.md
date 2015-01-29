@@ -301,6 +301,19 @@ p.then ->
 
 ```
 
+### Helpers
+
+#### z.ev()
+
+pass event context to callback fn
+
+```coffee
+z 'div',
+  onclick: z.ev (e, $$el) ->
+    # `e` is the original event
+    # $$el is the event source element which triggered the event
+```
+
 ## Architecture
 
 ### Folder structure

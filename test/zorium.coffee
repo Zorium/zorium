@@ -1073,3 +1073,11 @@ describe 'router', ->
     z.router.setMode 'pathname'
 
     z.router.go '/test11'
+
+  describe 'z.ev', ->
+    it 'wraps the this', ->
+      fn = z.ev (e, $$el) ->
+        e.ev.should.be 'x'
+        $$el.a.should.be 'b'
+
+      fn.call {a: 'b'}, {ev: 'x'}
