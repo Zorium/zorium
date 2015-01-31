@@ -1,6 +1,6 @@
 {
   "name": "zorium",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "",
   "main": "dist/zorium.js",
   "scripts": {
@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "coffee-script": "^1.8.0",
-    "lodash": "^2.4.1",
+    "lodash": "^3.0.0",
     "observ": "^0.2.0",
     "observ-array": "^3.1.0",
     "observ-struct": "^6.0.0",

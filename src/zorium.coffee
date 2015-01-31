@@ -49,5 +49,8 @@ _.extend z,
       $$el = this
       fn(e, $$el)
     # coffeelint: enable=missing_fat_arrows
+  classKebab: (classes) ->
+    _.map _.keys(_.pick classes, _.identity), _.kebabCase
+    .join ' '
 
 module.exports = z
