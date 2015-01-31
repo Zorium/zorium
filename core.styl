@@ -1,0 +1,110 @@
+@require 'nib'
+
+json('./colors.json')
+
+z-shadow-1()
+  transition: box-shadow 0.25s
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.37)
+
+z-shadow-2()
+  transition: box-shadow 0.25s
+  box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.2), 0 6px 10px 0 rgba(0, 0, 0, 0.3)
+
+z-shadow-3()
+  transition: box-shadow 0.25s
+  box-shadow: 0 11px 7px 0 rgba(0, 0, 0, 0.19), 0 13px 25px 0 rgba(0, 0, 0, 0.3)
+
+z-shadow-4()
+  transition: box-shadow 0.25s
+  box-shadow: 0 14px 12px 0 rgba(0, 0, 0, 0.17), 0 20px 40px 0 rgba(0, 0, 0, 0.3)
+
+z-shadow-5()
+  transition: box-shadow 0.25s
+  box-shadow: 0 17px 17px 0 rgba(0, 0, 0, 0.15), 0 27px 55px 0 rgba(0, 0, 0, 0.3)
+
+z-font-display4()
+  font-family: Roboto
+  font-size: 112px
+  font-weight: 300
+  color: $black54
+  letter-spacing: -0.01rem
+
+z-font-display3()
+  font-family: Roboto
+  font-size: 56px
+  font-weight: 400
+  color: $black54
+  letter-spacing: -0.005rem
+
+z-font-display2()
+  font-family: Roboto
+  font-size: 45px
+  font-weight: 400
+  color: $black54
+  letter-spacing: 0rem
+
+z-font-display1()
+  font-family: Roboto
+  font-size: 34px
+  font-weight: 400
+  color: $black54
+  letter-spacing: 0rem
+
+z-font-headline()
+  font-family: Roboto
+  font-size: 24px
+  font-weight: 400
+  color: $black87
+  letter-spacing: 0rem
+
+z-font-title()
+  font-family: Roboto
+  font-size: 20px
+  font-weight: 500
+  color: $black87
+  letter-spacing: 0.005rem
+
+z-font-subhead()
+  font-family: Roboto
+  font-size: 16px
+  font-weight: 400
+  color: $black87
+  letter-spacing: 0.01rem
+
+  @media only screen and (min-width: 1224px)
+    font-size: 15px
+
+z-font-body2()
+  font-family: Roboto
+  font-size: 14px
+  font-weight: 500
+  color: $black87
+  letter-spacing: 0.01rem
+
+  @media only screen and (min-width: 1224px)
+    font-size: 13px
+
+z-font-body1()
+  font-family: Roboto
+  font-size: 14px
+  font-weight: 400
+  color: $black87
+  letter-spacing: 0.01rem
+
+  @media only screen and (min-width: 1224px)
+    font-size: 13px
+
+z-font-caption()
+  font-family: Roboto
+  font-size: 12px
+  font-weight: 400
+  color: $black54
+  letter-spacing: 0.01rem
+
+z-font-button()
+  font-family: Roboto
+  font-size: 14px
+  font-weight: 500
+  color: $black87
+  letter-spacing: 0.01rem
+  text-transform: uppercase
