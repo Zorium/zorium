@@ -5,9 +5,6 @@
   "authors": [
     "Zolmeister <zolikahan@gmail.com>"
   ],
-  "scripts": {
-    "postinstall": "npm install --production"
-  },
   "description": "zorium",
   "main": "src/zorium.coffee",
   "keywords": [
