@@ -1,0 +1,14 @@
+{
+  "name": "zorium",
+  "version": "0.6.6",
+  "homepage": "http://zorium.org",
+  "authors": [
+    "Zolmeister <zolikahan@gmail.com>"
+  ],
+  "description": "zorium",
+  "main": "src/zorium.coffee",
+  "keywords": [
+    "zorium"
+  ],
+  "license": "MIT"
+}
