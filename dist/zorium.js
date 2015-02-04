@@ -110,7 +110,7 @@ module.exports =
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var getChildSerializedState, h, renderChild, util, z, _;
+	var getChildSerializedState, getOnBeforeUnmountHook, getOnMountHook, h, renderChild, util, z, _;
 
 	_ = __webpack_require__(5);
 
@@ -147,8 +147,49 @@ module.exports =
 	  }
 	};
 
+	getOnMountHook = function(child) {
+	  var OnMountHook, hook;
+	  OnMountHook = (function() {
+	    function OnMountHook() {}
+
+	    OnMountHook.prototype.hook = function($el, propName) {
+	      return setTimeout(function() {
+	        return child.onMount($el);
+	      });
+	    };
+
+	    return OnMountHook;
+
+	  })();
+	  hook = child._zorium_OnMountHook || new OnMountHook();
+	  child._zorium_OnMountHook = hook;
+	  return hook;
+	};
+
+	getOnBeforeUnmountHook = function(child, onUnhook) {
+	  var OnBeforeUnmountHook, hook;
+	  OnBeforeUnmountHook = (function() {
+	    function OnBeforeUnmountHook() {}
+
+	    OnBeforeUnmountHook.prototype.hook = function() {
+	      return null;
+	    };
+
+	    OnBeforeUnmountHook.prototype.unhook = function() {
+	      child.onBeforeUnmount();
+	      return onUnhook();
+	    };
+
+	    return OnBeforeUnmountHook;
+
+	  })();
+	  hook = child._zorium_OnBeforeUnmountHook || new OnBeforeUnmountHook();
+	  child._zorium_OnBeforeUnmountHook = hook;
+	  return hook;
+	};
+
 	renderChild = function(child) {
-	  var OnBeforeUnmountHook, OnMountHook, hook, tree;
+	  var hook, tree;
 	  if (util.isComponent(child)) {
 	    tree = child.render(getChildSerializedState(child));
 	    if (!tree) {
@@ -161,40 +202,15 @@ module.exports =
 	      tree.hooks = {};
 	    }
 	    if (!child.zorium_hasBeenMounted && _.isFunction(child.onMount)) {
-	      OnMountHook = (function() {
-	        function OnMountHook() {}
-
-	        OnMountHook.prototype.hook = function($el, propName) {
-	          return setTimeout(function() {
-	            return child.onMount($el);
-	          });
-	        };
-
-	        return OnMountHook;
-
-	      })();
 	      child.zorium_hasBeenMounted = true;
-	      hook = new OnMountHook();
+	      hook = getOnMountHook(child);
 	      tree.properties['zorium-onmount'] = hook;
 	      tree.hooks['zorium-onmount'] = hook;
 	    }
 	    if (_.isFunction(child.onBeforeUnmount)) {
-	      OnBeforeUnmountHook = (function() {
-	        function OnBeforeUnmountHook() {}
-
-	        OnBeforeUnmountHook.prototype.hook = function() {
-	          return null;
-	        };
-
-	        OnBeforeUnmountHook.prototype.unhook = function() {
-	          child.onBeforeUnmount();
-	          return child.zorium_hasBeenMounted = false;
-	        };
-
-	        return OnBeforeUnmountHook;
-
-	      })();
-	      hook = new OnBeforeUnmountHook();
+	      hook = getOnBeforeUnmountHook(child, function() {
+	        return child.zorium_hasBeenMounted = false;
+	      });
 	      tree.properties['zorium-onbeforeunmount'] = hook;
 	      tree.hooks['zorium-onbeforeunmount'] = hook;
 	    }

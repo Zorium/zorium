@@ -542,6 +542,33 @@ describe 'Lifecycle Callbacks', ->
           mountCalled.should.be 2
           done()
 
+    it 'only doesn\'t get called if not unmounted', (done) ->
+      unmountCalled = 0
+      mountCalled = 0
+      class BindComponent
+        onMount: ->
+          mountCalled += 1
+        onBeforeUnmount: ->
+          unmountCalled += 1
+        render: ->
+          z 'div',
+            z 'span', 'Hello World'
+            z 'span', 'Goodbye'
+
+      bind = new BindComponent()
+
+      root = document.createElement 'div'
+      z.render root, bind
+      z.redraw()
+      z.redraw()
+      z.redraw()
+
+      setTimeout ->
+        mountCalled.should.be 1
+        unmountCalled.should.be 0
+        done()
+      , 20
+
 describe 'redraw()', ->
   it 'redraws all bound root nodes', ->
     drawCnt = 0

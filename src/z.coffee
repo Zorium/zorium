@@ -30,6 +30,28 @@ module.exports = z = ->
 getChildSerializedState = (child) ->
   if _.isFunction(child.state) then child.state() else {}
 
+getOnMountHook = (child) ->
+  class OnMountHook
+    hook: ($el, propName) ->
+      setTimeout ->
+        child.onMount $el
+
+  hook = child._zorium_OnMountHook or new OnMountHook()
+  child._zorium_OnMountHook = hook
+  return hook
+
+getOnBeforeUnmountHook = (child, onUnhook) ->
+  class OnBeforeUnmountHook
+    # FIXME: https://github.com/Matt-Esch/virtual-dom/pull/175
+    hook: -> null
+    unhook: ->
+      child.onBeforeUnmount()
+      onUnhook()
+
+  hook = child._zorium_OnBeforeUnmountHook or new OnBeforeUnmountHook()
+  child._zorium_OnBeforeUnmountHook = hook
+  return hook
+
 renderChild = (child) ->
   if util.isComponent child
     tree = child.render getChildSerializedState child
@@ -43,26 +65,14 @@ renderChild = (child) ->
     tree.hooks ?= {}
 
     if not child.zorium_hasBeenMounted and _.isFunction child.onMount
-      class OnMountHook
-        hook: ($el, propName) ->
-          setTimeout ->
-            child.onMount $el
-
       child.zorium_hasBeenMounted = true
-
-      hook = new OnMountHook()
+      hook = getOnMountHook child
       tree.properties['zorium-onmount'] = hook
       tree.hooks['zorium-onmount'] = hook
 
     if _.isFunction child.onBeforeUnmount
-      class OnBeforeUnmountHook
-        # FIXME: https://github.com/Matt-Esch/virtual-dom/pull/175
-        hook: -> null
-        unhook: ->
-          child.onBeforeUnmount()
-          child.zorium_hasBeenMounted = false
-
-      hook = new OnBeforeUnmountHook()
+      hook = getOnBeforeUnmountHook child, ->
+        child.zorium_hasBeenMounted = false
       tree.properties['zorium-onbeforeunmount'] = hook
       tree.hooks['zorium-onbeforeunmount'] = hook
 
