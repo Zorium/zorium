@@ -943,13 +943,13 @@ describe 'router', ->
 
     z.router.setMode 'pathname'
 
-    window.history.pushState null, null, '/testa'
-    window.history.pushState null, null, '/testa'
+    z.router.go '/testa'
+    z.router.go '/testb'
     window.history.back()
     setTimeout ->
       root.isEqualNode(htmlToNode(result1)).should.be true
-      window.history.pushState null, null, '/testb'
-      window.history.pushState null, null, '/testb'
+      z.router.go '/testb'
+      z.router.go '/testa'
       window.history.back()
       setTimeout ->
         root.isEqualNode(htmlToNode(result2)).should.be true
@@ -957,6 +957,29 @@ describe 'router', ->
         done()
       , 90
     , 90
+
+  it 'doesn\'t respond to popstate before initial route', ->
+    class App
+      render: ->
+        z 'div', 'Hello World'
+
+    root = document.createElement 'div'
+
+    z.router.setRoot root
+    z.router.add '/', App
+
+    result1 = '<div></div>'
+    result2 = '<div><div>Hello World</div></div>'
+
+    z.router.setMode 'pathname'
+
+    event = new Event 'popstate'
+    window.dispatchEvent event
+
+    root.isEqualNode(htmlToNode(result1)).should.be true
+
+    z.router.go '/'
+    root.isEqualNode(htmlToNode(result2)).should.be true
 
   it 'passes params', ->
     class App
