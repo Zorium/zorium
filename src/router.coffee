@@ -12,8 +12,12 @@ class Router
     @mode = 'hash'
     @currentPath = null
 
+    # some browsers erroneously call popstate on intial page load (iOS Safari)
+    # We need to ignore that first event.
+    # https://code.google.com/p/chromium/issues/detail?id=63040
     window.addEventListener 'popstate', (e) =>
-      setTimeout @go
+      if @currentPath
+        setTimeout @go
 
 
   setRoot: ($root) =>
