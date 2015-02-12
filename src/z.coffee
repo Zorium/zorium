@@ -7,7 +7,7 @@ module.exports = z = ->
   {child, tagName, props, children} = util.parseZfuncArgs.apply null, arguments
 
   if child
-    return renderChild child
+    return renderChild child, props
 
   if _.isNull tagName
     return z 'div', children
@@ -27,14 +27,11 @@ module.exports = z = ->
 
   return h tagName, props, _.map _.filter(children), renderChild
 
-getChildSerializedState = (child) ->
-  if _.isFunction(child.state) then child.state() else {}
-
-getOnMountHook = (child) ->
+getOnMountHook = (child, onMount) ->
   class OnMountHook
     hook: ($el, propName) ->
       setTimeout ->
-        child.onMount $el
+        onMount $el
 
   hook = child._zorium_OnMountHook or new OnMountHook()
   child._zorium_OnMountHook = hook
@@ -52,9 +49,9 @@ getOnBeforeUnmountHook = (child, onUnhook) ->
   child._zorium_OnBeforeUnmountHook = hook
   return hook
 
-renderChild = (child) ->
+renderChild = (child, props = {}) ->
   if util.isComponent child
-    tree = child.render getChildSerializedState child
+    tree = child.render props
 
     unless tree
       tree = z 'div'
@@ -66,7 +63,7 @@ renderChild = (child) ->
 
     if not child.zorium_hasBeenMounted and _.isFunction child.onMount
       child.zorium_hasBeenMounted = true
-      hook = getOnMountHook child
+      hook = getOnMountHook child, child.onMount
       tree.properties['zorium-onmount'] = hook
       tree.hooks['zorium-onmount'] = hook
 

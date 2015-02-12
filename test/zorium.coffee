@@ -250,32 +250,25 @@ describe 'Virtual DOM', ->
     (first is root.querySelector '#uniq').should.be true
     z.render root, dom, z 'd'
 
-  # FIXME: https://github.com/claydotio/zorium/issues/13
-  # it 'x', ->
-  #   unmountsCalled = 0
-  #
-  #   class A
-  #     onBeforeUnmount: ->
-  #       unmountsCalled += 1
-  #     render: ->
-  #       z 'div', 'x'
-  #
-  #   class B
-  #     onBeforeUnmount: ->
-  #       unmountsCalled += 1
-  #     render: ->
-  #       z 'div', 'x'
-  #
-  #   $a = new A()
-  #   $b = new B()
-  #
-  #   root = document.createElement 'div'
-  #
-  #   z.render root, $a
-  #   z.render root, $b
-  #   z.render root, z 'x'
-  #
-  #   unmountsCalled.should.be 2
+  it 'passes props to render when z is used with a component', ->
+    class A
+      render: ({world}) ->
+        z 'div', 'hello ' + world
+
+    class B
+      constructor: ->
+        @$a = new A()
+      render: =>
+        z @$a, {world: 'world'}
+
+    $b = new B()
+
+    root = document.createElement 'div'
+
+    z.render root, $b
+
+    result = '<div><div>hello world</div></div>'
+    root.isEqualNode(htmlToNode(result)).should.be true
 
 
   describe 'Anchor Tag', ->
@@ -569,6 +562,33 @@ describe 'Lifecycle Callbacks', ->
         done()
       , 20
 
+    # https://github.com/claydotio/zorium/issues/13
+    it 'property replacing diff calls unhook method', ->
+      unmountsCalled = 0
+
+      class A
+        onBeforeUnmount: ->
+          unmountsCalled += 1
+        render: ->
+          z 'div', 'x'
+
+      class B
+        onBeforeUnmount: ->
+          unmountsCalled += 1
+        render: ->
+          z 'div', 'x'
+
+      $a = new A()
+      $b = new B()
+
+      root = document.createElement 'div'
+
+      z.render root, $a
+      z.render root, $b
+      z.render root, z 'x'
+
+      unmountsCalled.should.be 2
+
 describe 'redraw()', ->
   it 'redraws all bound root nodes', ->
     drawCnt = 0
@@ -777,22 +797,6 @@ describe 'z.state', ->
     p.resolve('p')
     p.then ->
       state().p.should.be 'y'
-
-  it 'passes state into render fn', ->
-    class App
-      constructor: ->
-        @state = z.state
-          a: 'a'
-          b: 'b'
-      render: (state) ->
-        state.a.should.be 'a'
-        state.b.should.be 'b'
-        z 'div'
-
-    root = document.createElement 'div'
-    app = new App()
-    z.render root, app
-
 
 describe 'router', ->
   beforeEach (done) ->

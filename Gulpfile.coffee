@@ -7,9 +7,21 @@ webpack = require 'gulp-webpack'
 coffeelint = require 'gulp-coffeelint'
 RewirePlugin = require 'rewire-webpack'
 webpackSource = require 'webpack'
+clayLintConfig = require 'clay-coffeescript-style-guide'
 
-karmaConf = require './karma.defaults'
 packangeConf = require './package.json'
+
+karmaConf =
+  frameworks: ['mocha']
+  client:
+    useIframe: true
+    captureConsole: true
+    mocha:
+      timeout: 300
+  files: [
+    'build/tests.js'
+  ]
+  browsers: ['Chrome', 'Firefox']
 
 paths =
   coffee: ['./src/**/*.coffee', './*.coffee', './test/**/*.coffee']
@@ -40,7 +52,7 @@ gulp.task 'watch', ->
 
 gulp.task 'lint', ->
   gulp.src paths.coffee
-    .pipe coffeelint()
+    .pipe coffeelint(null, clayLintConfig)
     .pipe coffeelint.reporter()
 
 gulp.task 'test:phantom', ['scripts:test'], (cb) ->
