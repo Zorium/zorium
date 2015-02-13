@@ -1,13 +1,11 @@
 ![Zorium](./zorium.png)
 
-## Zorium - The CoffeeScript Web
+## Zorium - The Coffeescript Web
 
 (╯°□°)╯︵ ┻━┻  
-v0.5.3
+v0.7.0
 
 ## Examples
-
-CoffeeScript
 
 ```coffee
 z = require 'zorium'
@@ -22,7 +20,9 @@ class AppComponent
     @state.set
       zoo: 'AllOfTheThings'
 
-  render: ({zoo}) =>
+  render: =>
+    {zoo} = @state()
+
     z 'a.zorium-link[href=/]',
       z "img[src=#{zoo}.png]", onclick: @clicker
 
@@ -62,10 +62,8 @@ z 'ul',
 
 ### Zorium Components
 
-Zorium components can be used in place of a virtual-dom node.  
+Zorium components can be used in place of a dom tag.  
 Zorium components must have a `render()` method
-
-CoffeeScript
 
 ```coffee
 class HelloWorldComponent
@@ -74,14 +72,33 @@ class HelloWorldComponent
 
 $hello = new HelloWorldComponent()
 
-z 'div', $hello # <div><span>Hello World</span></div>
+z 'div',
+  z $hello # <div><span>Hello World</span></div>
+```
+
+Parameters can also be passed to the render method
+
+```coffee
+class A
+  render: ({world}) ->
+    z 'div', 'hello ' + world
+
+class B
+  constructor: ->
+    @state = z.state
+      $a: new A()
+  render: =>
+    {$a} = @state()
+    z $a, {world: 'world'}
+
+$b = new B()
+root = document.createElement 'div'
+z.render root, $b # <div><div>hello world</div></div>
 ```
 
 #### Lifecycle Hooks
 
 If a component has a hook method defined, it will be called
-
-CoffeeScript
 
 ```coffee
 class BindComponent
@@ -102,15 +119,14 @@ class BindComponent
 
 #### Example
 
-CoffeeScript
-
 ```coffee
 class App
   constructor: (params) ->
     @state = z.state
       key: params.key or 'none'
 
-  render: ({key}) ->
+  render: =>
+    {key} = @state()
     z 'div', 'Hello ' + key
 
 root = document.createElement 'div'
@@ -149,8 +165,6 @@ z.router.setRoot(document.body)
 Variables will be passed into the component constructor.  
 pathTransform will be called if provided, and may return a promise.
 If the path returned by pathTransform differs from the original route, a redirect to the new route will occur.
-
-CoffeeScript
 
 ```coffee
 ###
@@ -341,8 +355,6 @@ Currently, routing goes here, along with other miscellaneous things.
 Components should set `@state` as a `z.state` when using local state
 Components are classes of the form:
 
-CoffeeScript
-
 ```coffee
 module.exports = class MyAbc
   render: ->
@@ -353,8 +365,6 @@ module.exports = class MyAbc
 
 Models are used for storing application state, as well as making resource API requests
 Models are singletons of the form  
-
-CoffeeScript
 
 ```coffee
 class AbcModel
@@ -369,8 +379,6 @@ Pages are components which are routed to via the router.
 They should contain as little logic as possible, and are responsible for laying out
 components on the page.
 
-CoffeeScript
-
 ```coffee
 Nav = require('../components/nav')
 Body = require('../components/body')
@@ -381,17 +389,16 @@ module.exports = class HomePage
       $nav: new Nav()
       $body: new Body(params.key)
 
-  render: ({$nav, $body}) =>
+  render: =>
+    {$nav, $body} = @state()
     z 'div',
-      $nav
-      $body
+      z $nav
+      z $body
 ```
 
 ##### Page Extension
 
 If extending a root page with sub-pages is desired, subclass.
-
-CoffeeScript
 
 ```coffee
 Nav = require('../components/nav')
@@ -404,10 +411,11 @@ class RootPage
         $nav: new Nav()
         $footer: new Footer()
 
-  render: ({$nav, $footer}) =>
+  render: =>
+    {$nav, $footer} = @state()
     z 'div',
-      $nav
-      $footer
+      z $nav
+      z $footer
 
 class APage extends RootPage
   constructor: ->
@@ -421,8 +429,6 @@ class APage extends RootPage
 ### Services
 
 Services are singletons of the form
-
-CoffeeScript
 
 ```coffee
 class AbcService
