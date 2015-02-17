@@ -110,7 +110,7 @@ module.exports =
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var getChildSerializedState, getOnBeforeUnmountHook, getOnMountHook, h, renderChild, util, z, _;
+	var getOnBeforeUnmountHook, getOnMountHook, h, renderChild, util, z, _;
 
 	_ = __webpack_require__(5);
 
@@ -122,7 +122,7 @@ module.exports =
 	  var attributes, child, children, props, tag, tagName, _ref;
 	  _ref = util.parseZfuncArgs.apply(null, arguments), child = _ref.child, tagName = _ref.tagName, props = _ref.props, children = _ref.children;
 	  if (child) {
-	    return renderChild(child);
+	    return renderChild(child, props);
 	  }
 	  if (_.isNull(tagName)) {
 	    return z('div', children);
@@ -139,22 +139,14 @@ module.exports =
 	  return h(tagName, props, _.map(_.filter(children), renderChild));
 	};
 
-	getChildSerializedState = function(child) {
-	  if (_.isFunction(child.state)) {
-	    return child.state();
-	  } else {
-	    return {};
-	  }
-	};
-
-	getOnMountHook = function(child) {
+	getOnMountHook = function(child, onMount) {
 	  var OnMountHook, hook;
 	  OnMountHook = (function() {
 	    function OnMountHook() {}
 
 	    OnMountHook.prototype.hook = function($el, propName) {
 	      return setTimeout(function() {
-	        return child.onMount($el);
+	        return onMount($el);
 	      });
 	    };
 
@@ -188,10 +180,13 @@ module.exports =
 	  return hook;
 	};
 
-	renderChild = function(child) {
+	renderChild = function(child, props) {
 	  var hook, tree;
+	  if (props == null) {
+	    props = {};
+	  }
 	  if (util.isComponent(child)) {
-	    tree = child.render(getChildSerializedState(child));
+	    tree = child.render(props);
 	    if (!tree) {
 	      tree = z('div');
 	    }
@@ -203,7 +198,7 @@ module.exports =
 	    }
 	    if (!child.zorium_hasBeenMounted && _.isFunction(child.onMount)) {
 	      child.zorium_hasBeenMounted = true;
-	      hook = getOnMountHook(child);
+	      hook = getOnMountHook(child, child.onMount);
 	      tree.properties['zorium-onmount'] = hook;
 	      tree.hooks['zorium-onmount'] = hook;
 	    }
@@ -567,7 +562,7 @@ module.exports =
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(module, global) {/**
 	 * @license
-	 * lodash 3.0.1 (Custom Build) <https://lodash.com/>
+	 * lodash 3.1.0 (Custom Build) <https://lodash.com/>
 	 * Build: `lodash modern -d -o ./index.js`
 	 * Copyright 2012-2015 The Dojo Foundation <http://dojofoundation.org/>
 	 * Based on Underscore.js 1.7.0 <http://underscorejs.org/LICENSE>
@@ -580,7 +575,7 @@ module.exports =
 	  var undefined;
 
 	  /** Used as the semantic version number. */
-	  var VERSION = '3.0.1';
+	  var VERSION = '3.1.0';
 
 	  /** Used to compose bitmasks for wrapper metadata. */
 	  var BIND_FLAG = 1,
@@ -1336,7 +1331,7 @@ module.exports =
 
 	    /**
 	     * Used as the maximum length of an array-like value.
-	     * See the [ES spec](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength)
+	     * See the [ES spec](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-number.max_safe_integer)
 	     * for more details.
 	     */
 	    var MAX_SAFE_INTEGER = Math.pow(2, 53) - 1;
@@ -1394,14 +1389,14 @@ module.exports =
 	     * `findLast`, `findLastIndex`, `findLastKey`, `findWhere`, `first`, `has`,
 	     * `identity`, `includes`, `indexOf`, `isArguments`, `isArray`, `isBoolean`,
 	     * `isDate`, `isElement`, `isEmpty`, `isEqual`, `isError`, `isFinite`,
-	     * `isFunction`, `isMatch` , `isNative`, `isNaN`, `isNull`, `isNumber`,
+	     * `isFunction`, `isMatch`, `isNative`, `isNaN`, `isNull`, `isNumber`,
 	     * `isObject`, `isPlainObject`, `isRegExp`, `isString`, `isUndefined`,
 	     * `isTypedArray`, `join`, `kebabCase`, `last`, `lastIndexOf`, `max`, `min`,
 	     * `noConflict`, `now`, `pad`, `padLeft`, `padRight`, `parseInt`, `pop`,
 	     * `random`, `reduce`, `reduceRight`, `repeat`, `result`, `runInContext`,
 	     * `shift`, `size`, `snakeCase`, `some`, `sortedIndex`, `sortedLastIndex`,
-	     * `startsWith`, `template`, `trim`, `trimLeft`, `trimRight`, `trunc`,
-	     * `unescape`, `uniqueId`, `value`, and `words`
+	     * `startCase`, `startsWith`, `template`, `trim`, `trimLeft`, `trimRight`,
+	     * `trunc`, `unescape`, `uniqueId`, `value`, and `words`
 	     *
 	     * The wrapper function `sample` will return a wrapped value when `n` is provided,
 	     * otherwise an unwrapped value is returned.
@@ -2214,7 +2209,7 @@ module.exports =
 	      }
 	      // Handle "_.property" and "_.matches" style callback shorthands.
 	      return type == 'object'
-	        ? baseMatches(func, !argCount)
+	        ? baseMatches(func)
 	        : baseProperty(func + '');
 	    }
 
@@ -2835,10 +2830,9 @@ module.exports =
 	     *
 	     * @private
 	     * @param {Object} source The object of property values to match.
-	     * @param {boolean} [isCloned] Specify cloning the source object.
 	     * @returns {Function} Returns the new function.
 	     */
-	    function baseMatches(source, isCloned) {
+	    function baseMatches(source) {
 	      var props = keys(source),
 	          length = props.length;
 
@@ -2851,9 +2845,6 @@ module.exports =
 	            return object != null && value === object[key] && hasOwnProperty.call(object, key);
 	          };
 	        }
-	      }
-	      if (isCloned) {
-	        source = baseClone(source, true);
 	      }
 	      var values = Array(length),
 	          strictCompareFlags = Array(length);
@@ -4165,13 +4156,17 @@ module.exports =
 	        var length = object.length,
 	            prereq = isLength(length) && isIndex(index, length);
 	      } else {
-	        prereq = type == 'string' && index in value;
+	        prereq = type == 'string' && index in object;
 	      }
 	      return prereq && object[index] === value;
 	    }
 
 	    /**
 	     * Checks if `value` is a valid array-like length.
+	     *
+	     * **Note:** This function is based on ES `ToLength`. See the
+	     * [ES spec](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength)
+	     * for more details.
 	     *
 	     * @private
 	     * @param {*} value The value to check.
@@ -6243,7 +6238,7 @@ module.exports =
 	     * // => 'fred'
 	     */
 	    function findWhere(collection, source) {
-	      return find(collection, matches(source));
+	      return find(collection, baseMatches(source));
 	    }
 
 	    /**
@@ -6620,7 +6615,7 @@ module.exports =
 	     * // => [36, 40] (iteration order is not guaranteed)
 	     */
 	    function pluck(collection, key) {
-	      return map(collection, property(key));
+	      return map(collection, baseProperty(key + ''));
 	    }
 
 	    /**
@@ -6991,7 +6986,7 @@ module.exports =
 	     * // => ['barney', 'fred']
 	     */
 	    function where(collection, source) {
-	      return filter(collection, matches(source));
+	      return filter(collection, baseMatches(source));
 	    }
 
 	    /*------------------------------------------------------------------------*/
@@ -9636,7 +9631,7 @@ module.exports =
 	     */
 	    var camelCase = createCompounder(function(result, word, index) {
 	      word = word.toLowerCase();
-	      return index ? (result + word.charAt(0).toUpperCase() + word.slice(1)) : word;
+	      return result + (index ? (word.charAt(0).toUpperCase() + word.slice(1)) : word);
 	    });
 
 	    /**
@@ -9987,14 +9982,39 @@ module.exports =
 	     * _.snakeCase('Foo Bar');
 	     * // => 'foo_bar'
 	     *
-	     * _.snakeCase('--foo-bar');
+	     * _.snakeCase('fooBar');
 	     * // => 'foo_bar'
 	     *
-	     * _.snakeCase('fooBar');
+	     * _.snakeCase('--foo-bar');
 	     * // => 'foo_bar'
 	     */
 	    var snakeCase = createCompounder(function(result, word, index) {
 	      return result + (index ? '_' : '') + word.toLowerCase();
+	    });
+
+	    /**
+	     * Converts `string` to start case.
+	     * See [Wikipedia](https://en.wikipedia.org/wiki/Letter_case#Stylistic_or_specialised_usage)
+	     * for more details.
+	     *
+	     * @static
+	     * @memberOf _
+	     * @category String
+	     * @param {string} [string=''] The string to convert.
+	     * @returns {string} Returns the start cased string.
+	     * @example
+	     *
+	     * _.startCase('--foo-bar');
+	     * // => 'Foo Bar'
+	     *
+	     * _.startCase('fooBar');
+	     * // => 'Foo Bar'
+	     *
+	     * _.startCase('__foo_bar__');
+	     * // => 'Foo Bar'
+	     */
+	    var startCase = createCompounder(function(result, word, index) {
+	      return result + (index ? ' ' : '') + (word.charAt(0).toUpperCase() + word.slice(1));
 	    });
 
 	    /**
@@ -10256,7 +10276,7 @@ module.exports =
 	      if (guard ? isIterateeCall(value, chars, guard) : chars == null) {
 	        return string.slice(trimmedLeftIndex(string), trimmedRightIndex(string) + 1);
 	      }
-	      chars = baseToString(chars);
+	      chars = (chars + '');
 	      return string.slice(charsLeftIndex(string, chars), charsRightIndex(string, chars) + 1);
 	    }
 
@@ -10287,7 +10307,7 @@ module.exports =
 	      if (guard ? isIterateeCall(value, chars, guard) : chars == null) {
 	        return string.slice(trimmedLeftIndex(string))
 	      }
-	      return string.slice(charsLeftIndex(string, baseToString(chars)));
+	      return string.slice(charsLeftIndex(string, (chars + '')));
 	    }
 
 	    /**
@@ -10317,7 +10337,7 @@ module.exports =
 	      if (guard ? isIterateeCall(value, chars, guard) : chars == null) {
 	        return string.slice(0, trimmedRightIndex(string) + 1)
 	      }
-	      return string.slice(0, charsRightIndex(string, baseToString(chars)) + 1);
+	      return string.slice(0, charsRightIndex(string, (chars + '')) + 1);
 	    }
 
 	    /**
@@ -10524,7 +10544,9 @@ module.exports =
 	      if (guard && isIterateeCall(func, thisArg, guard)) {
 	        thisArg = null;
 	      }
-	      return baseCallback(func, thisArg);
+	      return isObjectLike(func)
+	        ? matches(func)
+	        : baseCallback(func, thisArg);
 	    }
 
 	    /**
@@ -10592,7 +10614,7 @@ module.exports =
 	     * // => { 'user': 'barney', 'age': 36 }
 	     */
 	    function matches(source) {
-	      return baseMatches(source, true);
+	      return baseMatches(baseClone(source, true));
 	    }
 
 	    /**
@@ -11089,6 +11111,7 @@ module.exports =
 	    lodash.some = some;
 	    lodash.sortedIndex = sortedIndex;
 	    lodash.sortedLastIndex = sortedLastIndex;
+	    lodash.startCase = startCase;
 	    lodash.startsWith = startsWith;
 	    lodash.template = template;
 	    lodash.trim = trim;
@@ -11214,10 +11237,10 @@ module.exports =
 	    // Add `LazyWrapper` methods for `_.pluck` and `_.where`.
 	    arrayEach(['pluck', 'where'], function(methodName, index) {
 	      var operationName = index ? 'filter' : 'map',
-	          createCallback = index ? matches : property;
+	          createCallback = index ? baseMatches : baseProperty;
 
 	      LazyWrapper.prototype[methodName] = function(value) {
-	        return this[operationName](createCallback(value));
+	        return this[operationName](createCallback(index ? value : (value + '')));
 	      };
 	    });
 
@@ -12225,15 +12248,15 @@ module.exports =
 
 	var isArray = __webpack_require__(46);
 
-	var VNode = __webpack_require__(34);
-	var VText = __webpack_require__(35);
+	var VNode = __webpack_require__(32);
+	var VText = __webpack_require__(33);
 	var isVNode = __webpack_require__(14);
 	var isVText = __webpack_require__(15);
 	var isWidget = __webpack_require__(16);
-	var isHook = __webpack_require__(36);
-	var isVThunk = __webpack_require__(37);
+	var isHook = __webpack_require__(34);
+	var isVThunk = __webpack_require__(35);
 
-	var parseTag = __webpack_require__(38);
+	var parseTag = __webpack_require__(36);
 	var softSetHook = __webpack_require__(43);
 	var evHook = __webpack_require__(44);
 
@@ -12364,14 +12387,14 @@ module.exports =
 
 	var isArray = __webpack_require__(46)
 
-	var VPatch = __webpack_require__(41)
+	var VPatch = __webpack_require__(37)
 	var isVNode = __webpack_require__(14)
 	var isVText = __webpack_require__(15)
 	var isWidget = __webpack_require__(16)
-	var isThunk = __webpack_require__(37)
-	var handleThunk = __webpack_require__(40)
+	var isThunk = __webpack_require__(35)
+	var handleThunk = __webpack_require__(38)
 
-	var diffProps = __webpack_require__(42)
+	var diffProps = __webpack_require__(39)
 
 	module.exports = diff
 
@@ -12694,8 +12717,8 @@ module.exports =
 	var document = __webpack_require__(48)
 	var isArray = __webpack_require__(46)
 
-	var domIndex = __webpack_require__(32)
-	var patchOp = __webpack_require__(33)
+	var domIndex = __webpack_require__(40)
+	var patchOp = __webpack_require__(41)
 	module.exports = patch
 
 	function patch(rootNode, patches) {
@@ -12775,12 +12798,12 @@ module.exports =
 
 	var document = __webpack_require__(48)
 
-	var applyProperties = __webpack_require__(39)
+	var applyProperties = __webpack_require__(42)
 
 	var isVNode = __webpack_require__(14)
 	var isVText = __webpack_require__(15)
 	var isWidget = __webpack_require__(16)
-	var handleThunk = __webpack_require__(40)
+	var handleThunk = __webpack_require__(38)
 
 	module.exports = createElement
 
@@ -12871,6 +12894,322 @@ module.exports =
 /* 32 */
 /***/ function(module, exports, __webpack_require__) {
 
+	var version = __webpack_require__(29)
+	var isVNode = __webpack_require__(14)
+	var isWidget = __webpack_require__(16)
+	var isThunk = __webpack_require__(35)
+	var isVHook = __webpack_require__(34)
+
+	module.exports = VirtualNode
+
+	var noProperties = {}
+	var noChildren = []
+
+	function VirtualNode(tagName, properties, children, key, namespace) {
+	    this.tagName = tagName
+	    this.properties = properties || noProperties
+	    this.children = children || noChildren
+	    this.key = key != null ? String(key) : undefined
+	    this.namespace = (typeof namespace === "string") ? namespace : null
+
+	    var count = (children && children.length) || 0
+	    var descendants = 0
+	    var hasWidgets = false
+	    var hasThunks = false
+	    var descendantHooks = false
+	    var hooks
+
+	    for (var propName in properties) {
+	        if (properties.hasOwnProperty(propName)) {
+	            var property = properties[propName]
+	            if (isVHook(property) && property.unhook) {
+	                if (!hooks) {
+	                    hooks = {}
+	                }
+
+	                hooks[propName] = property
+	            }
+	        }
+	    }
+
+	    for (var i = 0; i < count; i++) {
+	        var child = children[i]
+	        if (isVNode(child)) {
+	            descendants += child.count || 0
+
+	            if (!hasWidgets && child.hasWidgets) {
+	                hasWidgets = true
+	            }
+
+	            if (!hasThunks && child.hasThunks) {
+	                hasThunks = true
+	            }
+
+	            if (!descendantHooks && (child.hooks || child.descendantHooks)) {
+	                descendantHooks = true
+	            }
+	        } else if (!hasWidgets && isWidget(child)) {
+	            if (typeof child.destroy === "function") {
+	                hasWidgets = true
+	            }
+	        } else if (!hasThunks && isThunk(child)) {
+	            hasThunks = true;
+	        }
+	    }
+
+	    this.count = count + descendants
+	    this.hasWidgets = hasWidgets
+	    this.hasThunks = hasThunks
+	    this.hooks = hooks
+	    this.descendantHooks = descendantHooks
+	}
+
+	VirtualNode.prototype.version = version
+	VirtualNode.prototype.type = "VirtualNode"
+
+
+/***/ },
+/* 33 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(29)
+
+	module.exports = VirtualText
+
+	function VirtualText(text) {
+	    this.text = String(text)
+	}
+
+	VirtualText.prototype.version = version
+	VirtualText.prototype.type = "VirtualText"
+
+
+/***/ },
+/* 34 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isHook
+
+	function isHook(hook) {
+	    return hook &&
+	      (typeof hook.hook === "function" && !hook.hasOwnProperty("hook") ||
+	       typeof hook.unhook === "function" && !hook.hasOwnProperty("unhook"))
+	}
+
+
+/***/ },
+/* 35 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isThunk
+
+	function isThunk(t) {
+	    return t && t.type === "Thunk"
+	}
+
+
+/***/ },
+/* 36 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	var split = __webpack_require__(51);
+
+	var classIdSplit = /([\.#]?[a-zA-Z0-9_:-]+)/;
+	var notClassId = /^\.|#/;
+
+	module.exports = parseTag;
+
+	function parseTag(tag, props) {
+	    if (!tag) {
+	        return 'DIV';
+	    }
+
+	    var noId = !(props.hasOwnProperty('id'));
+
+	    var tagParts = split(tag, classIdSplit);
+	    var tagName = null;
+
+	    if (notClassId.test(tagParts[1])) {
+	        tagName = 'DIV';
+	    }
+
+	    var classes, part, type, i;
+
+	    for (i = 0; i < tagParts.length; i++) {
+	        part = tagParts[i];
+
+	        if (!part) {
+	            continue;
+	        }
+
+	        type = part.charAt(0);
+
+	        if (!tagName) {
+	            tagName = part;
+	        } else if (type === '.') {
+	            classes = classes || [];
+	            classes.push(part.substring(1, part.length));
+	        } else if (type === '#' && noId) {
+	            props.id = part.substring(1, part.length);
+	        }
+	    }
+
+	    if (classes) {
+	        if (props.className) {
+	            classes.push(props.className);
+	        }
+
+	        props.className = classes.join(' ');
+	    }
+
+	    return props.namespace ? tagName : tagName.toUpperCase();
+	}
+
+
+/***/ },
+/* 37 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(29)
+
+	VirtualPatch.NONE = 0
+	VirtualPatch.VTEXT = 1
+	VirtualPatch.VNODE = 2
+	VirtualPatch.WIDGET = 3
+	VirtualPatch.PROPS = 4
+	VirtualPatch.ORDER = 5
+	VirtualPatch.INSERT = 6
+	VirtualPatch.REMOVE = 7
+	VirtualPatch.THUNK = 8
+
+	module.exports = VirtualPatch
+
+	function VirtualPatch(type, vNode, patch) {
+	    this.type = Number(type)
+	    this.vNode = vNode
+	    this.patch = patch
+	}
+
+	VirtualPatch.prototype.version = version
+	VirtualPatch.prototype.type = "VirtualPatch"
+
+
+/***/ },
+/* 38 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var isVNode = __webpack_require__(14)
+	var isVText = __webpack_require__(15)
+	var isWidget = __webpack_require__(16)
+	var isThunk = __webpack_require__(35)
+
+	module.exports = handleThunk
+
+	function handleThunk(a, b) {
+	    var renderedA = a
+	    var renderedB = b
+
+	    if (isThunk(b)) {
+	        renderedB = renderThunk(b, a)
+	    }
+
+	    if (isThunk(a)) {
+	        renderedA = renderThunk(a, null)
+	    }
+
+	    return {
+	        a: renderedA,
+	        b: renderedB
+	    }
+	}
+
+	function renderThunk(thunk, previous) {
+	    var renderedThunk = thunk.vnode
+
+	    if (!renderedThunk) {
+	        renderedThunk = thunk.vnode = thunk.render(previous)
+	    }
+
+	    if (!(isVNode(renderedThunk) ||
+	            isVText(renderedThunk) ||
+	            isWidget(renderedThunk))) {
+	        throw new Error("thunk did not return a valid node");
+	    }
+
+	    return renderedThunk
+	}
+
+
+/***/ },
+/* 39 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var isObject = __webpack_require__(49)
+	var isHook = __webpack_require__(34)
+
+	module.exports = diffProps
+
+	function diffProps(a, b) {
+	    var diff
+
+	    for (var aKey in a) {
+	        if (!(aKey in b)) {
+	            diff = diff || {}
+	            diff[aKey] = undefined
+	        }
+
+	        var aValue = a[aKey]
+	        var bValue = b[aKey]
+
+	        if (aValue === bValue) {
+	            continue
+	        } else if (isObject(aValue) && isObject(bValue)) {
+	            if (getPrototype(bValue) !== getPrototype(aValue)) {
+	                diff = diff || {}
+	                diff[aKey] = bValue
+	            } else if (isHook(bValue)) {
+	                 diff = diff || {}
+	                 diff[aKey] = bValue
+	            } else {
+	                var objectDiff = diffProps(aValue, bValue)
+	                if (objectDiff) {
+	                    diff = diff || {}
+	                    diff[aKey] = objectDiff
+	                }
+	            }
+	        } else {
+	            diff = diff || {}
+	            diff[aKey] = bValue
+	        }
+	    }
+
+	    for (var bKey in b) {
+	        if (!(bKey in a)) {
+	            diff = diff || {}
+	            diff[bKey] = b[bKey]
+	        }
+	    }
+
+	    return diff
+	}
+
+	function getPrototype(value) {
+	  if (Object.getPrototypeOf) {
+	    return Object.getPrototypeOf(value)
+	  } else if (value.__proto__) {
+	    return value.__proto__
+	  } else if (value.constructor) {
+	    return value.constructor.prototype
+	  }
+	}
+
+
+/***/ },
+/* 40 */
+/***/ function(module, exports, __webpack_require__) {
+
 	// Maps a virtual DOM tree onto a real DOM tree in an efficient manner.
 	// We don't want to read all of the DOM nodes in the tree so we use
 	// the in-order tree indexing to eliminate recursion down certain branches.
@@ -12959,13 +13298,13 @@ module.exports =
 
 
 /***/ },
-/* 33 */
+/* 41 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var applyProperties = __webpack_require__(39)
+	var applyProperties = __webpack_require__(42)
 
 	var isWidget = __webpack_require__(16)
-	var VPatch = __webpack_require__(41)
+	var VPatch = __webpack_require__(37)
 
 	var render = __webpack_require__(28)
 	var updateWidget = __webpack_require__(47)
@@ -13148,189 +13487,11 @@ module.exports =
 
 
 /***/ },
-/* 34 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(29)
-	var isVNode = __webpack_require__(14)
-	var isWidget = __webpack_require__(16)
-	var isThunk = __webpack_require__(37)
-	var isVHook = __webpack_require__(36)
-
-	module.exports = VirtualNode
-
-	var noProperties = {}
-	var noChildren = []
-
-	function VirtualNode(tagName, properties, children, key, namespace) {
-	    this.tagName = tagName
-	    this.properties = properties || noProperties
-	    this.children = children || noChildren
-	    this.key = key != null ? String(key) : undefined
-	    this.namespace = (typeof namespace === "string") ? namespace : null
-
-	    var count = (children && children.length) || 0
-	    var descendants = 0
-	    var hasWidgets = false
-	    var hasThunks = false
-	    var descendantHooks = false
-	    var hooks
-
-	    for (var propName in properties) {
-	        if (properties.hasOwnProperty(propName)) {
-	            var property = properties[propName]
-	            if (isVHook(property) && property.unhook) {
-	                if (!hooks) {
-	                    hooks = {}
-	                }
-
-	                hooks[propName] = property
-	            }
-	        }
-	    }
-
-	    for (var i = 0; i < count; i++) {
-	        var child = children[i]
-	        if (isVNode(child)) {
-	            descendants += child.count || 0
-
-	            if (!hasWidgets && child.hasWidgets) {
-	                hasWidgets = true
-	            }
-
-	            if (!hasThunks && child.hasThunks) {
-	                hasThunks = true
-	            }
-
-	            if (!descendantHooks && (child.hooks || child.descendantHooks)) {
-	                descendantHooks = true
-	            }
-	        } else if (!hasWidgets && isWidget(child)) {
-	            if (typeof child.destroy === "function") {
-	                hasWidgets = true
-	            }
-	        } else if (!hasThunks && isThunk(child)) {
-	            hasThunks = true;
-	        }
-	    }
-
-	    this.count = count + descendants
-	    this.hasWidgets = hasWidgets
-	    this.hasThunks = hasThunks
-	    this.hooks = hooks
-	    this.descendantHooks = descendantHooks
-	}
-
-	VirtualNode.prototype.version = version
-	VirtualNode.prototype.type = "VirtualNode"
-
-
-/***/ },
-/* 35 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(29)
-
-	module.exports = VirtualText
-
-	function VirtualText(text) {
-	    this.text = String(text)
-	}
-
-	VirtualText.prototype.version = version
-	VirtualText.prototype.type = "VirtualText"
-
-
-/***/ },
-/* 36 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isHook
-
-	function isHook(hook) {
-	    return hook &&
-	      (typeof hook.hook === "function" && !hook.hasOwnProperty("hook") ||
-	       typeof hook.unhook === "function" && !hook.hasOwnProperty("unhook"))
-	}
-
-
-/***/ },
-/* 37 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isThunk
-
-	function isThunk(t) {
-	    return t && t.type === "Thunk"
-	}
-
-
-/***/ },
-/* 38 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	var split = __webpack_require__(50);
-
-	var classIdSplit = /([\.#]?[a-zA-Z0-9_:-]+)/;
-	var notClassId = /^\.|#/;
-
-	module.exports = parseTag;
-
-	function parseTag(tag, props) {
-	    if (!tag) {
-	        return 'DIV';
-	    }
-
-	    var noId = !(props.hasOwnProperty('id'));
-
-	    var tagParts = split(tag, classIdSplit);
-	    var tagName = null;
-
-	    if (notClassId.test(tagParts[1])) {
-	        tagName = 'DIV';
-	    }
-
-	    var classes, part, type, i;
-
-	    for (i = 0; i < tagParts.length; i++) {
-	        part = tagParts[i];
-
-	        if (!part) {
-	            continue;
-	        }
-
-	        type = part.charAt(0);
-
-	        if (!tagName) {
-	            tagName = part;
-	        } else if (type === '.') {
-	            classes = classes || [];
-	            classes.push(part.substring(1, part.length));
-	        } else if (type === '#' && noId) {
-	            props.id = part.substring(1, part.length);
-	        }
-	    }
-
-	    if (classes) {
-	        if (props.className) {
-	            classes.push(props.className);
-	        }
-
-	        props.className = classes.join(' ');
-	    }
-
-	    return props.namespace ? tagName : tagName.toUpperCase();
-	}
-
-
-/***/ },
-/* 39 */
+/* 42 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var isObject = __webpack_require__(49)
-	var isHook = __webpack_require__(36)
+	var isHook = __webpack_require__(34)
 
 	module.exports = applyProperties
 
@@ -13425,144 +13586,6 @@ module.exports =
 	    } else if (value.constructor) {
 	        return value.constructor.prototype
 	    }
-	}
-
-
-/***/ },
-/* 40 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var isVNode = __webpack_require__(14)
-	var isVText = __webpack_require__(15)
-	var isWidget = __webpack_require__(16)
-	var isThunk = __webpack_require__(37)
-
-	module.exports = handleThunk
-
-	function handleThunk(a, b) {
-	    var renderedA = a
-	    var renderedB = b
-
-	    if (isThunk(b)) {
-	        renderedB = renderThunk(b, a)
-	    }
-
-	    if (isThunk(a)) {
-	        renderedA = renderThunk(a, null)
-	    }
-
-	    return {
-	        a: renderedA,
-	        b: renderedB
-	    }
-	}
-
-	function renderThunk(thunk, previous) {
-	    var renderedThunk = thunk.vnode
-
-	    if (!renderedThunk) {
-	        renderedThunk = thunk.vnode = thunk.render(previous)
-	    }
-
-	    if (!(isVNode(renderedThunk) ||
-	            isVText(renderedThunk) ||
-	            isWidget(renderedThunk))) {
-	        throw new Error("thunk did not return a valid node");
-	    }
-
-	    return renderedThunk
-	}
-
-
-/***/ },
-/* 41 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(29)
-
-	VirtualPatch.NONE = 0
-	VirtualPatch.VTEXT = 1
-	VirtualPatch.VNODE = 2
-	VirtualPatch.WIDGET = 3
-	VirtualPatch.PROPS = 4
-	VirtualPatch.ORDER = 5
-	VirtualPatch.INSERT = 6
-	VirtualPatch.REMOVE = 7
-	VirtualPatch.THUNK = 8
-
-	module.exports = VirtualPatch
-
-	function VirtualPatch(type, vNode, patch) {
-	    this.type = Number(type)
-	    this.vNode = vNode
-	    this.patch = patch
-	}
-
-	VirtualPatch.prototype.version = version
-	VirtualPatch.prototype.type = "VirtualPatch"
-
-
-/***/ },
-/* 42 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var isObject = __webpack_require__(49)
-	var isHook = __webpack_require__(36)
-
-	module.exports = diffProps
-
-	function diffProps(a, b) {
-	    var diff
-
-	    for (var aKey in a) {
-	        if (!(aKey in b)) {
-	            diff = diff || {}
-	            diff[aKey] = undefined
-	        }
-
-	        var aValue = a[aKey]
-	        var bValue = b[aKey]
-
-	        if (aValue === bValue) {
-	            continue
-	        } else if (isObject(aValue) && isObject(bValue)) {
-	            if (getPrototype(bValue) !== getPrototype(aValue)) {
-	                diff = diff || {}
-	                diff[aKey] = bValue
-	            } else if (isHook(bValue)) {
-	                 diff = diff || {}
-	                 diff[aKey] = bValue
-	            } else {
-	                var objectDiff = diffProps(aValue, bValue)
-	                if (objectDiff) {
-	                    diff = diff || {}
-	                    diff[aKey] = objectDiff
-	                }
-	            }
-	        } else {
-	            diff = diff || {}
-	            diff[aKey] = bValue
-	        }
-	    }
-
-	    for (var bKey in b) {
-	        if (!(bKey in a)) {
-	            diff = diff || {}
-	            diff[bKey] = b[bKey]
-	        }
-	    }
-
-	    return diff
-	}
-
-	function getPrototype(value) {
-	  if (Object.getPrototypeOf) {
-	    return Object.getPrototypeOf(value)
-	  } else if (value.__proto__) {
-	    return value.__proto__
-	  } else if (value.constructor) {
-	    return value.constructor.prototype
-	  }
 	}
 
 
@@ -13970,7 +13993,7 @@ module.exports =
 
 	/* WEBPACK VAR INJECTION */(function(global) {var topLevel = typeof global !== 'undefined' ? global :
 	    typeof window !== 'undefined' ? window : {}
-	var minDoc = __webpack_require__(51);
+	var minDoc = __webpack_require__(50);
 
 	if (typeof document !== 'undefined') {
 	    module.exports = document;
@@ -13999,6 +14022,12 @@ module.exports =
 
 /***/ },
 /* 50 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* (ignored) */
+
+/***/ },
+/* 51 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*!
@@ -14108,12 +14137,6 @@ module.exports =
 	  return self;
 	})();
 
-
-/***/ },
-/* 51 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/* (ignored) */
 
 /***/ },
 /* 52 */
