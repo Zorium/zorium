@@ -38,6 +38,7 @@ class Router
 
     node.properties.onclick = do =>
       router = this
+      mode = @mode
       # coffeelint: disable=missing_fat_arrows
       (e) ->
         $el = this
@@ -46,6 +47,9 @@ class Router
         if isLocal
           e.preventDefault()
           router.go $el.pathname
+
+        if mode is 'pathname'
+          location.hash = $el.hash
       # coffeelint: enable=missing_fat_arrows
 
     return node
