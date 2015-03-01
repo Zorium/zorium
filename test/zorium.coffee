@@ -844,6 +844,8 @@ describe 'router', ->
     z.router.add '/test', App
     z.router.add '/test2', App2
 
+    z.router.setMode 'hash'
+
     z.router.go '/test'
     window.location.hash.should.be '#/test'
     z.router.go '/test2'
@@ -870,6 +872,61 @@ describe 'router', ->
     window.location.pathname.should.be '/test3'
     z.router.go '/test4'
     window.location.pathname.should.be '/test4'
+
+  it 'ignores hash if in hash mode', ->
+    class App
+      render: ->
+        z 'div', 'Hello World'
+
+    class App2
+      render: ->
+        z 'div', 'World Hello'
+
+    root = document.createElement 'div'
+
+    z.router.setRoot root
+    z.router.add '/test-ignore-hash', App
+    z.router.add '/test-ignore-hash2', App2
+
+    z.router.setMode 'hash'
+
+    z.router.go '/test-ignore-hash#abc'
+    window.location.hash.should.be '#/test-ignore-hash'
+    z.router.go '/test-ignore-hash2#efg'
+    window.location.hash.should.be '#/test-ignore-hash2'
+
+  it 'uses hash if in pathname mode', ->
+    appRenders = 0
+
+    class App
+      render: ->
+        appRenders += 1
+        z 'div', 'Hello World'
+
+    class App2
+      render: ->
+        z 'div', 'World Hello'
+
+    root = document.createElement 'div'
+
+    z.router.setRoot root
+    z.router.add '/test-use-path', App
+    z.router.add '/test-use-path2', App2
+
+    z.router.setMode 'pathname'
+
+    z.router.go '/test-use-path#abc'
+    window.location.pathname.should.be '/test-use-path'
+    window.location.hash.should.be '#abc'
+    z.router.go '/test-use-path#def'
+    window.location.pathname.should.be '/test-use-path'
+    window.location.hash.should.be '#def'
+    z.router.go '/test-use-path2#abc'
+    window.location.pathname.should.be '/test-use-path2'
+    window.location.hash.should.be '#abc'
+
+    # hash change doesn't cause re-render
+    appRenders.should.be 1
 
   it 'routes to default current path', ->
     class App

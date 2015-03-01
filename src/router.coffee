@@ -11,6 +11,7 @@ class Router
     @routesRoot = null
     @mode = 'hash'
     @currentPath = null
+    @currentHash = '' # only valid when using pathname
 
     # some browsers erroneously call popstate on intial page load (iOS Safari)
     # We need to ignore that first event.
@@ -46,36 +47,55 @@ class Router
 
         if isLocal
           e.preventDefault()
-          router.go $el.pathname
-
-        if mode is 'pathname'
-          location.hash = $el.hash
+          router.go $el.pathname + $el.hash
       # coffeelint: enable=missing_fat_arrows
 
     return node
 
-  setPath: (path) =>
-    @currentPath = path
+  setUrl: (url) =>
+    @currentPath = url.pathname
+    @currentHash = url.hash
 
     if @mode is 'pathname'
-      window.history.pushState null, null, path
+      window.history.pushState null, null, url.pathname
     else
-      window.location.hash = path
+      window.location.hash = url.pathname
 
-    @emit 'route', path
+    @emit 'route', url.pathname
 
-  getCurrentPathname: =>
-    pathname = window.location.pathname
+  getCurrentPath: =>
     hash = window.location.hash.slice(1)
+    pathname = window.location.pathname
+    if pathname
+      pathname += '#' + hash
+
     return if @mode is 'pathname' then pathname or hash \
            else hash or pathname
+
+  parseUrl: (url) ->
+    a = document.createElement 'a'
+    a.href = url
+
+    {
+      pathname: a.pathname
+      hash: a.hash
+    }
+
+  hasPathChanged: (path) ->
+    path and @routesRoot and path isnt @currentPath
 
   go: (path) =>
     # default path to current location
     unless path
-      path = @getCurrentPathname()
+      path = @getCurrentPath()
 
-    unless path and @routesRoot and path isnt @currentPath
+    url = @parseUrl path
+    path = url.pathname
+
+    unless @hasPathChanged(path)
+      if url.hash isnt @currentHash and @mode is 'pathname'
+        @currentHash = url.hash
+        window.location.hash = url.hash
       return
 
     route = @router.match(path)
@@ -91,8 +111,11 @@ class Router
       if transformedPath isnt path
         @go transformedPath
       else
-        @setPath path
+        isHashDifferent = @currentHash isnt url.hash
+        @setUrl url
         renderer.render @routesRoot, new componentClass(route.params)
+        if @mode is 'pathname' and isHashDifferent
+          window.location.hash = url.hash
 
     if _.isFunction transformedPath?.then
       transformedPath.then enter
