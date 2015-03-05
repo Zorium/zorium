@@ -49,7 +49,7 @@ class Router
 
         if isLocal
           e.preventDefault()
-          router.go $el.pathname + $el.hash
+          router.go $el.pathname + $el.search + $el.hash
       # coffeelint: enable=missing_fat_arrows
 
     return node
