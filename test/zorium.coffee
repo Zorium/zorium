@@ -873,6 +873,63 @@ describe 'router', ->
     z.router.go '/test4'
     window.location.pathname.should.be '/test4'
 
+  it 'updates query param in hash mode', ->
+    class App
+      render: ->
+        z 'div', 'Hello World'
+
+    class App2
+      constructor: (pathParams, {x, y}) ->
+        should.not.exist x
+        y.should.be 'abc'
+      render: ->
+        z 'div', 'World Hello'
+
+    root = document.createElement 'div'
+
+    z.router.setRoot root
+    z.router.add '/test-qs', App
+    z.router.add '/test-qs2', App2
+
+    z.router.setMode 'hash'
+
+    z.router.go '/test-qs?x=abc'
+    window.location.hash.should.be '#/test-qs?x=abc'
+    z.router.go '/test-qs?x=xxx'
+    window.location.hash.should.be '#/test-qs?x=xxx'
+    z.router.go '/test-qs2?y=abc'
+    window.location.hash.should.be '#/test-qs2?y=abc'
+
+  it 'updates query string in path mode', ->
+    class App
+      render: ->
+        z 'div', 'Hello World'
+
+    class App2
+      constructor: (pathParams, {x, y}) ->
+        should.not.exist x
+        y.should.be 'abc'
+      render: ->
+        z 'div', 'World Hello'
+
+    root = document.createElement 'div'
+
+    z.router.setRoot root
+    z.router.add '/test-qs3', App
+    z.router.add '/test-qs4', App2
+
+    z.router.setMode 'pathname'
+
+    z.router.go '/test-qs3?x=abc'
+    window.location.pathname.should.be '/test-qs3'
+    window.location.search.should.be '?x=abc'
+    z.router.go '/test-qs3?x=xxx'
+    window.location.pathname.should.be '/test-qs3'
+    window.location.search.should.be '?x=xxx'
+    z.router.go '/test-qs4?y=abc'
+    window.location.pathname.should.be '/test-qs4'
+    window.location.search.should.be '?y=abc'
+
   it 'ignores hash if in hash mode', ->
     class App
       render: ->
@@ -928,7 +985,51 @@ describe 'router', ->
     # hash change doesn't cause re-render
     appRenders.should.be 1
 
-  it 'routes to default current path', ->
+  it 'routes to default current path in hash mode', ->
+    class App
+      render: ->
+        z 'div', 'Hello World'
+
+    root = document.createElement 'div'
+
+    result1 = '<div></div>'
+    result2 = '<div><div>Hello World</div></div>'
+
+    window.location.hash = '/test-pre-hash'
+
+    z.router.setRoot root
+    z.router.add '/test-pre-hash', App
+
+    z.router.setMode 'hash'
+    root.isEqualNode(htmlToNode(result1)).should.be true
+    z.router.go()
+    root.isEqualNode(htmlToNode(result2)).should.be true
+    window.location.hash.should.be '#/test-pre-hash'
+
+  it 'routes to default current path in hash mode with query string', ->
+    class App
+      constructor: (pathParams, {x}) ->
+        x.should.be 'abc'
+      render: ->
+        z 'div', 'Hello World'
+
+    root = document.createElement 'div'
+
+    result1 = '<div></div>'
+    result2 = '<div><div>Hello World</div></div>'
+
+    window.location.hash = '/test-pre-hash-search?x=abc'
+
+    z.router.setRoot root
+    z.router.add '/test-pre-hash-search', App
+
+    z.router.setMode 'hash'
+    root.isEqualNode(htmlToNode(result1)).should.be true
+    z.router.go()
+    root.isEqualNode(htmlToNode(result2)).should.be true
+    window.location.hash.should.be '#/test-pre-hash-search?x=abc'
+
+  it 'routes to default current path in pathname mode', ->
     class App
       render: ->
         z 'div', 'Hello World'
@@ -948,6 +1049,30 @@ describe 'router', ->
     z.router.go()
     root.isEqualNode(htmlToNode(result2)).should.be true
     window.location.pathname.should.be '/test-pre'
+
+  it 'routes to default current path in pathname mode with query string', ->
+    class App
+      constructor: (pathParams, {x}) ->
+        x.should.be 'abc'
+      render: ->
+        z 'div', 'Hello World'
+
+    root = document.createElement 'div'
+
+    result1 = '<div></div>'
+    result2 = '<div><div>Hello World</div></div>'
+
+    window.history.pushState null, null, '/test-pre-search?x=abc'
+
+    z.router.setRoot root
+    z.router.add '/test-pre-search', App
+
+    z.router.setMode 'pathname'
+    root.isEqualNode(htmlToNode(result1)).should.be true
+    z.router.go()
+    root.isEqualNode(htmlToNode(result2)).should.be true
+    window.location.pathname.should.be '/test-pre-search'
+    window.location.search.should.be '?x=abc'
 
 
   it 'responds to hashchange', (done) ->

@@ -46,6 +46,7 @@
     "observ": "^0.2.0",
     "observ-array": "^3.1.0",
     "observ-struct": "^6.0.0",
+    "qs": "^2.3.3",
     "routes": "^2.0.0",
     "virtual-dom": "^1.2.0"
   }

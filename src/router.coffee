@@ -1,4 +1,5 @@
 routes = require 'routes'
+Qs = require 'qs'
 
 z = require './z'
 util = require './util'
@@ -12,6 +13,7 @@ class Router
     @mode = 'hash'
     @currentPath = null
     @currentHash = '' # only valid when using pathname
+    @currentSearch = ''
 
     # some browsers erroneously call popstate on intial page load (iOS Safari)
     # We need to ignore that first event.
@@ -55,18 +57,21 @@ class Router
   setUrl: (url) =>
     @currentPath = url.pathname
     @currentHash = url.hash
+    @currentSearch = url.search
 
     if @mode is 'pathname'
-      window.history.pushState null, null, url.pathname
+      window.history.pushState null, null, url.pathname + url.search
     else
-      window.location.hash = url.pathname
+      window.location.hash = url.pathname + url.search
 
     @emit 'route', url.pathname
 
   getCurrentPath: =>
     hash = window.location.hash.slice(1)
     pathname = window.location.pathname
+    search = window.location.search
     if pathname
+      pathname += search
       pathname += '#' + hash
 
     return if @mode is 'pathname' then pathname or hash \
@@ -79,11 +84,16 @@ class Router
     {
       pathname: a.pathname
       hash: a.hash
+      search: a.search
     }
 
   hasPathChanged: (path) ->
     path and @routesRoot and path isnt @currentPath
 
+  hasSearchChanged: (search) ->
+    search isnt @currentSearch
+
+  # TODO: fix cyclomatic complexity
   go: (path) =>
     # default path to current location
     unless path
@@ -91,8 +101,9 @@ class Router
 
     url = @parseUrl path
     path = url.pathname
+    queryParams = Qs.parse(url.search.slice(1))
 
-    unless @hasPathChanged(path)
+    unless @hasPathChanged(path) or @hasSearchChanged(url.search)
       if url.hash isnt @currentHash and @mode is 'pathname'
         @currentHash = url.hash
         window.location.hash = url.hash
@@ -113,7 +124,8 @@ class Router
       else
         isHashDifferent = @currentHash isnt url.hash
         @setUrl url
-        renderer.render @routesRoot, new componentClass(route.params)
+        renderer.render @routesRoot,
+          new componentClass(route.params, queryParams)
         if @mode is 'pathname' and isHashDifferent
           window.location.hash = url.hash
 
