@@ -45,7 +45,7 @@ module.exports =
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var observe, renderer, router, z, _;
+	var _, observe, renderer, router, z;
 
 	if (!Function.prototype.bind) {
 	  Function.prototype.bind = function(oThis) {
@@ -83,7 +83,7 @@ module.exports =
 	  router: router,
 	  observe: observe,
 	  state: function(obj) {
-	    var observed, _set;
+	    var _set, observed;
 	    observed = observe(obj);
 	    _set = observed.set.bind(observed);
 	    observed.set = function(diff) {
@@ -110,7 +110,7 @@ module.exports =
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var getOnBeforeUnmountHook, getOnMountHook, h, renderChild, util, z, _;
+	var _, getOnBeforeUnmountHook, getOnMountHook, h, renderChild, util, z;
 
 	_ = __webpack_require__(5);
 
@@ -119,8 +119,8 @@ module.exports =
 	util = __webpack_require__(6);
 
 	module.exports = z = function() {
-	  var attributes, child, children, props, tag, tagName, _ref;
-	  _ref = util.parseZfuncArgs.apply(null, arguments), child = _ref.child, tagName = _ref.tagName, props = _ref.props, children = _ref.children;
+	  var attributes, child, children, props, ref, tag, tagName;
+	  ref = util.parseZfuncArgs.apply(null, arguments), child = ref.child, tagName = ref.tagName, props = ref.props, children = ref.children;
 	  if (child) {
 	    return renderChild(child, props);
 	  }
@@ -228,15 +228,15 @@ module.exports =
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var extendMethods, getAllProperties, isPromise, observ, observArray, observStruct, observe, observePromise, _;
+	var _, extendMethods, getAllProperties, isPromise, observ, observArray, observStruct, observe, observePromise;
 
 	_ = __webpack_require__(5);
 
-	observStruct = __webpack_require__(9);
+	observStruct = __webpack_require__(7);
 
-	observArray = __webpack_require__(7);
+	observArray = __webpack_require__(8);
 
-	observ = __webpack_require__(8);
+	observ = __webpack_require__(9);
 
 	isPromise = function(obj) {
 	  return _.isObject(obj) && _.isFunction(obj.then);
@@ -283,7 +283,7 @@ module.exports =
 	};
 
 	observe = function(obj) {
-	  var observed, _set;
+	  var _set, observed;
 	  observed = (function() {
 	    switch (false) {
 	      case !_.isFunction(obj):
@@ -330,10 +330,12 @@ module.exports =
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Router, renderer, routes, util, z,
-	  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+	var Qs, Router, renderer, routes, util, z,
+	  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-	routes = __webpack_require__(14);
+	routes = __webpack_require__(15);
+
+	Qs = __webpack_require__(14);
 
 	z = __webpack_require__(1);
 
@@ -343,21 +345,23 @@ module.exports =
 
 	Router = (function() {
 	  function Router() {
-	    this.off = __bind(this.off, this);
-	    this.emit = __bind(this.emit, this);
-	    this.on = __bind(this.on, this);
-	    this.go = __bind(this.go, this);
-	    this.getCurrentPathname = __bind(this.getCurrentPathname, this);
-	    this.setPath = __bind(this.setPath, this);
-	    this.link = __bind(this.link, this);
-	    this.setMode = __bind(this.setMode, this);
-	    this.add = __bind(this.add, this);
-	    this.setRoot = __bind(this.setRoot, this);
+	    this.off = bind(this.off, this);
+	    this.emit = bind(this.emit, this);
+	    this.on = bind(this.on, this);
+	    this.go = bind(this.go, this);
+	    this.getCurrentPath = bind(this.getCurrentPath, this);
+	    this.setUrl = bind(this.setUrl, this);
+	    this.link = bind(this.link, this);
+	    this.setMode = bind(this.setMode, this);
+	    this.add = bind(this.add, this);
+	    this.setRoot = bind(this.setRoot, this);
 	    this.router = new routes();
 	    this.events = {};
 	    this.routesRoot = null;
 	    this.mode = 'hash';
 	    this.currentPath = null;
+	    this.currentHash = '';
+	    this.currentSearch = '';
 	    window.addEventListener('popstate', (function(_this) {
 	      return function(e) {
 	        if (_this.currentPath) {
@@ -401,10 +405,7 @@ module.exports =
 	          isLocal = $el.hostname === window.location.hostname;
 	          if (isLocal) {
 	            e.preventDefault();
-	            router.go($el.pathname);
-	          }
-	          if (mode === 'pathname') {
-	            return location.hash = $el.hash;
+	            return router.go($el.pathname + $el.hash);
 	          }
 	        };
 	      };
@@ -412,20 +413,27 @@ module.exports =
 	    return node;
 	  };
 
-	  Router.prototype.setPath = function(path) {
-	    this.currentPath = path;
+	  Router.prototype.setUrl = function(url) {
+	    this.currentPath = url.pathname;
+	    this.currentHash = url.hash;
+	    this.currentSearch = url.search;
 	    if (this.mode === 'pathname') {
-	      window.history.pushState(null, null, path);
+	      window.history.pushState(null, null, url.pathname + url.search);
 	    } else {
-	      window.location.hash = path;
+	      window.location.hash = url.pathname + url.search;
 	    }
-	    return this.emit('route', path);
+	    return this.emit('route', url.pathname);
 	  };
 
-	  Router.prototype.getCurrentPathname = function() {
-	    var hash, pathname;
-	    pathname = window.location.pathname;
+	  Router.prototype.getCurrentPath = function() {
+	    var hash, pathname, search;
 	    hash = window.location.hash.slice(1);
+	    pathname = window.location.pathname;
+	    search = window.location.search;
+	    if (pathname) {
+	      pathname += search;
+	      pathname += '#' + hash;
+	    }
 	    if (this.mode === 'pathname') {
 	      return pathname || hash;
 	    } else {
@@ -433,27 +441,58 @@ module.exports =
 	    }
 	  };
 
+	  Router.prototype.parseUrl = function(url) {
+	    var a;
+	    a = document.createElement('a');
+	    a.href = url;
+	    return {
+	      pathname: a.pathname,
+	      hash: a.hash,
+	      search: a.search
+	    };
+	  };
+
+	  Router.prototype.hasPathChanged = function(path) {
+	    return path && this.routesRoot && path !== this.currentPath;
+	  };
+
+	  Router.prototype.hasSearchChanged = function(search) {
+	    return search !== this.currentSearch;
+	  };
+
 	  Router.prototype.go = function(path) {
-	    var componentClass, enter, pathTransformFn, route, transformedPath, _ref;
+	    var componentClass, enter, pathTransformFn, queryParams, ref, route, transformedPath, url;
 	    if (!path) {
-	      path = this.getCurrentPathname();
+	      path = this.getCurrentPath();
 	    }
-	    if (!(path && this.routesRoot && path !== this.currentPath)) {
+	    url = this.parseUrl(path);
+	    path = url.pathname;
+	    queryParams = Qs.parse(url.search.slice(1));
+	    if (!(this.hasPathChanged(path) || this.hasSearchChanged(url.search))) {
+	      if (url.hash !== this.currentHash && this.mode === 'pathname') {
+	        this.currentHash = url.hash;
+	        window.location.hash = url.hash;
+	      }
 	      return;
 	    }
 	    route = this.router.match(path);
 	    if (!route) {
 	      return;
 	    }
-	    _ref = route.fn(), componentClass = _ref[0], pathTransformFn = _ref[1];
+	    ref = route.fn(), componentClass = ref[0], pathTransformFn = ref[1];
 	    transformedPath = pathTransformFn(path);
 	    enter = (function(_this) {
 	      return function(transformedPath) {
+	        var isHashDifferent;
 	        if (transformedPath !== path) {
 	          return _this.go(transformedPath);
 	        } else {
-	          _this.setPath(path);
-	          return renderer.render(_this.routesRoot, new componentClass(route.params));
+	          isHashDifferent = _this.currentHash !== url.hash;
+	          _this.setUrl(url);
+	          renderer.render(_this.routesRoot, new componentClass(route.params, queryParams));
+	          if (_this.mode === 'pathname' && isHashDifferent) {
+	            return window.location.hash = url.hash;
+	          }
 	        }
 	      };
 	    })(this);
@@ -496,7 +535,7 @@ module.exports =
 /***/ function(module, exports, __webpack_require__) {
 
 	var Renderer, createElement, diff, patch, z,
-	  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+	  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 	diff = __webpack_require__(11);
 
@@ -508,8 +547,8 @@ module.exports =
 
 	Renderer = (function() {
 	  function Renderer() {
-	    this.redraw = __bind(this.redraw, this);
-	    this.render = __bind(this.render, this);
+	    this.redraw = bind(this.redraw, this);
+	    this.render = bind(this.render, this);
 	    var id;
 	    this.registeredRoots = {};
 	    id = 0;
@@ -543,14 +582,14 @@ module.exports =
 	  };
 
 	  Renderer.prototype.redraw = function() {
-	    var id, root, _ref, _results;
-	    _ref = this.registeredRoots;
-	    _results = [];
-	    for (id in _ref) {
-	      root = _ref[id];
-	      _results.push(this.render(root.$root, root.tree));
+	    var id, ref, results, root;
+	    ref = this.registeredRoots;
+	    results = [];
+	    for (id in ref) {
+	      root = ref[id];
+	      results.push(this.render(root.$root, root.tree));
 	    }
-	    return _results;
+	    return results;
 	  };
 
 	  return Renderer;
@@ -566,10 +605,10 @@ module.exports =
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(module, global) {/**
 	 * @license
-	 * lodash 3.2.0 (Custom Build) <https://lodash.com/>
+	 * lodash 3.3.1 (Custom Build) <https://lodash.com/>
 	 * Build: `lodash modern -d -o ./index.js`
 	 * Copyright 2012-2015 The Dojo Foundation <http://dojofoundation.org/>
-	 * Based on Underscore.js 1.7.0 <http://underscorejs.org/LICENSE>
+	 * Based on Underscore.js 1.8.2 <http://underscorejs.org/LICENSE>
 	 * Copyright 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
 	 * Available under MIT license <https://lodash.com/license>
 	 */
@@ -579,7 +618,7 @@ module.exports =
 	  var undefined;
 
 	  /** Used as the semantic version number. */
-	  var VERSION = '3.2.0';
+	  var VERSION = '3.3.1';
 
 	  /** Used to compose bitmasks for wrapper metadata. */
 	  var BIND_FLAG = 1,
@@ -890,6 +929,20 @@ module.exports =
 	      }
 	    }
 	    return -1;
+	  }
+
+	  /**
+	   * The base implementation of `_.isFunction` without support for environments
+	   * with incorrect `typeof` results.
+	   *
+	   * @private
+	   * @param {*} value The value to check.
+	   * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+	   */
+	  function baseIsFunction(value) {
+	    // Avoid a Chakra JIT bug in compatibility modes of IE 11.
+	    // See https://github.com/jashkenas/underscore/issues/1621 for more details.
+	    return typeof value == 'function' || false;
 	  }
 
 	  /**
@@ -1378,8 +1431,8 @@ module.exports =
 	     * `filter`, `flatten`, `flattenDeep`, `flow`, `flowRight`, `forEach`,
 	     * `forEachRight`, `forIn`, `forInRight`, `forOwn`, `forOwnRight`, `functions`,
 	     * `groupBy`, `indexBy`, `initial`, `intersection`, `invert`, `invoke`, `keys`,
-	     * `keysIn`, `map`, `mapValues`, `matches`, `memoize`, `merge`, `mixin`,
-	     * `negate`, `noop`, `omit`, `once`, `pairs`, `partial`, `partialRight`,
+	     * `keysIn`, `map`, `mapValues`, `matches`, `matchesProperty`, `memoize`, `merge`,
+	     * `mixin`, `negate`, `noop`, `omit`, `once`, `pairs`, `partial`, `partialRight`,
 	     * `partition`, `pick`, `plant`, `pluck`, `property`, `propertyOf`, `pull`,
 	     * `pullAt`, `push`, `range`, `rearg`, `reject`, `remove`, `rest`, `reverse`,
 	     * `shuffle`, `slice`, `sort`, `sortBy`, `sortByAll`, `splice`, `spread`,
@@ -1416,11 +1469,15 @@ module.exports =
 	     * var wrapped = _([1, 2, 3]);
 	     *
 	     * // returns an unwrapped value
-	     * wrapped.reduce(function(sum, n) { return sum + n; });
+	     * wrapped.reduce(function(sum, n) {
+	     *   return sum + n;
+	     * });
 	     * // => 6
 	     *
 	     * // returns a wrapped value
-	     * var squares = wrapped.map(function(n) { return n * n; });
+	     * var squares = wrapped.map(function(n) {
+	     *   return n * n;
+	     * });
 	     *
 	     * _.isArray(squares);
 	     * // => false
@@ -1438,6 +1495,15 @@ module.exports =
 	        }
 	      }
 	      return new LodashWrapper(value);
+	    }
+
+	    /**
+	     * The function whose prototype all chaining wrappers inherit from.
+	     *
+	     * @private
+	     */
+	    function baseLodash() {
+	      // No operation performed.
 	    }
 
 	    /**
@@ -2343,7 +2409,7 @@ module.exports =
 	      var index = -1,
 	          indexOf = getIndexOf(),
 	          isCommon = indexOf == baseIndexOf,
-	          cache = isCommon && values.length >= 200 && createCache(values),
+	          cache = (isCommon && values.length >= 200) ? createCache(values) : null,
 	          valuesLength = values.length;
 
 	      if (cache) {
@@ -2878,7 +2944,7 @@ module.exports =
 
 	        if (isStrictComparable(value)) {
 	          return function(object) {
-	            return object != null && value === object[key] && hasOwnProperty.call(object, key);
+	            return object != null && object[key] === value && hasOwnProperty.call(object, key);
 	          };
 	        }
 	      }
@@ -2928,8 +2994,10 @@ module.exports =
 	     * @returns {Object} Returns the destination object.
 	     */
 	    function baseMerge(object, source, customizer, stackA, stackB) {
+	      if (!isObject(object)) {
+	        return object;
+	      }
 	      var isSrcArr = isLength(source.length) && (isArray(source) || isTypedArray(source));
-
 	      (isSrcArr ? arrayEach : baseForOwn)(source, function(srcValue, key, source) {
 	        if (isObjectLike(srcValue)) {
 	          stackA || (stackA = []);
@@ -3161,7 +3229,7 @@ module.exports =
 	          length = array.length,
 	          isCommon = indexOf == baseIndexOf,
 	          isLarge = isCommon && length >= 200,
-	          seen = isLarge && createCache(),
+	          seen = isLarge ? createCache() : null,
 	          result = [];
 
 	      if (seen) {
@@ -4213,7 +4281,11 @@ module.exports =
 	      } else {
 	        prereq = type == 'string' && index in object;
 	      }
-	      return prereq && object[index] === value;
+	      if (prereq) {
+	        var other = object[index];
+	        return value === value ? value === other : other !== other;
+	      }
+	      return false;
 	    }
 
 	    /**
@@ -4608,7 +4680,7 @@ module.exports =
 	     * @returns {Array} Returns the new array of filtered values.
 	     * @example
 	     *
-	     * _.difference([1, 2, 3], [5, 2, 10]);
+	     * _.difference([1, 2, 3], [4, 2]);
 	     * // => [1, 3]
 	     */
 	    function difference() {
@@ -4700,14 +4772,14 @@ module.exports =
 	     * Elements are dropped until `predicate` returns falsey. The predicate is
 	     * bound to `thisArg` and invoked with three arguments; (value, index, array).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that match the properties of the given
 	     * object, else `false`.
 	     *
@@ -4716,29 +4788,31 @@ module.exports =
 	     * @category Array
 	     * @param {Array} array The array to query.
 	     * @param {Function|Object|string} [predicate=_.identity] The function invoked
-	     *  per element.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `predicate`.
 	     * @returns {Array} Returns the slice of `array`.
 	     * @example
 	     *
-	     * _.dropRightWhile([1, 2, 3], function(n) { return n > 1; });
+	     * _.dropRightWhile([1, 2, 3], function(n) {
+	     *   return n > 1;
+	     * });
 	     * // => [1]
 	     *
 	     * var users = [
-	     *   { 'user': 'barney',  'age': 36, 'active': true },
-	     *   { 'user': 'fred',    'age': 40, 'active': false },
-	     *   { 'user': 'pebbles', 'age': 1,  'active': false }
+	     *   { 'user': 'barney',  'active': true },
+	     *   { 'user': 'fred',    'active': false },
+	     *   { 'user': 'pebbles', 'active': false }
 	     * ];
 	     *
-	     * // using the "_.matches" callback shorthand
-	     * _.pluck(_.dropRightWhile(users, { 'age': 1, 'active': false }), 'user');
+	     * // using the `_.matches` callback shorthand
+	     * _.pluck(_.dropRightWhile(users, { 'user': pebbles, 'active': false }), 'user');
 	     * // => ['barney', 'fred']
 	     *
-	     * // using the "_.matchesProperty" callback shorthand
+	     * // using the `_.matchesProperty` callback shorthand
 	     * _.pluck(_.dropRightWhile(users, 'active', false), 'user');
 	     * // => ['barney']
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.pluck(_.dropRightWhile(users, 'active'), 'user');
 	     * // => ['barney', 'fred', 'pebbles']
 	     */
@@ -4757,14 +4831,14 @@ module.exports =
 	     * Elements are dropped until `predicate` returns falsey. The predicate is
 	     * bound to `thisArg` and invoked with three arguments; (value, index, array).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -4773,29 +4847,31 @@ module.exports =
 	     * @category Array
 	     * @param {Array} array The array to query.
 	     * @param {Function|Object|string} [predicate=_.identity] The function invoked
-	     *  per element.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `predicate`.
 	     * @returns {Array} Returns the slice of `array`.
 	     * @example
 	     *
-	     * _.dropWhile([1, 2, 3], function(n) { return n < 3; });
+	     * _.dropWhile([1, 2, 3], function(n) {
+	     *   return n < 3;
+	     * });
 	     * // => [3]
 	     *
 	     * var users = [
-	     *   { 'user': 'barney',  'age': 36, 'active': false },
-	     *   { 'user': 'fred',    'age': 40, 'active': false },
-	     *   { 'user': 'pebbles', 'age': 1,  'active': true }
+	     *   { 'user': 'barney',  'active': false },
+	     *   { 'user': 'fred',    'active': false },
+	     *   { 'user': 'pebbles', 'active': true }
 	     * ];
 	     *
-	     * // using the "_.matches" callback shorthand
-	     * _.pluck(_.dropWhile(users, { 'age': 36, 'active': false }), 'user');
+	     * // using the `_.matches` callback shorthand
+	     * _.pluck(_.dropWhile(users, { 'user': 'barney', 'active': false }), 'user');
 	     * // => ['fred', 'pebbles']
 	     *
-	     * // using the "_.matchesProperty" callback shorthand
+	     * // using the `_.matchesProperty` callback shorthand
 	     * _.pluck(_.dropWhile(users, 'active', false), 'user');
 	     * // => ['pebbles']
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.pluck(_.dropWhile(users, 'active'), 'user');
 	     * // => ['barney', 'fred', 'pebbles']
 	     */
@@ -4816,7 +4892,9 @@ module.exports =
 	     *
 	     * **Note:** This method mutates `array`.
 	     *
-	     * @private
+	     * @static
+	     * @memberOf _
+	     * @category Array
 	     * @param {Array} array The array to fill.
 	     * @param {*} value The value to fill `array` with.
 	     * @param {number} [start=0] The start position.
@@ -4839,14 +4917,14 @@ module.exports =
 	     * This method is like `_.find` except that it returns the index of the first
 	     * element `predicate` returns truthy for, instead of the element itself.
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -4855,32 +4933,33 @@ module.exports =
 	     * @category Array
 	     * @param {Array} array The array to search.
 	     * @param {Function|Object|string} [predicate=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `predicate`.
 	     * @returns {number} Returns the index of the found element, else `-1`.
 	     * @example
 	     *
 	     * var users = [
-	     *   { 'user': 'barney',  'age': 36, 'active': false },
-	     *   { 'user': 'fred',    'age': 40, 'active': true },
-	     *   { 'user': 'pebbles', 'age': 1,  'active': false }
+	     *   { 'user': 'barney',  'active': false },
+	     *   { 'user': 'fred',    'active': false },
+	     *   { 'user': 'pebbles', 'active': true }
 	     * ];
 	     *
-	     * _.findIndex(users, function(chr) { return chr.age < 40; });
+	     * _.findIndex(users, function(chr) {
+	     *   return chr.user == 'barney';
+	     * });
 	     * // => 0
 	     *
-	     * // using the "_.matches" callback shorthand
-	     * _.findIndex(users, { 'age': 40, 'active': true });
+	     * // using the `_.matches` callback shorthand
+	     * _.findIndex(users, { 'user': 'fred', 'active': false });
 	     * // => 1
 	     *
-	     * // using the "_.matchesProperty" callback shorthand
-	     * _.findIndex(users, 'age', 1);
-	     * // => 2
+	     * // using the `_.matchesProperty` callback shorthand
+	     * _.findIndex(users, 'active', false);
+	     * // => 0
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.findIndex(users, 'active');
-	     * // => 1
+	     * // => 2
 	     */
 	    function findIndex(array, predicate, thisArg) {
 	      var index = -1,
@@ -4899,14 +4978,14 @@ module.exports =
 	     * This method is like `_.findIndex` except that it iterates over elements
 	     * of `collection` from right to left.
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -4915,30 +4994,31 @@ module.exports =
 	     * @category Array
 	     * @param {Array} array The array to search.
 	     * @param {Function|Object|string} [predicate=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `predicate`.
 	     * @returns {number} Returns the index of the found element, else `-1`.
 	     * @example
 	     *
 	     * var users = [
-	     *   { 'user': 'barney',  'age': 36, 'active': true },
-	     *   { 'user': 'fred',    'age': 40, 'active': false },
-	     *   { 'user': 'pebbles', 'age': 1,  'active': false }
+	     *   { 'user': 'barney',  'active': true },
+	     *   { 'user': 'fred',    'active': false },
+	     *   { 'user': 'pebbles', 'active': false }
 	     * ];
 	     *
-	     * _.findLastIndex(users, function(chr) { return chr.age < 40; });
+	     * _.findLastIndex(users, function(chr) {
+	     *   return chr.user == 'pebbles';
+	     * });
 	     * // => 2
 	     *
-	     * // using the "_.matches" callback shorthand
-	     * _.findLastIndex(users, { 'age': 36, 'active': true });
+	     * // using the `_.matches` callback shorthand
+	     * _.findLastIndex(users, { 'user': 'barney', 'active': true });
 	     * // => 0
 	     *
-	     * // using the "_.matchesProperty" callback shorthand
-	     * _.findLastIndex(users, 'age', 40);
+	     * // using the `_.matchesProperty` callback shorthand
+	     * _.findLastIndex(users, 'active', false);
 	     * // => 1
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.findLastIndex(users, 'active');
 	     * // => 0
 	     */
@@ -4987,11 +5067,11 @@ module.exports =
 	     * @returns {Array} Returns the new flattened array.
 	     * @example
 	     *
-	     * _.flatten([1, [2], [3, [[4]]]]);
-	     * // => [1, 2, 3, [[4]]];
+	     * _.flatten([1, [2, 3, [4]]]);
+	     * // => [1, 2, 3, [4]];
 	     *
 	     * // using `isDeep`
-	     * _.flatten([1, [2], [3, [[4]]]], true);
+	     * _.flatten([1, [2, 3, [4]]], true);
 	     * // => [1, 2, 3, 4];
 	     */
 	    function flatten(array, isDeep, guard) {
@@ -5012,7 +5092,7 @@ module.exports =
 	     * @returns {Array} Returns the new flattened array.
 	     * @example
 	     *
-	     * _.flattenDeep([1, [2], [3, [[4]]]]);
+	     * _.flattenDeep([1, [2, 3, [4]]]);
 	     * // => [1, 2, 3, 4];
 	     */
 	    function flattenDeep(array) {
@@ -5041,15 +5121,15 @@ module.exports =
 	     * @returns {number} Returns the index of the matched value, else `-1`.
 	     * @example
 	     *
-	     * _.indexOf([1, 2, 3, 1, 2, 3], 2);
+	     * _.indexOf([1, 2, 1, 2], 2);
 	     * // => 1
 	     *
 	     * // using `fromIndex`
-	     * _.indexOf([1, 2, 3, 1, 2, 3], 2, 3);
-	     * // => 4
+	     * _.indexOf([1, 2, 1, 2], 2, 2);
+	     * // => 3
 	     *
 	     * // performing a binary search
-	     * _.indexOf([4, 4, 5, 5, 6, 6], 5, true);
+	     * _.indexOf([1, 1, 2, 2], 2, true);
 	     * // => 2
 	     */
 	    function indexOf(array, value, fromIndex) {
@@ -5100,9 +5180,8 @@ module.exports =
 	     * @param {...Array} [arrays] The arrays to inspect.
 	     * @returns {Array} Returns the new array of shared values.
 	     * @example
-	     *
-	     * _.intersection([1, 2, 3], [5, 2, 1, 4], [2, 1]);
-	     * // => [1, 2]
+	     * _.intersection([1, 2], [4, 2], [2, 1]);
+	     * // => [2]
 	     */
 	    function intersection() {
 	      var args = [],
@@ -5116,7 +5195,7 @@ module.exports =
 	        var value = arguments[argsIndex];
 	        if (isArray(value) || isArguments(value)) {
 	          args.push(value);
-	          caches.push(isCommon && value.length >= 120 && createCache(argsIndex && value));
+	          caches.push((isCommon && value.length >= 120) ? createCache(argsIndex && value) : null);
 	        }
 	      }
 	      argsLength = args.length;
@@ -5178,15 +5257,15 @@ module.exports =
 	     * @returns {number} Returns the index of the matched value, else `-1`.
 	     * @example
 	     *
-	     * _.lastIndexOf([1, 2, 3, 1, 2, 3], 2);
-	     * // => 4
+	     * _.lastIndexOf([1, 2, 1, 2], 2);
+	     * // => 3
 	     *
 	     * // using `fromIndex`
-	     * _.lastIndexOf([1, 2, 3, 1, 2, 3], 2, 3);
+	     * _.lastIndexOf([1, 2, 1, 2], 2, 2);
 	     * // => 1
 	     *
 	     * // performing a binary search
-	     * _.lastIndexOf([4, 4, 5, 5, 6, 6], 5, true);
+	     * _.lastIndexOf([1, 1, 2, 2], 2, true);
 	     * // => 3
 	     */
 	    function lastIndexOf(array, value, fromIndex) {
@@ -5232,6 +5311,7 @@ module.exports =
 	     * @example
 	     *
 	     * var array = [1, 2, 3, 1, 2, 3];
+	     *
 	     * _.pull(array, 2, 3);
 	     * console.log(array);
 	     * // => [1, 1]
@@ -5273,7 +5353,7 @@ module.exports =
 	     * @example
 	     *
 	     * var array = [5, 10, 15, 20];
-	     * var evens = _.pullAt(array, [1, 3]);
+	     * var evens = _.pullAt(array, 1, 3);
 	     *
 	     * console.log(array);
 	     * // => [5, 15]
@@ -5290,14 +5370,14 @@ module.exports =
 	     * and returns an array of the removed elements. The predicate is bound to
 	     * `thisArg` and invoked with three arguments; (value, index, array).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -5308,14 +5388,15 @@ module.exports =
 	     * @category Array
 	     * @param {Array} array The array to modify.
 	     * @param {Function|Object|string} [predicate=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `predicate`.
 	     * @returns {Array} Returns the new array of removed elements.
 	     * @example
 	     *
 	     * var array = [1, 2, 3, 4];
-	     * var evens = _.remove(array, function(n) { return n % 2 == 0; });
+	     * var evens = _.remove(array, function(n) {
+	     *   return n % 2 == 0;
+	     * });
 	     *
 	     * console.log(array);
 	     * // => [1, 3]
@@ -5391,14 +5472,14 @@ module.exports =
 	     * to compute their sort ranking. The iteratee is bound to `thisArg` and
 	     * invoked with one argument; (value).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -5408,8 +5489,7 @@ module.exports =
 	     * @param {Array} array The sorted array to inspect.
 	     * @param {*} value The value to evaluate.
 	     * @param {Function|Object|string} [iteratee=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `iteratee`.
 	     * @returns {number} Returns the index at which `value` should be inserted
 	     *  into `array`.
@@ -5418,7 +5498,7 @@ module.exports =
 	     * _.sortedIndex([30, 50], 40);
 	     * // => 1
 	     *
-	     * _.sortedIndex([4, 4, 5, 5, 6, 6], 5);
+	     * _.sortedIndex([4, 4, 5, 5], 5);
 	     * // => 2
 	     *
 	     * var dict = { 'data': { 'thirty': 30, 'forty': 40, 'fifty': 50 } };
@@ -5429,7 +5509,7 @@ module.exports =
 	     * }, dict);
 	     * // => 1
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.sortedIndex([{ 'x': 30 }, { 'x': 50 }], { 'x': 40 }, 'x');
 	     * // => 1
 	     */
@@ -5451,14 +5531,13 @@ module.exports =
 	     * @param {Array} array The sorted array to inspect.
 	     * @param {*} value The value to evaluate.
 	     * @param {Function|Object|string} [iteratee=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `iteratee`.
 	     * @returns {number} Returns the index at which `value` should be inserted
 	     *  into `array`.
 	     * @example
 	     *
-	     * _.sortedLastIndex([4, 4, 5, 5, 6, 6], 5);
+	     * _.sortedLastIndex([4, 4, 5, 5], 5);
 	     * // => 4
 	     */
 	    function sortedLastIndex(array, value, iteratee, thisArg) {
@@ -5544,14 +5623,14 @@ module.exports =
 	     * taken until `predicate` returns falsey. The predicate is bound to `thisArg`
 	     * and invoked with three arguments; (value, index, array).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -5560,29 +5639,31 @@ module.exports =
 	     * @category Array
 	     * @param {Array} array The array to query.
 	     * @param {Function|Object|string} [predicate=_.identity] The function invoked
-	     *  per element.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `predicate`.
 	     * @returns {Array} Returns the slice of `array`.
 	     * @example
 	     *
-	     * _.takeRightWhile([1, 2, 3], function(n) { return n > 1; });
+	     * _.takeRightWhile([1, 2, 3], function(n) {
+	     *   return n > 1;
+	     * });
 	     * // => [2, 3]
 	     *
 	     * var users = [
-	     *   { 'user': 'barney',  'age': 36, 'active': true },
-	     *   { 'user': 'fred',    'age': 40, 'active': false },
-	     *   { 'user': 'pebbles', 'age': 1,  'active': false }
+	     *   { 'user': 'barney',  'active': true },
+	     *   { 'user': 'fred',    'active': false },
+	     *   { 'user': 'pebbles', 'active': false }
 	     * ];
 	     *
-	     * // using the "_.matches" callback shorthand
-	     * _.pluck(_.takeRightWhile(users, { 'age': 1, 'active': true }), 'user');
+	     * // using the `_.matches` callback shorthand
+	     * _.pluck(_.takeRightWhile(users, { 'user': 'pebbles', 'active': false }), 'user');
 	     * // => ['pebbles']
 	     *
-	     * // using the "_.matchesProperty" callback shorthand
+	     * // using the `_.matchesProperty` callback shorthand
 	     * _.pluck(_.takeRightWhile(users, 'active', false), 'user');
 	     * // => ['fred', 'pebbles']
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.pluck(_.takeRightWhile(users, 'active'), 'user');
 	     * // => []
 	     */
@@ -5601,14 +5682,14 @@ module.exports =
 	     * are taken until `predicate` returns falsey. The predicate is bound to
 	     * `thisArg` and invoked with three arguments; (value, index, array).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -5617,29 +5698,31 @@ module.exports =
 	     * @category Array
 	     * @param {Array} array The array to query.
 	     * @param {Function|Object|string} [predicate=_.identity] The function invoked
-	     *  per element.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `predicate`.
 	     * @returns {Array} Returns the slice of `array`.
 	     * @example
 	     *
-	     * _.takeWhile([1, 2, 3], function(n) { return n < 3; });
+	     * _.takeWhile([1, 2, 3], function(n) {
+	     *   return n < 3;
+	     * });
 	     * // => [1, 2]
 	     *
 	     * var users = [
-	     *   { 'user': 'barney',  'age': 36, 'active': false },
-	     *   { 'user': 'fred',    'age': 40, 'active': false },
-	     *   { 'user': 'pebbles', 'age': 1,  'active': true }
+	     *   { 'user': 'barney',  'active': false },
+	     *   { 'user': 'fred',    'active': false},
+	     *   { 'user': 'pebbles', 'active': true }
 	     * ];
 	     *
-	     * // using the "_.matches" callback shorthand
-	     * _.pluck(_.takeWhile(users, { 'age': 36, 'active': true }), 'user');
+	     * // using the `_.matches` callback shorthand
+	     * _.pluck(_.takeWhile(users, { 'user': 'barney', 'active': false }), 'user');
 	     * // => ['barney']
 	     *
-	     * // using the "_.matchesProperty" callback shorthand
+	     * // using the `_.matchesProperty` callback shorthand
 	     * _.pluck(_.takeWhile(users, 'active', false), 'user');
 	     * // => ['barney', 'fred']
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.pluck(_.takeWhile(users, 'active'), 'user');
 	     * // => []
 	     */
@@ -5670,8 +5753,8 @@ module.exports =
 	     * @returns {Array} Returns the new array of combined values.
 	     * @example
 	     *
-	     * _.union([1, 2, 3], [5, 2, 1, 4], [2, 1]);
-	     * // => [1, 2, 3, 5, 4]
+	     * _.union([1, 2], [4, 2], [2, 1]);
+	     * // => [1, 2, 4]
 	     */
 	    function union() {
 	      return baseUniq(baseFlatten(arguments, false, true));
@@ -5685,14 +5768,14 @@ module.exports =
 	     * uniqueness is computed. The `iteratee` is bound to `thisArg` and invoked
 	     * with three arguments; (value, index, array).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -5708,8 +5791,6 @@ module.exports =
 	     * @param {Array} array The array to inspect.
 	     * @param {boolean} [isSorted] Specify the array is sorted.
 	     * @param {Function|Object|string} [iteratee] The function invoked per iteration.
-	     *  If a property name or object is provided it is used to create a "_.property"
-	     *  or "_.matches" style callback respectively.
 	     * @param {*} [thisArg] The `this` binding of `iteratee`.
 	     * @returns {Array} Returns the new duplicate-value-free array.
 	     * @example
@@ -5722,10 +5803,12 @@ module.exports =
 	     * // => [1, 2]
 	     *
 	     * // using an iteratee function
-	     * _.uniq([1, 2.5, 1.5, 2], function(n) { return this.floor(n); }, Math);
+	     * _.uniq([1, 2.5, 1.5, 2], function(n) {
+	     *   return this.floor(n);
+	     * }, Math);
 	     * // => [1, 2.5]
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.uniq([{ 'x': 1 }, { 'x': 2 }, { 'x': 1 }], 'x');
 	     * // => [{ 'x': 1 }, { 'x': 2 }]
 	     */
@@ -5734,8 +5817,7 @@ module.exports =
 	      if (!length) {
 	        return [];
 	      }
-	      // Juggle arguments.
-	      if (typeof isSorted != 'boolean' && isSorted != null) {
+	      if (isSorted != null && typeof isSorted != 'boolean') {
 	        thisArg = iteratee;
 	        iteratee = isIterateeCall(array, isSorted, thisArg) ? null : isSorted;
 	        isSorted = false;
@@ -5795,8 +5877,8 @@ module.exports =
 	     * @returns {Array} Returns the new array of filtered values.
 	     * @example
 	     *
-	     * _.without([1, 2, 1, 0, 3, 1, 4], 0, 1);
-	     * // => [2, 3, 4]
+	     * _.without([1, 2, 1, 3], 1, 2);
+	     * // => [3]
 	     */
 	    function without(array) {
 	      return baseDifference(array, baseSlice(arguments, 1));
@@ -5814,11 +5896,8 @@ module.exports =
 	     * @returns {Array} Returns the new array of values.
 	     * @example
 	     *
-	     * _.xor([1, 2, 3], [5, 2, 1, 4]);
-	     * // => [3, 5, 4]
-	     *
-	     * _.xor([1, 2, 5], [2, 3, 5], [3, 4, 5]);
-	     * // => [1, 4, 5]
+	     * _.xor([1, 2], [4, 2]);
+	     * // => [1, 4]
 	     */
 	    function xor() {
 	      var index = -1,
@@ -5917,7 +5996,9 @@ module.exports =
 	     *
 	     * var youngest = _.chain(users)
 	     *   .sortBy('age')
-	     *   .map(function(chr) { return chr.user + ' is ' + chr.age; })
+	     *   .map(function(chr) {
+	     *     return chr.user + ' is ' + chr.age;
+	     *   })
 	     *   .first()
 	     *   .value();
 	     * // => 'pebbles is 1'
@@ -5944,7 +6025,9 @@ module.exports =
 	     * @example
 	     *
 	     * _([1, 2, 3])
-	     *  .tap(function(array) { array.pop(); })
+	     *  .tap(function(array) {
+	     *    array.pop();
+	     *  })
 	     *  .reverse()
 	     *  .value();
 	     * // => [2, 1]
@@ -5968,7 +6051,9 @@ module.exports =
 	     *
 	     * _([1, 2, 3])
 	     *  .last()
-	     *  .thru(function(value) { return [value]; })
+	     *  .thru(function(value) {
+	     *    return [value];
+	     *  })
 	     *  .value();
 	     * // => [3]
 	     */
@@ -6044,7 +6129,9 @@ module.exports =
 	     * @example
 	     *
 	     * var array = [1, 2];
-	     * var wrapper = _(array).map(_.partial(Math.pow, _, 2));
+	     * var wrapper = _(array).map(function(value) {
+	     *   return Math.pow(value, 2);
+	     * });
 	     *
 	     * var other = [3, 4];
 	     * var otherWrapper = wrapper.plant(other);
@@ -6059,7 +6146,7 @@ module.exports =
 	      var result,
 	          parent = this;
 
-	      while (parent instanceof LodashWrapper) {
+	      while (parent instanceof baseLodash) {
 	        var clone = wrapperClone(parent);
 	        if (result) {
 	          previous.__wrapped__ = clone;
@@ -6155,8 +6242,8 @@ module.exports =
 	     * @returns {Array} Returns the new array of picked elements.
 	     * @example
 	     *
-	     * _.at(['a', 'b', 'c', 'd', 'e'], [0, 2, 4]);
-	     * // => ['a', 'c', 'e']
+	     * _.at(['a', 'b', 'c'], [0, 2]);
+	     * // => ['a', 'c']
 	     *
 	     * _.at(['fred', 'barney', 'pebbles'], 0, 2);
 	     * // => ['fred', 'pebbles']
@@ -6170,71 +6257,20 @@ module.exports =
 	    }
 
 	    /**
-	     * Checks if `value` is in `collection` using `SameValueZero` for equality
-	     * comparisons. If `fromIndex` is negative, it is used as the offset from
-	     * the end of `collection`.
-	     *
-	     * **Note:** `SameValueZero` comparisons are like strict equality comparisons,
-	     * e.g. `===`, except that `NaN` matches `NaN`. See the
-	     * [ES spec](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
-	     * for more details.
-	     *
-	     * @static
-	     * @memberOf _
-	     * @alias contains, include
-	     * @category Collection
-	     * @param {Array|Object|string} collection The collection to search.
-	     * @param {*} target The value to search for.
-	     * @param {number} [fromIndex=0] The index to search from.
-	     * @returns {boolean} Returns `true` if a matching element is found, else `false`.
-	     * @example
-	     *
-	     * _.includes([1, 2, 3], 1);
-	     * // => true
-	     *
-	     * _.includes([1, 2, 3], 1, 2);
-	     * // => false
-	     *
-	     * _.includes({ 'user': 'fred', 'age': 40 }, 'fred');
-	     * // => true
-	     *
-	     * _.includes('pebbles', 'eb');
-	     * // => true
-	     */
-	    function includes(collection, target, fromIndex) {
-	      var length = collection ? collection.length : 0;
-	      if (!isLength(length)) {
-	        collection = values(collection);
-	        length = collection.length;
-	      }
-	      if (!length) {
-	        return false;
-	      }
-	      if (typeof fromIndex == 'number') {
-	        fromIndex = fromIndex < 0 ? nativeMax(length + fromIndex, 0) : (fromIndex || 0);
-	      } else {
-	        fromIndex = 0;
-	      }
-	      return (typeof collection == 'string' || !isArray(collection) && isString(collection))
-	        ? (fromIndex < length && collection.indexOf(target, fromIndex) > -1)
-	        : (getIndexOf(collection, target, fromIndex) > -1);
-	    }
-
-	    /**
 	     * Creates an object composed of keys generated from the results of running
 	     * each element of `collection` through `iteratee`. The corresponding value
 	     * of each key is the number of times the key was returned by `iteratee`.
 	     * The `iteratee` is bound to `thisArg` and invoked with three arguments;
 	     * (value, index|key, collection).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -6243,16 +6279,19 @@ module.exports =
 	     * @category Collection
 	     * @param {Array|Object|string} collection The collection to iterate over.
 	     * @param {Function|Object|string} [iteratee=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `iteratee`.
 	     * @returns {Object} Returns the composed aggregate object.
 	     * @example
 	     *
-	     * _.countBy([4.3, 6.1, 6.4], function(n) { return Math.floor(n); });
+	     * _.countBy([4.3, 6.1, 6.4], function(n) {
+	     *   return Math.floor(n);
+	     * });
 	     * // => { '4': 1, '6': 2 }
 	     *
-	     * _.countBy([4.3, 6.1, 6.4], function(n) { return this.floor(n); }, Math);
+	     * _.countBy([4.3, 6.1, 6.4], function(n) {
+	     *   return this.floor(n);
+	     * }, Math);
 	     * // => { '4': 1, '6': 2 }
 	     *
 	     * _.countBy(['one', 'two', 'three'], 'length');
@@ -6267,14 +6306,14 @@ module.exports =
 	     * The predicate is bound to `thisArg` and invoked with three arguments;
 	     * (value, index|key, collection).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -6284,30 +6323,29 @@ module.exports =
 	     * @category Collection
 	     * @param {Array|Object|string} collection The collection to iterate over.
 	     * @param {Function|Object|string} [predicate=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `predicate`.
 	     * @returns {boolean} Returns `true` if all elements pass the predicate check,
 	     *  else `false`.
 	     * @example
 	     *
-	     * _.every([true, 1, null, 'yes']);
+	     * _.every([true, 1, null, 'yes'], Boolean);
 	     * // => false
 	     *
 	     * var users = [
-	     *   { 'user': 'barney', 'age': 36, 'active': false },
-	     *   { 'user': 'fred',   'age': 40, 'active': false }
+	     *   { 'user': 'barney', 'active': false },
+	     *   { 'user': 'fred',   'active': false }
 	     * ];
 	     *
-	     * // using the "_.matches" callback shorthand
-	     * _.every(users, { 'age': 36, 'active': false });
+	     * // using the `_.matches` callback shorthand
+	     * _.every(users, { 'user': 'barney', 'active': false });
 	     * // => false
 	     *
-	     * // using the "_.matchesProperty" callback shorthand
+	     * // using the `_.matchesProperty` callback shorthand
 	     * _.every(users, 'active', false);
 	     * // => true
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.every(users, 'active');
 	     * // => false
 	     */
@@ -6324,14 +6362,14 @@ module.exports =
 	     * `predicate` returns truthy for. The predicate is bound to `thisArg` and
 	     * invoked with three arguments; (value, index|key, collection).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -6341,29 +6379,30 @@ module.exports =
 	     * @category Collection
 	     * @param {Array|Object|string} collection The collection to iterate over.
 	     * @param {Function|Object|string} [predicate=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `predicate`.
 	     * @returns {Array} Returns the new filtered array.
 	     * @example
 	     *
-	     * var evens = _.filter([1, 2, 3, 4], function(n) { return n % 2 == 0; });
-	     * // => [2, 4]
+	     * _.filter([4, 5, 6], function(n) {
+	     *   return n % 2 == 0;
+	     * });
+	     * // => [4, 6]
 	     *
 	     * var users = [
 	     *   { 'user': 'barney', 'age': 36, 'active': true },
 	     *   { 'user': 'fred',   'age': 40, 'active': false }
 	     * ];
 	     *
-	     * // using the "_.matches" callback shorthand
+	     * // using the `_.matches` callback shorthand
 	     * _.pluck(_.filter(users, { 'age': 36, 'active': true }), 'user');
 	     * // => ['barney']
 	     *
-	     * // using the "_.matchesProperty" callback shorthand
+	     * // using the `_.matchesProperty` callback shorthand
 	     * _.pluck(_.filter(users, 'active', false), 'user');
 	     * // => ['fred']
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.pluck(_.filter(users, 'active'), 'user');
 	     * // => ['barney']
 	     */
@@ -6378,14 +6417,14 @@ module.exports =
 	     * `predicate` returns truthy for. The predicate is bound to `thisArg` and
 	     * invoked with three arguments; (value, index|key, collection).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -6395,8 +6434,7 @@ module.exports =
 	     * @category Collection
 	     * @param {Array|Object|string} collection The collection to search.
 	     * @param {Function|Object|string} [predicate=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `predicate`.
 	     * @returns {*} Returns the matched element, else `undefined`.
 	     * @example
@@ -6407,18 +6445,20 @@ module.exports =
 	     *   { 'user': 'pebbles', 'age': 1,  'active': true }
 	     * ];
 	     *
-	     * _.result(_.find(users, function(chr) { return chr.age < 40; }), 'user');
+	     * _.result(_.find(users, function(chr) {
+	     *   return chr.age < 40;
+	     * }), 'user');
 	     * // => 'barney'
 	     *
-	     * // using the "_.matches" callback shorthand
+	     * // using the `_.matches` callback shorthand
 	     * _.result(_.find(users, { 'age': 1, 'active': true }), 'user');
 	     * // => 'pebbles'
 	     *
-	     * // using the "_.matchesProperty" callback shorthand
+	     * // using the `_.matchesProperty` callback shorthand
 	     * _.result(_.find(users, 'active', false), 'user');
 	     * // => 'fred'
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.result(_.find(users, 'active'), 'user');
 	     * // => 'barney'
 	     */
@@ -6440,13 +6480,14 @@ module.exports =
 	     * @category Collection
 	     * @param {Array|Object|string} collection The collection to search.
 	     * @param {Function|Object|string} [predicate=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `predicate`.
 	     * @returns {*} Returns the matched element, else `undefined`.
 	     * @example
 	     *
-	     * _.findLast([1, 2, 3, 4], function(n) { return n % 2 == 1; });
+	     * _.findLast([1, 2, 3, 4], function(n) {
+	     *   return n % 2 == 1;
+	     * });
 	     * // => 3
 	     */
 	    function findLast(collection, predicate, thisArg) {
@@ -6507,10 +6548,14 @@ module.exports =
 	     * @returns {Array|Object|string} Returns `collection`.
 	     * @example
 	     *
-	     * _([1, 2, 3]).forEach(function(n) { console.log(n); }).value();
+	     * _([1, 2]).forEach(function(n) {
+	     *   console.log(n);
+	     * }).value();
 	     * // => logs each value from left to right and returns the array
 	     *
-	     * _.forEach({ 'one': 1, 'two': 2, 'three': 3 }, function(n, key) { console.log(n, key); });
+	     * _.forEach({ 'a': 1, 'b': 2 }, function(n, key) {
+	     *   console.log(n, key);
+	     * });
 	     * // => logs each value-key pair and returns the object (iteration order is not guaranteed)
 	     */
 	    function forEach(collection, iteratee, thisArg) {
@@ -6533,7 +6578,9 @@ module.exports =
 	     * @returns {Array|Object|string} Returns `collection`.
 	     * @example
 	     *
-	     * _([1, 2, 3]).forEachRight(function(n) { console.log(n); }).join(',');
+	     * _([1, 2]).forEachRight(function(n) {
+	     *   console.log(n);
+	     * }).join(',');
 	     * // => logs each value from right to left and returns the array
 	     */
 	    function forEachRight(collection, iteratee, thisArg) {
@@ -6549,14 +6596,14 @@ module.exports =
 	     * The `iteratee` is bound to `thisArg` and invoked with three arguments;
 	     * (value, index|key, collection).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -6565,19 +6612,22 @@ module.exports =
 	     * @category Collection
 	     * @param {Array|Object|string} collection The collection to iterate over.
 	     * @param {Function|Object|string} [iteratee=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `iteratee`.
 	     * @returns {Object} Returns the composed aggregate object.
 	     * @example
 	     *
-	     * _.groupBy([4.2, 6.1, 6.4], function(n) { return Math.floor(n); });
+	     * _.groupBy([4.2, 6.1, 6.4], function(n) {
+	     *   return Math.floor(n);
+	     * });
 	     * // => { '4': [4.2], '6': [6.1, 6.4] }
 	     *
-	     * _.groupBy([4.2, 6.1, 6.4], function(n) { return this.floor(n); }, Math);
+	     * _.groupBy([4.2, 6.1, 6.4], function(n) {
+	     *   return this.floor(n);
+	     * }, Math);
 	     * // => { '4': [4.2], '6': [6.1, 6.4] }
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.groupBy(['one', 'two', 'three'], 'length');
 	     * // => { '3': ['one', 'two'], '5': ['three'] }
 	     */
@@ -6590,20 +6640,71 @@ module.exports =
 	    });
 
 	    /**
+	     * Checks if `value` is in `collection` using `SameValueZero` for equality
+	     * comparisons. If `fromIndex` is negative, it is used as the offset from
+	     * the end of `collection`.
+	     *
+	     * **Note:** `SameValueZero` comparisons are like strict equality comparisons,
+	     * e.g. `===`, except that `NaN` matches `NaN`. See the
+	     * [ES spec](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-samevaluezero)
+	     * for more details.
+	     *
+	     * @static
+	     * @memberOf _
+	     * @alias contains, include
+	     * @category Collection
+	     * @param {Array|Object|string} collection The collection to search.
+	     * @param {*} target The value to search for.
+	     * @param {number} [fromIndex=0] The index to search from.
+	     * @returns {boolean} Returns `true` if a matching element is found, else `false`.
+	     * @example
+	     *
+	     * _.includes([1, 2, 3], 1);
+	     * // => true
+	     *
+	     * _.includes([1, 2, 3], 1, 2);
+	     * // => false
+	     *
+	     * _.includes({ 'user': 'fred', 'age': 40 }, 'fred');
+	     * // => true
+	     *
+	     * _.includes('pebbles', 'eb');
+	     * // => true
+	     */
+	    function includes(collection, target, fromIndex) {
+	      var length = collection ? collection.length : 0;
+	      if (!isLength(length)) {
+	        collection = values(collection);
+	        length = collection.length;
+	      }
+	      if (!length) {
+	        return false;
+	      }
+	      if (typeof fromIndex == 'number') {
+	        fromIndex = fromIndex < 0 ? nativeMax(length + fromIndex, 0) : (fromIndex || 0);
+	      } else {
+	        fromIndex = 0;
+	      }
+	      return (typeof collection == 'string' || !isArray(collection) && isString(collection))
+	        ? (fromIndex < length && collection.indexOf(target, fromIndex) > -1)
+	        : (getIndexOf(collection, target, fromIndex) > -1);
+	    }
+
+	    /**
 	     * Creates an object composed of keys generated from the results of running
 	     * each element of `collection` through `iteratee`. The corresponding value
 	     * of each key is the last element responsible for generating the key. The
 	     * iteratee function is bound to `thisArg` and invoked with three arguments;
 	     * (value, index|key, collection).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -6612,8 +6713,7 @@ module.exports =
 	     * @category Collection
 	     * @param {Array|Object|string} collection The collection to iterate over.
 	     * @param {Function|Object|string} [iteratee=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `iteratee`.
 	     * @returns {Object} Returns the composed aggregate object.
 	     * @example
@@ -6626,10 +6726,14 @@ module.exports =
 	     * _.indexBy(keyData, 'dir');
 	     * // => { 'left': { 'dir': 'left', 'code': 97 }, 'right': { 'dir': 'right', 'code': 100 } }
 	     *
-	     * _.indexBy(keyData, function(object) { return String.fromCharCode(object.code); });
+	     * _.indexBy(keyData, function(object) {
+	     *   return String.fromCharCode(object.code);
+	     * });
 	     * // => { 'a': { 'dir': 'left', 'code': 97 }, 'd': { 'dir': 'right', 'code': 100 } }
 	     *
-	     * _.indexBy(keyData, function(object) { return this.fromCharCode(object.code); }, String);
+	     * _.indexBy(keyData, function(object) {
+	     *   return this.fromCharCode(object.code);
+	     * }, String);
 	     * // => { 'a': { 'dir': 'left', 'code': 97 }, 'd': { 'dir': 'right', 'code': 100 } }
 	     */
 	    var indexBy = createAggregator(function(result, value, key) {
@@ -6667,14 +6771,14 @@ module.exports =
 	     * `iteratee`. The `iteratee` is bound to `thisArg` and invoked with three
 	     * arguments; (value, index|key, collection).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -6693,24 +6797,28 @@ module.exports =
 	     * @category Collection
 	     * @param {Array|Object|string} collection The collection to iterate over.
 	     * @param {Function|Object|string} [iteratee=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
+	     *  create a `_.property` or `_.matches` style callback respectively.
 	     * @param {*} [thisArg] The `this` binding of `iteratee`.
 	     * @returns {Array} Returns the new mapped array.
 	     * @example
 	     *
-	     * _.map([1, 2, 3], function(n) { return n * 3; });
-	     * // => [3, 6, 9]
+	     * function timesThree(n) {
+	     *   return n * 3;
+	     * }
 	     *
-	     * _.map({ 'one': 1, 'two': 2, 'three': 3 }, function(n) { return n * 3; });
-	     * // => [3, 6, 9] (iteration order is not guaranteed)
+	     * _.map([1, 2], timesThree);
+	     * // => [3, 6]
+	     *
+	     * _.map({ 'a': 1, 'b': 2 }, timesThree);
+	     * // => [3, 6] (iteration order is not guaranteed)
 	     *
 	     * var users = [
 	     *   { 'user': 'barney' },
 	     *   { 'user': 'fred' }
 	     * ];
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.map(users, 'user');
 	     * // => ['barney', 'fred']
 	     */
@@ -6727,14 +6835,14 @@ module.exports =
 	     * is ranked. The `iteratee` is bound to `thisArg` and invoked with three
 	     * arguments; (value, index, collection).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -6743,8 +6851,6 @@ module.exports =
 	     * @category Collection
 	     * @param {Array|Object|string} collection The collection to iterate over.
 	     * @param {Function|Object|string} [iteratee] The function invoked per iteration.
-	     *  If a property name or object is provided it is used to create a "_.property"
-	     *  or "_.matches" style callback respectively.
 	     * @param {*} [thisArg] The `this` binding of `iteratee`.
 	     * @returns {*} Returns the maximum value.
 	     * @example
@@ -6760,10 +6866,12 @@ module.exports =
 	     *   { 'user': 'fred',   'age': 40 }
 	     * ];
 	     *
-	     * _.max(users, function(chr) { return chr.age; });
+	     * _.max(users, function(chr) {
+	     *   return chr.age;
+	     * });
 	     * // => { 'user': 'fred', 'age': 40 };
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.max(users, 'age');
 	     * // => { 'user': 'fred', 'age': 40 };
 	     */
@@ -6776,14 +6884,14 @@ module.exports =
 	     * is ranked. The `iteratee` is bound to `thisArg` and invoked with three
 	     * arguments; (value, index, collection).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -6792,8 +6900,6 @@ module.exports =
 	     * @category Collection
 	     * @param {Array|Object|string} collection The collection to iterate over.
 	     * @param {Function|Object|string} [iteratee] The function invoked per iteration.
-	     *  If a property name or object is provided it is used to create a "_.property"
-	     *  or "_.matches" style callback respectively.
 	     * @param {*} [thisArg] The `this` binding of `iteratee`.
 	     * @returns {*} Returns the minimum value.
 	     * @example
@@ -6809,10 +6915,12 @@ module.exports =
 	     *   { 'user': 'fred',   'age': 40 }
 	     * ];
 	     *
-	     * _.min(users, function(chr) { return chr.age; });
+	     * _.min(users, function(chr) {
+	     *   return chr.age;
+	     * });
 	     * // => { 'user': 'barney', 'age': 36 };
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.min(users, 'age');
 	     * // => { 'user': 'barney', 'age': 36 };
 	     */
@@ -6824,14 +6932,14 @@ module.exports =
 	     * contains elements `predicate` returns falsey for. The predicate is bound
 	     * to `thisArg` and invoked with three arguments; (value, index|key, collection).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -6840,16 +6948,19 @@ module.exports =
 	     * @category Collection
 	     * @param {Array|Object|string} collection The collection to iterate over.
 	     * @param {Function|Object|string} [predicate=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `predicate`.
 	     * @returns {Array} Returns the array of grouped elements.
 	     * @example
 	     *
-	     * _.partition([1, 2, 3], function(n) { return n % 2; });
+	     * _.partition([1, 2, 3], function(n) {
+	     *   return n % 2;
+	     * });
 	     * // => [[1, 3], [2]]
 	     *
-	     * _.partition([1.2, 2.3, 3.4], function(n) { return this.floor(n) % 2; }, Math);
+	     * _.partition([1.2, 2.3, 3.4], function(n) {
+	     *   return this.floor(n) % 2;
+	     * }, Math);
 	     * // => [[1, 3], [2]]
 	     *
 	     * var users = [
@@ -6858,17 +6969,19 @@ module.exports =
 	     *   { 'user': 'pebbles', 'age': 1,  'active': false }
 	     * ];
 	     *
-	     * var mapper = function(array) { return _.pluck(array, 'user'); };
+	     * var mapper = function(array) {
+	     *   return _.pluck(array, 'user');
+	     * };
 	     *
-	     * // using the "_.matches" callback shorthand
+	     * // using the `_.matches` callback shorthand
 	     * _.map(_.partition(users, { 'age': 1, 'active': false }), mapper);
 	     * // => [['pebbles'], ['barney', 'fred']]
 	     *
-	     * // using the "_.matchesProperty" callback shorthand
+	     * // using the `_.matchesProperty` callback shorthand
 	     * _.map(_.partition(users, 'active', false), mapper);
 	     * // => [['barney', 'pebbles'], ['fred']]
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.map(_.partition(users, 'active'), mapper);
 	     * // => [['fred'], ['barney', 'pebbles']]
 	     */
@@ -6928,14 +7041,16 @@ module.exports =
 	     * @returns {*} Returns the accumulated value.
 	     * @example
 	     *
-	     * var sum = _.reduce([1, 2, 3], function(sum, n) { return sum + n; });
-	     * // => 6
+	     * _.reduce([1, 2], function(sum, n) {
+	     *   return sum + n;
+	     * });
+	     * // => 3
 	     *
-	     * var mapped = _.reduce({ 'a': 1, 'b': 2, 'c': 3 }, function(result, n, key) {
+	     * _.reduce({ 'a': 1, 'b': 2 }, function(result, n, key) {
 	     *   result[key] = n * 3;
 	     *   return result;
 	     * }, {});
-	     * // => { 'a': 3, 'b': 6, 'c': 9 } (iteration order is not guaranteed)
+	     * // => { 'a': 3, 'b': 6 } (iteration order is not guaranteed)
 	     */
 	    function reduce(collection, iteratee, accumulator, thisArg) {
 	      var func = isArray(collection) ? arrayReduce : baseReduce;
@@ -6958,7 +7073,10 @@ module.exports =
 	     * @example
 	     *
 	     * var array = [[0, 1], [2, 3], [4, 5]];
-	     * _.reduceRight(array, function(flattened, other) { return flattened.concat(other); }, []);
+	     *
+	     * _.reduceRight(array, function(flattened, other) {
+	     *   return flattened.concat(other);
+	     * }, []);
 	     * // => [4, 5, 2, 3, 0, 1]
 	     */
 	    function reduceRight(collection, iteratee, accumulator, thisArg) {
@@ -6970,14 +7088,14 @@ module.exports =
 	     * The opposite of `_.filter`; this method returns the elements of `collection`
 	     * that `predicate` does **not** return truthy for.
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -6986,13 +7104,14 @@ module.exports =
 	     * @category Collection
 	     * @param {Array|Object|string} collection The collection to iterate over.
 	     * @param {Function|Object|string} [predicate=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `predicate`.
 	     * @returns {Array} Returns the new filtered array.
 	     * @example
 	     *
-	     * var odds = _.reject([1, 2, 3, 4], function(n) { return n % 2 == 0; });
+	     * _.reject([1, 2, 3, 4], function(n) {
+	     *   return n % 2 == 0;
+	     * });
 	     * // => [1, 3]
 	     *
 	     * var users = [
@@ -7000,15 +7119,15 @@ module.exports =
 	     *   { 'user': 'fred',   'age': 40, 'active': true }
 	     * ];
 	     *
-	     * // using the "_.matches" callback shorthand
+	     * // using the `_.matches` callback shorthand
 	     * _.pluck(_.reject(users, { 'age': 40, 'active': true }), 'user');
 	     * // => ['barney']
 	     *
-	     * // using the "_.matchesProperty" callback shorthand
+	     * // using the `_.matchesProperty` callback shorthand
 	     * _.pluck(_.reject(users, 'active', false), 'user');
 	     * // => ['fred']
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.pluck(_.reject(users, 'active'), 'user');
 	     * // => ['barney']
 	     */
@@ -7092,11 +7211,11 @@ module.exports =
 	     * @returns {number} Returns the size of `collection`.
 	     * @example
 	     *
-	     * _.size([1, 2]);
-	     * // => 2
-	     *
-	     * _.size({ 'one': 1, 'two': 2, 'three': 3 });
+	     * _.size([1, 2, 3]);
 	     * // => 3
+	     *
+	     * _.size({ 'a': 1, 'b': 2 });
+	     * // => 2
 	     *
 	     * _.size('pebbles');
 	     * // => 7
@@ -7112,14 +7231,14 @@ module.exports =
 	     * over the entire collection. The predicate is bound to `thisArg` and invoked
 	     * with three arguments; (value, index|key, collection).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -7129,8 +7248,7 @@ module.exports =
 	     * @category Collection
 	     * @param {Array|Object|string} collection The collection to iterate over.
 	     * @param {Function|Object|string} [predicate=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `predicate`.
 	     * @returns {boolean} Returns `true` if any element passes the predicate check,
 	     *  else `false`.
@@ -7140,19 +7258,19 @@ module.exports =
 	     * // => true
 	     *
 	     * var users = [
-	     *   { 'user': 'barney', 'age': 36, 'active': false },
-	     *   { 'user': 'fred',   'age': 40, 'active': true }
+	     *   { 'user': 'barney', 'active': true },
+	     *   { 'user': 'fred',   'active': false }
 	     * ];
 	     *
-	     * // using the "_.matches" callback shorthand
-	     * _.some(users, { 'age': 1, 'active': true });
+	     * // using the `_.matches` callback shorthand
+	     * _.some(users, { 'user': 'barney', 'active': false });
 	     * // => false
 	     *
-	     * // using the "_.matchesProperty" callback shorthand
+	     * // using the `_.matchesProperty` callback shorthand
 	     * _.some(users, 'active', false);
 	     * // => true
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.some(users, 'active');
 	     * // => true
 	     */
@@ -7171,14 +7289,14 @@ module.exports =
 	     * The `iteratee` is bound to `thisArg` and invoked with three arguments;
 	     * (value, index|key, collection).
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -7188,15 +7306,19 @@ module.exports =
 	     * @param {Array|Object|string} collection The collection to iterate over.
 	     * @param {Array|Function|Object|string} [iteratee=_.identity] The function
 	     *  invoked per iteration. If a property name or an object is provided it is
-	     *  used to create a "_.property" or "_.matches" style callback respectively.
+	     *  used to create a `_.property` or `_.matches` style callback respectively.
 	     * @param {*} [thisArg] The `this` binding of `iteratee`.
 	     * @returns {Array} Returns the new sorted array.
 	     * @example
 	     *
-	     * _.sortBy([1, 2, 3], function(n) { return Math.sin(n); });
+	     * _.sortBy([1, 2, 3], function(n) {
+	     *   return Math.sin(n);
+	     * });
 	     * // => [3, 1, 2]
 	     *
-	     * _.sortBy([1, 2, 3], function(n) { return this.sin(n); }, Math);
+	     * _.sortBy([1, 2, 3], function(n) {
+	     *   return this.sin(n);
+	     * }, Math);
 	     * // => [3, 1, 2]
 	     *
 	     * var users = [
@@ -7205,7 +7327,7 @@ module.exports =
 	     *   { 'user': 'barney' }
 	     * ];
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.pluck(_.sortBy(users, 'user'), 'user');
 	     * // => ['barney', 'fred', 'pebbles']
 	     */
@@ -7313,7 +7435,9 @@ module.exports =
 	     * @category Date
 	     * @example
 	     *
-	     * _.defer(function(stamp) { console.log(_.now() - stamp); }, _.now());
+	     * _.defer(function(stamp) {
+	     *   console.log(_.now() - stamp);
+	     * }, _.now());
 	     * // => logs the number of milliseconds it took for the deferred function to be invoked
 	     */
 	    var now = nativeNow || function() {
@@ -7489,7 +7613,9 @@ module.exports =
 	     *
 	     * var view = {
 	     *   'label': 'docs',
-	     *   'onClick': function() { console.log('clicked ' + this.label); }
+	     *   'onClick': function() {
+	     *     console.log('clicked ' + this.label);
+	     *   }
 	     * };
 	     *
 	     * _.bindAll(view);
@@ -7673,7 +7799,7 @@ module.exports =
 	     * @memberOf _
 	     * @category Function
 	     * @param {Function} func The function to debounce.
-	     * @param {number} wait The number of milliseconds to delay.
+	     * @param {number} [wait=0] The number of milliseconds to delay.
 	     * @param {Object} [options] The options object.
 	     * @param {boolean} [options.leading=false] Specify invoking on the leading
 	     *  edge of the timeout.
@@ -7731,7 +7857,7 @@ module.exports =
 	      if (typeof func != 'function') {
 	        throw new TypeError(FUNC_ERROR_TEXT);
 	      }
-	      wait = wait < 0 ? 0 : wait;
+	      wait = wait < 0 ? 0 : (+wait || 0);
 	      if (options === true) {
 	        var leading = true;
 	        trailing = false;
@@ -7842,7 +7968,9 @@ module.exports =
 	     * @returns {number} Returns the timer id.
 	     * @example
 	     *
-	     * _.defer(function(text) { console.log(text); }, 'deferred');
+	     * _.defer(function(text) {
+	     *   console.log(text);
+	     * }, 'deferred');
 	     * // logs 'deferred' after one or more milliseconds
 	     */
 	    function defer(func) {
@@ -7862,7 +7990,9 @@ module.exports =
 	     * @returns {number} Returns the timer id.
 	     * @example
 	     *
-	     * _.delay(function(text) { console.log(text); }, 1000, 'later');
+	     * _.delay(function(text) {
+	     *   console.log(text);
+	     * }, 1000, 'later');
 	     * // => logs 'later' after one second
 	     */
 	    function delay(func, wait) {
@@ -7900,7 +8030,7 @@ module.exports =
 	      if (!length) {
 	        return function() { return arguments[0]; };
 	      }
-	      if (!arrayEvery(funcs, isFunction)) {
+	      if (!arrayEvery(funcs, baseIsFunction)) {
 	        throw new TypeError(FUNC_ERROR_TEXT);
 	      }
 	      return function() {
@@ -7945,7 +8075,7 @@ module.exports =
 	      if (fromIndex < 0) {
 	        return function() { return arguments[0]; };
 	      }
-	      if (!arrayEvery(funcs, isFunction)) {
+	      if (!arrayEvery(funcs, baseIsFunction)) {
 	        throw new TypeError(FUNC_ERROR_TEXT);
 	      }
 	      return function() {
@@ -8180,7 +8310,9 @@ module.exports =
 	     * // => ['a', 'b', 'c']
 	     *
 	     * var map = _.rearg(_.map, [1, 0]);
-	     * map(function(n) { return n * 3; }, [1, 2, 3]);
+	     * map(function(n) {
+	     *   return n * 3;
+	     * }, [1, 2, 3]);
 	     * // => [3, 6, 9]
 	     */
 	    function rearg(func) {
@@ -8213,11 +8345,9 @@ module.exports =
 	     *   Promise.resolve(36)
 	     * ]);
 	     *
-	     * var add = function(x, y) {
+	     * numbers.then(_.spread(function(x, y) {
 	     *   return x + y;
-	     * };
-	     *
-	     * numbers.then(_.spread(add));
+	     * }));
 	     * // => a Promise of 76
 	     */
 	    function spread(func) {
@@ -8248,7 +8378,7 @@ module.exports =
 	     * @memberOf _
 	     * @category Function
 	     * @param {Function} func The function to throttle.
-	     * @param {number} wait The number of milliseconds to throttle invocations to.
+	     * @param {number} [wait=0] The number of milliseconds to throttle invocations to.
 	     * @param {Object} [options] The options object.
 	     * @param {boolean} [options.leading=true] Specify invoking on the leading
 	     *  edge of the timeout.
@@ -8261,8 +8391,9 @@ module.exports =
 	     * jQuery(window).on('scroll', _.throttle(updatePosition, 100));
 	     *
 	     * // invoke `renewToken` when the click event is fired, but not more than once every 5 minutes
-	     * var throttled =  _.throttle(renewToken, 300000, { 'trailing': false })
-	     * jQuery('.interactive').on('click', throttled);
+	     * jQuery('.interactive').on('click', _.throttle(renewToken, 300000, {
+	     *   'trailing': false
+	     * }));
 	     *
 	     * // cancel a trailing throttled call
 	     * jQuery(window).on('popstate', throttled.cancel);
@@ -8352,22 +8483,26 @@ module.exports =
 	     * // => false
 	     *
 	     * // using a customizer callback
-	     * var body = _.clone(document.body, function(value) {
-	     *   return _.isElement(value) ? value.cloneNode(false) : undefined;
+	     * var el = _.clone(document.body, function(value) {
+	     *   if (_.isElement(value)) {
+	     *     return value.cloneNode(false);
+	     *   }
 	     * });
 	     *
-	     * body === document.body
+	     * el === document.body
 	     * // => false
-	     * body.nodeName
+	     * el.nodeName
 	     * // => BODY
-	     * body.childNodes.length;
+	     * el.childNodes.length;
 	     * // => 0
 	     */
 	    function clone(value, isDeep, customizer, thisArg) {
-	      // Juggle arguments.
-	      if (typeof isDeep != 'boolean' && isDeep != null) {
+	      if (isDeep && typeof isDeep != 'boolean' && isIterateeCall(value, isDeep, customizer)) {
+	        isDeep = false;
+	      }
+	      else if (typeof isDeep == 'function') {
 	        thisArg = customizer;
-	        customizer = isIterateeCall(value, isDeep, thisArg) ? null : isDeep;
+	        customizer = isDeep;
 	        isDeep = false;
 	      }
 	      customizer = typeof customizer == 'function' && bindCallback(customizer, thisArg, 1);
@@ -8407,14 +8542,16 @@ module.exports =
 	     *
 	     * // using a customizer callback
 	     * var el = _.cloneDeep(document.body, function(value) {
-	     *   return _.isElement(value) ? value.cloneNode(true) : undefined;
+	     *   if (_.isElement(value)) {
+	     *     return value.cloneNode(true);
+	     *   }
 	     * });
 	     *
-	     * body === document.body
+	     * el === document.body
 	     * // => false
-	     * body.nodeName
+	     * el.nodeName
 	     * // => BODY
-	     * body.childNodes.length;
+	     * el.childNodes.length;
 	     * // => 20
 	     */
 	    function cloneDeep(value, customizer, thisArg) {
@@ -8432,7 +8569,7 @@ module.exports =
 	     * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
 	     * @example
 	     *
-	     * (function() { return _.isArguments(arguments); })();
+	     * _.isArguments(function() { return arguments; }());
 	     * // => true
 	     *
 	     * _.isArguments([1, 2, 3]);
@@ -8456,7 +8593,7 @@ module.exports =
 	     * _.isArray([1, 2, 3]);
 	     * // => true
 	     *
-	     * (function() { return _.isArray(arguments); })();
+	     * _.isArray(function() { return arguments; }());
 	     * // => false
 	     */
 	    var isArray = nativeIsArray || function(value) {
@@ -8606,7 +8743,9 @@ module.exports =
 	     * var other = ['hi', 'goodbye'];
 	     *
 	     * _.isEqual(array, other, function(value, other) {
-	     *   return _.every([value, other], RegExp.prototype.test, /^h(?:i|ello)$/) || undefined;
+	     *   if (_.every([value, other], RegExp.prototype.test, /^h(?:i|ello)$/)) {
+	     *     return true;
+	     *   }
 	     * });
 	     * // => true
 	     */
@@ -8689,20 +8828,12 @@ module.exports =
 	     * _.isFunction(/abc/);
 	     * // => false
 	     */
-	    function isFunction(value) {
-	      // Avoid a Chakra JIT bug in compatibility modes of IE 11.
-	      // See https://github.com/jashkenas/underscore/issues/1621 for more details.
-	      return typeof value == 'function' || false;
-	    }
-	    // Fallback for environments that return incorrect `typeof` operator results.
-	    if (isFunction(/x/) || (Uint8Array && !isFunction(Uint8Array))) {
-	      isFunction = function(value) {
-	        // The use of `Object#toString` avoids issues with the `typeof` operator
-	        // in older versions of Chrome and Safari which return 'function' for regexes
-	        // and Safari 8 equivalents which return 'object' for typed array constructors.
-	        return objToString.call(value) == funcTag;
-	      };
-	    }
+	    var isFunction = !(baseIsFunction(/x/) || (Uint8Array && !baseIsFunction(Uint8Array))) ? baseIsFunction : function(value) {
+	      // The use of `Object#toString` avoids issues with the `typeof` operator
+	      // in older versions of Chrome and Safari which return 'function' for regexes
+	      // and Safari 8 equivalents which return 'object' for typed array constructors.
+	      return objToString.call(value) == funcTag;
+	    };
 
 	    /**
 	     * Checks if `value` is the language type of `Object`.
@@ -9031,7 +9162,9 @@ module.exports =
 	     * @returns {Array} Returns the converted array.
 	     * @example
 	     *
-	     * (function() { return _.toArray(arguments).slice(1); })(1, 2, 3);
+	     * (function() {
+	     *   return _.toArray(arguments).slice(1);
+	     * }(1, 2, 3));
 	     * // => [2, 3]
 	     */
 	    function toArray(value) {
@@ -9128,7 +9261,9 @@ module.exports =
 	     *   Shape.call(this);
 	     * }
 	     *
-	     * Circle.prototype = _.create(Shape.prototype, { 'constructor': Circle });
+	     * Circle.prototype = _.create(Shape.prototype, {
+	     *   'constructor': Circle
+	     * });
 	     *
 	     * var circle = new Circle;
 	     * circle instanceof Circle;
@@ -9174,14 +9309,14 @@ module.exports =
 	     * This method is like `_.findIndex` except that it returns the key of the
 	     * first element `predicate` returns truthy for, instead of the element itself.
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -9190,8 +9325,7 @@ module.exports =
 	     * @category Object
 	     * @param {Object} object The object to search.
 	     * @param {Function|Object|string} [predicate=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `predicate`.
 	     * @returns {string|undefined} Returns the key of the matched element, else `undefined`.
 	     * @example
@@ -9202,18 +9336,20 @@ module.exports =
 	     *   'pebbles': { 'age': 1,  'active': true }
 	     * };
 	     *
-	     * _.findKey(users, function(chr) { return chr.age < 40; });
+	     * _.findKey(users, function(chr) {
+	     *   return chr.age < 40;
+	     * });
 	     * // => 'barney' (iteration order is not guaranteed)
 	     *
-	     * // using the "_.matches" callback shorthand
+	     * // using the `_.matches` callback shorthand
 	     * _.findKey(users, { 'age': 1, 'active': true });
 	     * // => 'pebbles'
 	     *
-	     * // using the "_.matchesProperty" callback shorthand
+	     * // using the `_.matchesProperty` callback shorthand
 	     * _.findKey(users, 'active', false);
 	     * // => 'fred'
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.findKey(users, 'active');
 	     * // => 'barney'
 	     */
@@ -9226,14 +9362,14 @@ module.exports =
 	     * This method is like `_.findKey` except that it iterates over elements of
 	     * a collection in the opposite order.
 	     *
-	     * If a property name is provided for `predicate` the created "_.property"
+	     * If a property name is provided for `predicate` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `predicate` the created "_.matches" style
+	     * If an object is provided for `predicate` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -9242,8 +9378,7 @@ module.exports =
 	     * @category Object
 	     * @param {Object} object The object to search.
 	     * @param {Function|Object|string} [predicate=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `predicate`.
 	     * @returns {string|undefined} Returns the key of the matched element, else `undefined`.
 	     * @example
@@ -9254,18 +9389,20 @@ module.exports =
 	     *   'pebbles': { 'age': 1,  'active': true }
 	     * };
 	     *
-	     * _.findLastKey(users, function(chr) { return chr.age < 40; });
+	     * _.findLastKey(users, function(chr) {
+	     *   return chr.age < 40;
+	     * });
 	     * // => returns `pebbles` assuming `_.findKey` returns `barney`
 	     *
-	     * // using the "_.matches" callback shorthand
+	     * // using the `_.matches` callback shorthand
 	     * _.findLastKey(users, { 'age': 36, 'active': true });
 	     * // => 'barney'
 	     *
-	     * // using the "_.matchesProperty" callback shorthand
+	     * // using the `_.matchesProperty` callback shorthand
 	     * _.findLastKey(users, 'active', false);
 	     * // => 'fred'
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.findLastKey(users, 'active');
 	     * // => 'pebbles'
 	     */
@@ -9353,10 +9490,17 @@ module.exports =
 	     * @returns {Object} Returns `object`.
 	     * @example
 	     *
-	     * _.forOwn({ '0': 'zero', '1': 'one', 'length': 2 }, function(n, key) {
+	     * function Foo() {
+	     *   this.a = 1;
+	     *   this.b = 2;
+	     * }
+	     *
+	     * Foo.prototype.c = 3;
+	     *
+	     * _.forOwn(new Foo, function(value, key) {
 	     *   console.log(key);
 	     * });
-	     * // => logs '0', '1', and 'length' (iteration order is not guaranteed)
+	     * // => logs 'a' and 'b' (iteration order is not guaranteed)
 	     */
 	    function forOwn(object, iteratee, thisArg) {
 	      if (typeof iteratee != 'function' || typeof thisArg != 'undefined') {
@@ -9378,10 +9522,17 @@ module.exports =
 	     * @returns {Object} Returns `object`.
 	     * @example
 	     *
-	     * _.forOwnRight({ '0': 'zero', '1': 'one', 'length': 2 }, function(n, key) {
+	     * function Foo() {
+	     *   this.a = 1;
+	     *   this.b = 2;
+	     * }
+	     *
+	     * Foo.prototype.c = 3;
+	     *
+	     * _.forOwnRight(new Foo, function(value, key) {
 	     *   console.log(key);
 	     * });
-	     * // => logs 'length', '1', and '0' assuming `_.forOwn` logs '0', '1', and 'length'
+	     * // => logs 'b' and 'a' assuming `_.forOwn` logs 'a' and 'b'
 	     */
 	    function forOwnRight(object, iteratee, thisArg) {
 	      iteratee = bindCallback(iteratee, thisArg, 3);
@@ -9401,7 +9552,7 @@ module.exports =
 	     * @example
 	     *
 	     * _.functions(_);
-	     * // => ['all', 'any', 'bind', ...]
+	     * // => ['after', 'ary', 'assign', ...]
 	     */
 	    function functions(object) {
 	      return baseFunctions(object, keysIn(object));
@@ -9419,7 +9570,9 @@ module.exports =
 	     * @returns {boolean} Returns `true` if `key` is a direct property, else `false`.
 	     * @example
 	     *
-	     * _.has({ 'a': 1, 'b': 2, 'c': 3 }, 'b');
+	     * var object = { 'a': 1, 'b': 2, 'c': 3 };
+	     *
+	     * _.has(object, 'b');
 	     * // => true
 	     */
 	    function has(object, key) {
@@ -9440,16 +9593,14 @@ module.exports =
 	     * @returns {Object} Returns the new inverted object.
 	     * @example
 	     *
-	     * _.invert({ 'first': 'fred', 'second': 'barney' });
-	     * // => { 'fred': 'first', 'barney': 'second' }
+	     * var object = { 'a': 1, 'b': 2, 'c': 1 };
 	     *
-	     * // without `multiValue`
-	     * _.invert({ 'first': 'fred', 'second': 'barney', 'third': 'fred' });
-	     * // => { 'fred': 'third', 'barney': 'second' }
+	     * _.invert(object);
+	     * // => { '1': 'c', '2': 'b' }
 	     *
 	     * // with `multiValue`
-	     * _.invert({ 'first': 'fred', 'second': 'barney', 'third': 'fred' }, true);
-	     * // => { 'fred': ['first', 'third'], 'barney': ['second'] }
+	     * _.invert(object, true);
+	     * // => { '1': ['a', 'c'], '2': ['b'] }
 	     */
 	    function invert(object, multiValue, guard) {
 	      if (guard && isIterateeCall(object, multiValue, guard)) {
@@ -9574,14 +9725,14 @@ module.exports =
 	     * iteratee function is bound to `thisArg` and invoked with three arguments;
 	     * (value, key, object).
 	     *
-	     * If a property name is provided for `iteratee` the created "_.property"
+	     * If a property name is provided for `iteratee` the created `_.property`
 	     * style callback returns the property value of the given element.
 	     *
-	     * If value is also provided for `thisArg` the created "_.matchesProperty"
+	     * If a value is also provided for `thisArg` the created `_.matchesProperty`
 	     * style callback returns `true` for elements that have a matching property
 	     * value, else `false`.
 	     *
-	     * If an object is provided for `iteratee` the created "_.matches" style
+	     * If an object is provided for `iteratee` the created `_.matches` style
 	     * callback returns `true` for elements that have the properties of the given
 	     * object, else `false`.
 	     *
@@ -9590,21 +9741,22 @@ module.exports =
 	     * @category Object
 	     * @param {Object} object The object to iterate over.
 	     * @param {Function|Object|string} [iteratee=_.identity] The function invoked
-	     *  per iteration. If a property name or object is provided it is used to
-	     *  create a "_.property" or "_.matches" style callback respectively.
+	     *  per iteration.
 	     * @param {*} [thisArg] The `this` binding of `iteratee`.
 	     * @returns {Object} Returns the new mapped object.
 	     * @example
 	     *
-	     * _.mapValues({ 'a': 1, 'b': 2, 'c': 3} , function(n) { return n * 3; });
-	     * // => { 'a': 3, 'b': 6, 'c': 9 }
+	     * _.mapValues({ 'a': 1, 'b': 2 }, function(n) {
+	     *   return n * 3;
+	     * });
+	     * // => { 'a': 3, 'b': 6 }
 	     *
 	     * var users = {
 	     *   'fred':    { 'user': 'fred',    'age': 40 },
 	     *   'pebbles': { 'user': 'pebbles', 'age': 1 }
 	     * };
 	     *
-	     * // using the "_.property" callback shorthand
+	     * // using the `_.property` callback shorthand
 	     * _.mapValues(users, 'age');
 	     * // => { 'fred': 40, 'pebbles': 1 } (iteration order is not guaranteed)
 	     */
@@ -9660,7 +9812,9 @@ module.exports =
 	     * };
 	     *
 	     * _.merge(object, other, function(a, b) {
-	     *   return _.isArray(a) ? a.concat(b) : undefined;
+	     *   if (_.isArray(a)) {
+	     *     return a.concat(b);
+	     *   }
 	     * });
 	     * // => { 'fruits': ['apple', 'banana'], 'vegetables': ['beet', 'carrot'] }
 	     */
@@ -9826,18 +9980,16 @@ module.exports =
 	     * @returns {*} Returns the accumulated value.
 	     * @example
 	     *
-	     * var squares = _.transform([1, 2, 3, 4, 5, 6], function(result, n) {
-	     *   n *= n;
-	     *   if (n % 2) {
-	     *     return result.push(n) < 3;
-	     *   }
+	     * _.transform([2, 3, 4], function(result, n) {
+	     *   result.push(n *= n);
+	     *   return n % 2 == 0;
 	     * });
-	     * // => [1, 9, 25]
+	     * // => [4, 9]
 	     *
-	     * var mapped = _.transform({ 'a': 1, 'b': 2, 'c': 3 }, function(result, n, key) {
+	     * _.transform({ 'a': 1, 'b': 2 }, function(result, n, key) {
 	     *   result[key] = n * 3;
 	     * });
-	     * // => { 'a': 3, 'b': 6, 'c': 9 }
+	     * // => { 'a': 3, 'b': 6 }
 	     */
 	    function transform(object, iteratee, accumulator, thisArg) {
 	      var isArr = isArray(object) || isTypedArray(object);
@@ -9918,6 +10070,48 @@ module.exports =
 	    }
 
 	    /*------------------------------------------------------------------------*/
+
+	    /**
+	     * Checks if `n` is between `start` and up to but not including, `end`. If
+	     * `end` is not specified it defaults to `start` with `start` becoming `0`.
+	     *
+	     * @static
+	     * @memberOf _
+	     * @category Number
+	     * @param {number} n The number to check.
+	     * @param {number} [start=0] The start of the range.
+	     * @param {number} end The end of the range.
+	     * @returns {boolean} Returns `true` if `n` is in the range, else `false`.
+	     * @example
+	     *
+	     * _.inRange(3, 2, 4);
+	     * // => true
+	     *
+	     * _.inRange(4, 8);
+	     * // => true
+	     *
+	     * _.inRange(4, 2);
+	     * // => false
+	     *
+	     * _.inRange(2, 2);
+	     * // => false
+	     *
+	     * _.inRange(1.2, 2);
+	     * // => true
+	     *
+	     * _.inRange(5.2, 4);
+	     * // => false
+	     */
+	    function inRange(value, start, end) {
+	      start = +start || 0;
+	      if (typeof end === 'undefined') {
+	        end = start;
+	        start = 0;
+	      } else {
+	        end = +end || 0;
+	      }
+	      return value >= start && value < end;
+	    }
 
 	    /**
 	     * Produces a random number between `min` and `max` (inclusive). If only one
@@ -10138,7 +10332,7 @@ module.exports =
 	    }
 
 	    /**
-	     * Converts `string` to kebab case (a.k.a. spinal case).
+	     * Converts `string` to kebab case.
 	     * See [Wikipedia](https://en.wikipedia.org/wiki/Letter_case#Special_case_styles) for
 	     * more details.
 	     *
@@ -10501,10 +10695,10 @@ module.exports =
 	     * var compiled = _.template('hi <%= data.user %>!', { 'variable': 'data' });
 	     * compiled.source;
 	     * // => function(data) {
-	     *   var __t, __p = '';
-	     *   __p += 'hi ' + ((__t = ( data.user )) == null ? '' : __t) + '!';
-	     *   return __p;
-	     * }
+	     * //   var __t, __p = '';
+	     * //   __p += 'hi ' + ((__t = ( data.user )) == null ? '' : __t) + '!';
+	     * //   return __p;
+	     * // }
 	     *
 	     * // using the `source` property to inline compiled templates for meaningful
 	     * // line numbers in error messages and a stack trace
@@ -10737,13 +10931,21 @@ module.exports =
 	     * _.trunc('hi-diddly-ho there, neighborino', 24);
 	     * // => 'hi-diddly-ho there, n...'
 	     *
-	     * _.trunc('hi-diddly-ho there, neighborino', { 'length': 24, 'separator': ' ' });
+	     * _.trunc('hi-diddly-ho there, neighborino', {
+	     *   'length': 24,
+	     *   'separator': ' '
+	     * });
 	     * // => 'hi-diddly-ho there,...'
 	     *
-	     * _.trunc('hi-diddly-ho there, neighborino', { 'length': 24, 'separator': /,? +/ });
+	     * _.trunc('hi-diddly-ho there, neighborino', {
+	     *   'length': 24,
+	     *   'separator': /,? +/
+	     * });
 	     * //=> 'hi-diddly-ho there...'
 	     *
-	     * _.trunc('hi-diddly-ho there, neighborino', { 'omission': ' [...]' });
+	     * _.trunc('hi-diddly-ho there, neighborino', {
+	     *   'omission': ' [...]'
+	     * });
 	     * // => 'hi-diddly-ho there, neig [...]'
 	     */
 	    function trunc(string, options, guard) {
@@ -10871,9 +11073,16 @@ module.exports =
 	     *   elements = [];
 	     * }
 	     */
-	    function attempt(func) {
+	    function attempt() {
+	      var length = arguments.length,
+	          func = arguments[0];
+
 	      try {
-	        return func.apply(undefined, baseSlice(arguments, 1));
+	        var args = Array(length ? length - 1 : 0);
+	        while (--length > 0) {
+	          args[length - 1] = arguments[length];
+	        }
+	        return func.apply(undefined, args);
 	      } catch(e) {
 	        return isError(e) ? e : new Error(e);
 	      }
@@ -10908,7 +11117,9 @@ module.exports =
 	     *     return callback(func, thisArg);
 	     *   }
 	     *   return function(object) {
-	     *     return match[2] == 'gt' ? object[match[1]] > match[3] : object[match[1]] < match[3];
+	     *     return match[2] == 'gt'
+	     *       ? object[match[1]] > match[3]
+	     *       : object[match[1]] < match[3];
 	     *   };
 	     * });
 	     *
@@ -10936,6 +11147,7 @@ module.exports =
 	     *
 	     * var object = { 'user': 'fred' };
 	     * var getter = _.constant(object);
+	     *
 	     * getter() === object;
 	     * // => true
 	     */
@@ -10956,6 +11168,7 @@ module.exports =
 	     * @example
 	     *
 	     * var object = { 'user': 'fred' };
+	     *
 	     * _.identity(object) === object;
 	     * // => true
 	     */
@@ -11009,14 +11222,12 @@ module.exports =
 	     * @example
 	     *
 	     * var users = [
-	     *   { 'user': 'barney',  'age': 36 },
-	     *   { 'user': 'fred',    'age': 40 },
-	     *   { 'user': 'pebbles', 'age': 1 }
+	     *   { 'user': 'barney' },
+	     *   { 'user': 'fred' },
+	     *   { 'user': 'pebbles' }
 	     * ];
 	     *
-	     * var matchFred = _.matchesProperty('user', 'fred');
-	     *
-	     * _.find(users, matchFred);
+	     * _.find(users, _.matchesProperty('user', 'fred'));
 	     * // => { 'user': 'fred', 'age': 40 }
 	     */
 	    function matchesProperty(key, value) {
@@ -11128,7 +11339,8 @@ module.exports =
 	    }
 
 	    /**
-	     * A no-operation function.
+	     * A no-operation function which returns `undefined` regardless of the
+	     * arguments it receives.
 	     *
 	     * @static
 	     * @memberOf _
@@ -11136,6 +11348,7 @@ module.exports =
 	     * @example
 	     *
 	     * var object = { 'user': 'fred' };
+	     *
 	     * _.noop(object) === undefined;
 	     * // => true
 	     */
@@ -11181,11 +11394,11 @@ module.exports =
 	     * @returns {Function} Returns the new function.
 	     * @example
 	     *
-	     * var object = { 'user': 'fred', 'age': 40, 'active': true };
-	     * _.map(['active', 'user'], _.propertyOf(object));
-	     * // => [true, 'fred']
-	     *
 	     * var object = { 'a': 3, 'b': 1, 'c': 2 };
+	     *
+	     * _.map(['a', 'c'], _.propertyOf(object));
+	     * // => [3, 2]
+	     *
 	     * _.sortBy(['a', 'b', 'c'], _.propertyOf(object));
 	     * // => ['b', 'c', 'a']
 	     */
@@ -11197,8 +11410,9 @@ module.exports =
 
 	    /**
 	     * Creates an array of numbers (positive and/or negative) progressing from
-	     * `start` up to, but not including, `end`. If `start` is less than `end` a
-	     * zero-length range is created unless a negative `step` is specified.
+	     * `start` up to, but not including, `end`. If `end` is not specified it
+	     * defaults to `start` with `start` becoming `0`. If `start` is less than
+	     * `end` a zero-length range is created unless a negative `step` is specified.
 	     *
 	     * @static
 	     * @memberOf _
@@ -11270,10 +11484,14 @@ module.exports =
 	     * var diceRolls = _.times(3, _.partial(_.random, 1, 6, false));
 	     * // => [3, 6, 4]
 	     *
-	     * _.times(3, function(n) { mage.castSpell(n); });
+	     * _.times(3, function(n) {
+	     *   mage.castSpell(n);
+	     * });
 	     * // => invokes `mage.castSpell(n)` three times with `n` of `0`, `1`, and `2` respectively
 	     *
-	     * _.times(3, function(n) { this.cast(n); }, mage);
+	     * _.times(3, function(n) {
+	     *   this.cast(n);
+	     * }, mage);
 	     * // => also invokes `mage.castSpell(n)` three times
 	     */
 	    function times(n, iteratee, thisArg) {
@@ -11321,11 +11539,13 @@ module.exports =
 
 	    /*------------------------------------------------------------------------*/
 
-	    // Ensure `new LodashWrapper` is an instance of `lodash`.
-	    LodashWrapper.prototype = baseCreate(lodash.prototype);
+	    // Ensure wrappers are instances of `baseLodash`.
+	    lodash.prototype = baseLodash.prototype;
 
-	    // Ensure `new LazyWraper` is an instance of `LodashWrapper`
-	    LazyWrapper.prototype = baseCreate(LodashWrapper.prototype);
+	    LodashWrapper.prototype = baseCreate(baseLodash.prototype);
+	    LodashWrapper.prototype.constructor = LodashWrapper;
+
+	    LazyWrapper.prototype = baseCreate(baseLodash.prototype);
 	    LazyWrapper.prototype.constructor = LazyWrapper;
 
 	    // Add functions to the `Map` cache.
@@ -11483,6 +11703,7 @@ module.exports =
 	    lodash.identity = identity;
 	    lodash.includes = includes;
 	    lodash.indexOf = indexOf;
+	    lodash.inRange = inRange;
 	    lodash.isArguments = isArguments;
 	    lodash.isArray = isArray;
 	    lodash.isBoolean = isBoolean;
@@ -11591,15 +11812,13 @@ module.exports =
 
 	    // Add `LazyWrapper` methods that accept an `iteratee` value.
 	    arrayEach(['filter', 'map', 'takeWhile'], function(methodName, index) {
-	      var isFilter = index == LAZY_FILTER_FLAG,
-	          isWhile = index == LAZY_WHILE_FLAG;
+	      var isFilter = index == LAZY_FILTER_FLAG || index == LAZY_WHILE_FLAG;
 
 	      LazyWrapper.prototype[methodName] = function(iteratee, thisArg) {
 	        var result = this.clone(),
-	            filtered = result.__filtered__,
 	            iteratees = result.__iteratees__ || (result.__iteratees__ = []);
 
-	        result.__filtered__ = filtered || isFilter || (isWhile && result.__dir__ < 0);
+	        result.__filtered__ = result.__filtered__ || isFilter;
 	        iteratees.push({ 'iteratee': getCallback(iteratee, thisArg, 3), 'type': index });
 	        return result;
 	      };
@@ -11665,18 +11884,23 @@ module.exports =
 	      return this.filter(identity);
 	    };
 
-	    LazyWrapper.prototype.dropWhile = function(iteratee, thisArg) {
-	      var done;
-	      iteratee = getCallback(iteratee, thisArg, 3);
+	    LazyWrapper.prototype.dropWhile = function(predicate, thisArg) {
+	      var done,
+	          lastIndex,
+	          isRight = this.__dir__ < 0;
+
+	      predicate = getCallback(predicate, thisArg, 3);
 	      return this.filter(function(value, index, array) {
-	        return done || (done = !iteratee(value, index, array));
+	        done = done && (isRight ? index < lastIndex : index > lastIndex);
+	        lastIndex = index;
+	        return done || (done = !predicate(value, index, array));
 	      });
 	    };
 
-	    LazyWrapper.prototype.reject = function(iteratee, thisArg) {
-	      iteratee = getCallback(iteratee, thisArg, 3);
+	    LazyWrapper.prototype.reject = function(predicate, thisArg) {
+	      predicate = getCallback(predicate, thisArg, 3);
 	      return this.filter(function(value, index, array) {
-	        return !iteratee(value, index, array);
+	        return !predicate(value, index, array);
 	      });
 	    };
 
@@ -11754,7 +11978,7 @@ module.exports =
 	    LazyWrapper.prototype.reverse = lazyReverse;
 	    LazyWrapper.prototype.value = lazyValue;
 
-	    // Add chaining functions to the lodash wrapper.
+	    // Add chaining functions to the `lodash` wrapper.
 	    lodash.prototype.chain = wrapperChain;
 	    lodash.prototype.commit = wrapperCommit;
 	    lodash.prototype.plant = wrapperPlant;
@@ -11762,7 +11986,7 @@ module.exports =
 	    lodash.prototype.toString = wrapperToString;
 	    lodash.prototype.run = lodash.prototype.toJSON = lodash.prototype.valueOf = lodash.prototype.value = wrapperValue;
 
-	    // Add function aliases to the lodash wrapper.
+	    // Add function aliases to the `lodash` wrapper.
 	    lodash.prototype.collect = lodash.prototype.map;
 	    lodash.prototype.head = lodash.prototype.first;
 	    lodash.prototype.select = lodash.prototype.filter;
@@ -11807,20 +12031,20 @@ module.exports =
 	  }
 	}.call(this));
 	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(18)(module), (function() { return this; }())))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(19)(module), (function() { return this; }())))
 
 /***/ },
 /* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var getTagAttributes, isChild, isChildren, isComponent, isVNode, isVText, isWidget, parseZfuncArgs,
-	  __slice = [].slice;
+	  slice = [].slice;
 
-	isVNode = __webpack_require__(15);
+	isVNode = __webpack_require__(16);
 
-	isVText = __webpack_require__(16);
+	isVText = __webpack_require__(17);
 
-	isWidget = __webpack_require__(17);
+	isWidget = __webpack_require__(18);
 
 	isComponent = function(x) {
 	  return _.isObject(x) && _.isFunction(x.render);
@@ -11852,7 +12076,7 @@ module.exports =
 
 	parseZfuncArgs = function() {
 	  var children, props, tagName;
-	  tagName = arguments[0], children = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+	  tagName = arguments[0], children = 2 <= arguments.length ? slice.call(arguments, 1) : [];
 	  props = {};
 	  if (children[0] && !isChildren(children[0])) {
 	    props = children[0];
@@ -11892,132 +12116,8 @@ module.exports =
 /* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Observ = __webpack_require__(8)
-
-	// circular dep between ArrayMethods & this file
-	module.exports = ObservArray
-
-	var splice = __webpack_require__(19)
-	var put = __webpack_require__(20)
-	var set = __webpack_require__(21)
-	var transaction = __webpack_require__(22)
-	var ArrayMethods = __webpack_require__(23)
-	var addListener = __webpack_require__(24)
-
-
-	/*  ObservArray := (Array<T>) => Observ<
-	        Array<T> & { _diff: Array }
-	    > & {
-	        splice: (index: Number, amount: Number, rest...: T) =>
-	            Array<T>,
-	        push: (values...: T) => Number,
-	        filter: (lambda: Function, thisValue: Any) => Array<T>,
-	        indexOf: (item: T, fromIndex: Number) => Number
-	    }
-
-	    Fix to make it more like ObservHash.
-
-	    I.e. you write observables into it.
-	        reading methods take plain JS objects to read
-	        and the value of the array is always an array of plain
-	        objsect.
-
-	        The observ array instance itself would have indexed
-	        properties that are the observables
-	*/
-	function ObservArray(initialList) {
-	    // list is the internal mutable list observ instances that
-	    // all methods on `obs` dispatch to.
-	    var list = initialList
-	    var initialState = []
-
-	    // copy state out of initialList into initialState
-	    list.forEach(function (observ, index) {
-	        initialState[index] = typeof observ === "function" ?
-	            observ() : observ
-	    })
-
-	    var obs = Observ(initialState)
-	    obs.splice = splice
-
-	    // override set and store original for later use
-	    obs._observSet = obs.set
-	    obs.set = set
-
-	    obs.get = get
-	    obs.getLength = getLength
-	    obs.put = put
-	    obs.transaction = transaction
-
-	    // you better not mutate this list directly
-	    // this is the list of observs instances
-	    obs._list = list
-
-	    var removeListeners = list.map(function (observ) {
-	        return typeof observ === "function" ?
-	            addListener(obs, observ) :
-	            null
-	    });
-	    // this is a list of removal functions that must be called
-	    // when observ instances are removed from `obs.list`
-	    // not calling this means we do not GC our observ change
-	    // listeners. Which causes rage bugs
-	    obs._removeListeners = removeListeners
-
-	    obs._type = "observ-array"
-	    obs._version = "3"
-
-	    return ArrayMethods(obs, list)
-	}
-
-	function get(index) {
-	    return this._list[index]
-	}
-
-	function getLength() {
-	    return this._list.length
-	}
-
-
-/***/ },
-/* 8 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = Observable
-
-	function Observable(value) {
-	    var listeners = []
-	    value = value === undefined ? null : value
-
-	    observable.set = function (v) {
-	        value = v
-	        listeners.forEach(function (f) {
-	            f(v)
-	        })
-	    }
-
-	    return observable
-
-	    function observable(listener) {
-	        if (!listener) {
-	            return value
-	        }
-
-	        listeners.push(listener)
-
-	        return function remove() {
-	            listeners.splice(listeners.indexOf(listener), 1)
-	        }
-	    }
-	}
-
-
-/***/ },
-/* 9 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var Observ = __webpack_require__(8)
-	var extend = __webpack_require__(30)
+	var Observ = __webpack_require__(9)
+	var extend = __webpack_require__(32)
 
 	var blackList = {
 	    "length": "Clashes with `Function.prototype.length`.\n",
@@ -12127,6 +12227,130 @@ module.exports =
 
 
 /***/ },
+/* 8 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Observ = __webpack_require__(9)
+
+	// circular dep between ArrayMethods & this file
+	module.exports = ObservArray
+
+	var splice = __webpack_require__(20)
+	var put = __webpack_require__(21)
+	var set = __webpack_require__(22)
+	var transaction = __webpack_require__(23)
+	var ArrayMethods = __webpack_require__(24)
+	var addListener = __webpack_require__(25)
+
+
+	/*  ObservArray := (Array<T>) => Observ<
+	        Array<T> & { _diff: Array }
+	    > & {
+	        splice: (index: Number, amount: Number, rest...: T) =>
+	            Array<T>,
+	        push: (values...: T) => Number,
+	        filter: (lambda: Function, thisValue: Any) => Array<T>,
+	        indexOf: (item: T, fromIndex: Number) => Number
+	    }
+
+	    Fix to make it more like ObservHash.
+
+	    I.e. you write observables into it.
+	        reading methods take plain JS objects to read
+	        and the value of the array is always an array of plain
+	        objsect.
+
+	        The observ array instance itself would have indexed
+	        properties that are the observables
+	*/
+	function ObservArray(initialList) {
+	    // list is the internal mutable list observ instances that
+	    // all methods on `obs` dispatch to.
+	    var list = initialList
+	    var initialState = []
+
+	    // copy state out of initialList into initialState
+	    list.forEach(function (observ, index) {
+	        initialState[index] = typeof observ === "function" ?
+	            observ() : observ
+	    })
+
+	    var obs = Observ(initialState)
+	    obs.splice = splice
+
+	    // override set and store original for later use
+	    obs._observSet = obs.set
+	    obs.set = set
+
+	    obs.get = get
+	    obs.getLength = getLength
+	    obs.put = put
+	    obs.transaction = transaction
+
+	    // you better not mutate this list directly
+	    // this is the list of observs instances
+	    obs._list = list
+
+	    var removeListeners = list.map(function (observ) {
+	        return typeof observ === "function" ?
+	            addListener(obs, observ) :
+	            null
+	    });
+	    // this is a list of removal functions that must be called
+	    // when observ instances are removed from `obs.list`
+	    // not calling this means we do not GC our observ change
+	    // listeners. Which causes rage bugs
+	    obs._removeListeners = removeListeners
+
+	    obs._type = "observ-array"
+	    obs._version = "3"
+
+	    return ArrayMethods(obs, list)
+	}
+
+	function get(index) {
+	    return this._list[index]
+	}
+
+	function getLength() {
+	    return this._list.length
+	}
+
+
+/***/ },
+/* 9 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = Observable
+
+	function Observable(value) {
+	    var listeners = []
+	    value = value === undefined ? null : value
+
+	    observable.set = function (v) {
+	        value = v
+	        listeners.forEach(function (f) {
+	            f(v)
+	        })
+	    }
+
+	    return observable
+
+	    function observable(listener) {
+	        if (!listener) {
+	            return value
+	        }
+
+	        listeners.push(listener)
+
+	        return function remove() {
+	            listeners.splice(listeners.indexOf(listener), 1)
+	        }
+	    }
+	}
+
+
+/***/ },
 /* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -12139,7 +12363,7 @@ module.exports =
 /* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var diff = __webpack_require__(25)
+	var diff = __webpack_require__(27)
 
 	module.exports = diff
 
@@ -12148,7 +12372,7 @@ module.exports =
 /* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var patch = __webpack_require__(27)
+	var patch = __webpack_require__(29)
 
 	module.exports = patch
 
@@ -12164,6 +12388,13 @@ module.exports =
 
 /***/ },
 /* 14 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = __webpack_require__(30);
+
+
+/***/ },
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var require;var require;!function(e){if(true)module.exports=e();else if("function"==typeof define&&define.amd)define(e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.routes=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return require(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
@@ -12332,10 +12563,10 @@ module.exports =
 	});
 
 /***/ },
-/* 15 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(29)
+	var version = __webpack_require__(31)
 
 	module.exports = isVirtualNode
 
@@ -12345,10 +12576,10 @@ module.exports =
 
 
 /***/ },
-/* 16 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(29)
+	var version = __webpack_require__(31)
 
 	module.exports = isVirtualText
 
@@ -12358,7 +12589,7 @@ module.exports =
 
 
 /***/ },
-/* 17 */
+/* 18 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = isWidget
@@ -12369,7 +12600,7 @@ module.exports =
 
 
 /***/ },
-/* 18 */
+/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = function(module) {
@@ -12385,13 +12616,13 @@ module.exports =
 
 
 /***/ },
-/* 19 */
+/* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var slice = Array.prototype.slice
 
-	var addListener = __webpack_require__(24)
-	var setNonEnumerable = __webpack_require__(31);
+	var addListener = __webpack_require__(25)
+	var setNonEnumerable = __webpack_require__(33);
 
 	module.exports = splice
 
@@ -12441,11 +12672,11 @@ module.exports =
 
 
 /***/ },
-/* 20 */
+/* 21 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var addListener = __webpack_require__(24)
-	var setNonEnumerable = __webpack_require__(31);
+	var addListener = __webpack_require__(25)
+	var setNonEnumerable = __webpack_require__(33);
 
 	module.exports = put
 
@@ -12484,18 +12715,18 @@ module.exports =
 	}
 
 /***/ },
-/* 21 */
+/* 22 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var addListener = __webpack_require__(24)
-	var setNonEnumerable = __webpack_require__(31)
-	var adiff = __webpack_require__(45)
+	var applyPatch = __webpack_require__(34)
+	var setNonEnumerable = __webpack_require__(33)
+	var adiff = __webpack_require__(52)
 
 	module.exports = set
 
 	function set(rawList) {
 	    if (!Array.isArray(rawList)) rawList = []
-	        
+
 	    var obs = this
 	    var changes = adiff.diff(obs._list, rawList)
 	    var valueList = obs().slice()
@@ -12508,41 +12739,9 @@ module.exports =
 	    return changes
 	}
 
-	function applyPatch (valueList, args) {
-	    var obs = this
-	    var valueArgs = args.map(unpack)
-
-	    valueList.splice.apply(valueList, valueArgs)
-	    obs._list.splice.apply(obs._list, args)
-
-	    var extraRemoveListeners = args.slice(2).map(function (observ) {
-	        return typeof observ === "function" ?
-	            addListener(obs, observ) :
-	            null
-	    })
-
-	    extraRemoveListeners.unshift(args[0], args[1])
-	    var removedListeners = obs._removeListeners.splice
-	        .apply(obs._removeListeners, extraRemoveListeners)
-
-	    removedListeners.forEach(function (removeObservListener) {
-	        if (removeObservListener) {
-	            removeObservListener()
-	        }
-	    })
-
-	    return valueArgs
-	}
-
-	function unpack(value, index){
-	    if (index === 0 || index === 1) {
-	        return value
-	    }
-	    return typeof value === "function" ? value() : value
-	}
 
 /***/ },
-/* 22 */
+/* 23 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = transaction
@@ -12558,10 +12757,10 @@ module.exports =
 	}
 
 /***/ },
-/* 23 */
+/* 24 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var ObservArray = __webpack_require__(7)
+	var ObservArray = __webpack_require__(8)
 
 	var slice = Array.prototype.slice
 
@@ -12590,8 +12789,8 @@ module.exports =
 	    obs.pop = observArrayPop
 	    obs.shift = observArrayShift
 	    obs.unshift = observArrayUnshift
-	    obs.reverse = notImplemented
-	    obs.sort = notImplemented
+	    obs.reverse = __webpack_require__(35)
+	    obs.sort = __webpack_require__(36)
 
 	    methods.forEach(function (tuple) {
 	        obs[tuple[0]] = tuple[1]
@@ -12629,10 +12828,10 @@ module.exports =
 
 
 /***/ },
-/* 24 */
+/* 25 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var setNonEnumerable = __webpack_require__(31);
+	var setNonEnumerable = __webpack_require__(33);
 
 	module.exports = addListener
 
@@ -12663,19 +12862,160 @@ module.exports =
 
 
 /***/ },
-/* 25 */
+/* 26 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isArray = __webpack_require__(46)
+	'use strict';
 
-	var VPatch = __webpack_require__(32)
-	var isVNode = __webpack_require__(15)
-	var isVText = __webpack_require__(16)
-	var isWidget = __webpack_require__(17)
-	var isThunk = __webpack_require__(33)
-	var handleThunk = __webpack_require__(34)
+	var isArray = __webpack_require__(53);
 
-	var diffProps = __webpack_require__(35)
+	var VNode = __webpack_require__(41);
+	var VText = __webpack_require__(42);
+	var isVNode = __webpack_require__(16);
+	var isVText = __webpack_require__(17);
+	var isWidget = __webpack_require__(18);
+	var isHook = __webpack_require__(43);
+	var isVThunk = __webpack_require__(38);
+
+	var parseTag = __webpack_require__(44);
+	var softSetHook = __webpack_require__(45);
+	var evHook = __webpack_require__(46);
+
+	module.exports = h;
+
+	function h(tagName, properties, children) {
+	    var childNodes = [];
+	    var tag, props, key, namespace;
+
+	    if (!children && isChildren(properties)) {
+	        children = properties;
+	        props = {};
+	    }
+
+	    props = props || properties || {};
+	    tag = parseTag(tagName, props);
+
+	    // support keys
+	    if (props.hasOwnProperty('key')) {
+	        key = props.key;
+	        props.key = undefined;
+	    }
+
+	    // support namespace
+	    if (props.hasOwnProperty('namespace')) {
+	        namespace = props.namespace;
+	        props.namespace = undefined;
+	    }
+
+	    // fix cursor bug
+	    if (tag === 'INPUT' &&
+	        !namespace &&
+	        props.hasOwnProperty('value') &&
+	        props.value !== undefined &&
+	        !isHook(props.value)
+	    ) {
+	        props.value = softSetHook(props.value);
+	    }
+
+	    transformProperties(props);
+
+	    if (children !== undefined && children !== null) {
+	        addChild(children, childNodes, tag, props);
+	    }
+
+
+	    return new VNode(tag, props, childNodes, key, namespace);
+	}
+
+	function addChild(c, childNodes, tag, props) {
+	    if (typeof c === 'string') {
+	        childNodes.push(new VText(c));
+	    } else if (isChild(c)) {
+	        childNodes.push(c);
+	    } else if (isArray(c)) {
+	        for (var i = 0; i < c.length; i++) {
+	            addChild(c[i], childNodes, tag, props);
+	        }
+	    } else if (c === null || c === undefined) {
+	        return;
+	    } else {
+	        throw UnexpectedVirtualElement({
+	            foreignObject: c,
+	            parentVnode: {
+	                tagName: tag,
+	                properties: props
+	            }
+	        });
+	    }
+	}
+
+	function transformProperties(props) {
+	    for (var propName in props) {
+	        if (props.hasOwnProperty(propName)) {
+	            var value = props[propName];
+
+	            if (isHook(value)) {
+	                continue;
+	            }
+
+	            if (propName.substr(0, 3) === 'ev-') {
+	                // add ev-foo support
+	                props[propName] = evHook(value);
+	            }
+	        }
+	    }
+	}
+
+	function isChild(x) {
+	    return isVNode(x) || isVText(x) || isWidget(x) || isVThunk(x);
+	}
+
+	function isChildren(x) {
+	    return typeof x === 'string' || isArray(x) || isChild(x);
+	}
+
+	function UnexpectedVirtualElement(data) {
+	    var err = new Error();
+
+	    err.type = 'virtual-hyperscript.unexpected.virtual-element';
+	    err.message = 'Unexpected virtual child passed to h().\n' +
+	        'Expected a VNode / Vthunk / VWidget / string but:\n' +
+	        'got:\n' +
+	        errorString(data.foreignObject) +
+	        '.\n' +
+	        'The parent vnode is:\n' +
+	        errorString(data.parentVnode)
+	        '\n' +
+	        'Suggested fix: change your `h(..., [ ... ])` callsite.';
+	    err.foreignObject = data.foreignObject;
+	    err.parentVnode = data.parentVnode;
+
+	    return err;
+	}
+
+	function errorString(obj) {
+	    try {
+	        return JSON.stringify(obj, null, '    ');
+	    } catch (e) {
+	        return String(obj);
+	    }
+	}
+
+
+/***/ },
+/* 27 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var isArray = __webpack_require__(53)
+
+	var VPatch = __webpack_require__(37)
+	var isVNode = __webpack_require__(16)
+	var isVText = __webpack_require__(17)
+	var isWidget = __webpack_require__(18)
+	var isThunk = __webpack_require__(38)
+	var handleThunk = __webpack_require__(39)
+
+	var diffProps = __webpack_require__(40)
 
 	module.exports = diff
 
@@ -12992,155 +13332,66 @@ module.exports =
 
 
 /***/ },
-/* 26 */
+/* 28 */
 /***/ function(module, exports, __webpack_require__) {
 
-	'use strict';
+	var document = __webpack_require__(54)
 
-	var isArray = __webpack_require__(46);
+	var applyProperties = __webpack_require__(47)
 
-	var VNode = __webpack_require__(39);
-	var VText = __webpack_require__(40);
-	var isVNode = __webpack_require__(15);
-	var isVText = __webpack_require__(16);
-	var isWidget = __webpack_require__(17);
-	var isHook = __webpack_require__(41);
-	var isVThunk = __webpack_require__(33);
+	var isVNode = __webpack_require__(16)
+	var isVText = __webpack_require__(17)
+	var isWidget = __webpack_require__(18)
+	var handleThunk = __webpack_require__(39)
 
-	var parseTag = __webpack_require__(42);
-	var softSetHook = __webpack_require__(43);
-	var evHook = __webpack_require__(44);
+	module.exports = createElement
 
-	module.exports = h;
+	function createElement(vnode, opts) {
+	    var doc = opts ? opts.document || document : document
+	    var warn = opts ? opts.warn : null
 
-	function h(tagName, properties, children) {
-	    var childNodes = [];
-	    var tag, props, key, namespace;
+	    vnode = handleThunk(vnode).a
 
-	    if (!children && isChildren(properties)) {
-	        children = properties;
-	        props = {};
-	    }
-
-	    props = props || properties || {};
-	    tag = parseTag(tagName, props);
-
-	    // support keys
-	    if (props.hasOwnProperty('key')) {
-	        key = props.key;
-	        props.key = undefined;
-	    }
-
-	    // support namespace
-	    if (props.hasOwnProperty('namespace')) {
-	        namespace = props.namespace;
-	        props.namespace = undefined;
-	    }
-
-	    // fix cursor bug
-	    if (tag === 'INPUT' &&
-	        !namespace &&
-	        props.hasOwnProperty('value') &&
-	        props.value !== undefined &&
-	        !isHook(props.value)
-	    ) {
-	        props.value = softSetHook(props.value);
-	    }
-
-	    transformProperties(props);
-
-	    if (children !== undefined && children !== null) {
-	        addChild(children, childNodes, tag, props);
-	    }
-
-
-	    return new VNode(tag, props, childNodes, key, namespace);
-	}
-
-	function addChild(c, childNodes, tag, props) {
-	    if (typeof c === 'string') {
-	        childNodes.push(new VText(c));
-	    } else if (isChild(c)) {
-	        childNodes.push(c);
-	    } else if (isArray(c)) {
-	        for (var i = 0; i < c.length; i++) {
-	            addChild(c[i], childNodes, tag, props);
+	    if (isWidget(vnode)) {
+	        return vnode.init()
+	    } else if (isVText(vnode)) {
+	        return doc.createTextNode(vnode.text)
+	    } else if (!isVNode(vnode)) {
+	        if (warn) {
+	            warn("Item is not a valid virtual dom node", vnode)
 	        }
-	    } else if (c === null || c === undefined) {
-	        return;
-	    } else {
-	        throw UnexpectedVirtualElement({
-	            foreignObject: c,
-	            parentVnode: {
-	                tagName: tag,
-	                properties: props
-	            }
-	        });
+	        return null
 	    }
-	}
 
-	function transformProperties(props) {
-	    for (var propName in props) {
-	        if (props.hasOwnProperty(propName)) {
-	            var value = props[propName];
+	    var node = (vnode.namespace === null) ?
+	        doc.createElement(vnode.tagName) :
+	        doc.createElementNS(vnode.namespace, vnode.tagName)
 
-	            if (isHook(value)) {
-	                continue;
-	            }
+	    var props = vnode.properties
+	    applyProperties(node, props)
 
-	            if (propName.substr(0, 3) === 'ev-') {
-	                // add ev-foo support
-	                props[propName] = evHook(value);
-	            }
+	    var children = vnode.children
+
+	    for (var i = 0; i < children.length; i++) {
+	        var childNode = createElement(children[i], opts)
+	        if (childNode) {
+	            node.appendChild(childNode)
 	        }
 	    }
-	}
 
-	function isChild(x) {
-	    return isVNode(x) || isVText(x) || isWidget(x) || isVThunk(x);
-	}
-
-	function isChildren(x) {
-	    return typeof x === 'string' || isArray(x) || isChild(x);
-	}
-
-	function UnexpectedVirtualElement(data) {
-	    var err = new Error();
-
-	    err.type = 'virtual-hyperscript.unexpected.virtual-element';
-	    err.message = 'Unexpected virtual child passed to h().\n' +
-	        'Expected a VNode / Vthunk / VWidget / string but:\n' +
-	        'got:\n' +
-	        errorString(data.foreignObject) +
-	        '.\n' +
-	        'The parent vnode is:\n' +
-	        errorString(data.parentVnode)
-	        '\n' +
-	        'Suggested fix: change your `h(..., [ ... ])` callsite.';
-	    err.foreignObject = data.foreignObject;
-	    err.parentVnode = data.parentVnode;
-
-	    return err;
-	}
-
-	function errorString(obj) {
-	    try {
-	        return JSON.stringify(obj, null, '    ');
-	    } catch (e) {
-	        return String(obj);
-	    }
+	    return node
 	}
 
 
 /***/ },
-/* 27 */
+/* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var document = __webpack_require__(47)
-	var isArray = __webpack_require__(46)
+	var document = __webpack_require__(54)
+	var isArray = __webpack_require__(53)
 
-	var domIndex = __webpack_require__(37)
-	var patchOp = __webpack_require__(38)
+	var domIndex = __webpack_require__(48)
+	var patchOp = __webpack_require__(49)
 	module.exports = patch
 
 	function patch(rootNode, patches) {
@@ -13215,66 +13466,35 @@ module.exports =
 
 
 /***/ },
-/* 28 */
+/* 30 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var document = __webpack_require__(47)
+	// Load modules
 
-	var applyProperties = __webpack_require__(36)
+	var Stringify = __webpack_require__(50);
+	var Parse = __webpack_require__(51);
 
-	var isVNode = __webpack_require__(15)
-	var isVText = __webpack_require__(16)
-	var isWidget = __webpack_require__(17)
-	var handleThunk = __webpack_require__(34)
 
-	module.exports = createElement
+	// Declare internals
 
-	function createElement(vnode, opts) {
-	    var doc = opts ? opts.document || document : document
-	    var warn = opts ? opts.warn : null
+	var internals = {};
 
-	    vnode = handleThunk(vnode).a
 
-	    if (isWidget(vnode)) {
-	        return vnode.init()
-	    } else if (isVText(vnode)) {
-	        return doc.createTextNode(vnode.text)
-	    } else if (!isVNode(vnode)) {
-	        if (warn) {
-	            warn("Item is not a valid virtual dom node", vnode)
-	        }
-	        return null
-	    }
-
-	    var node = (vnode.namespace === null) ?
-	        doc.createElement(vnode.tagName) :
-	        doc.createElementNS(vnode.namespace, vnode.tagName)
-
-	    var props = vnode.properties
-	    applyProperties(node, props)
-
-	    var children = vnode.children
-
-	    for (var i = 0; i < children.length; i++) {
-	        var childNode = createElement(children[i], opts)
-	        if (childNode) {
-	            node.appendChild(childNode)
-	        }
-	    }
-
-	    return node
-	}
+	module.exports = {
+	    stringify: Stringify,
+	    parse: Parse
+	};
 
 
 /***/ },
-/* 29 */
+/* 31 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = "1"
 
 
 /***/ },
-/* 30 */
+/* 32 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = extend
@@ -13297,7 +13517,7 @@ module.exports =
 
 
 /***/ },
-/* 31 */
+/* 33 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = setNonEnumerable;
@@ -13313,10 +13533,156 @@ module.exports =
 
 
 /***/ },
-/* 32 */
+/* 34 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(29)
+	var addListener = __webpack_require__(25)
+
+	module.exports = applyPatch
+
+	function applyPatch (valueList, args) {
+	    var obs = this
+	    var valueArgs = args.map(unpack)
+
+	    valueList.splice.apply(valueList, valueArgs)
+	    obs._list.splice.apply(obs._list, args)
+
+	    var extraRemoveListeners = args.slice(2).map(function (observ) {
+	        return typeof observ === "function" ?
+	            addListener(obs, observ) :
+	            null
+	    })
+
+	    extraRemoveListeners.unshift(args[0], args[1])
+	    var removedListeners = obs._removeListeners.splice
+	        .apply(obs._removeListeners, extraRemoveListeners)
+
+	    removedListeners.forEach(function (removeObservListener) {
+	        if (removeObservListener) {
+	            removeObservListener()
+	        }
+	    })
+
+	    return valueArgs
+	}
+
+	function unpack(value, index){
+	    if (index === 0 || index === 1) {
+	        return value
+	    }
+	    return typeof value === "function" ? value() : value
+	}
+
+
+/***/ },
+/* 35 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var applyPatch = __webpack_require__(34)
+	var setNonEnumerable = __webpack_require__(33)
+
+	module.exports = reverse
+
+	function reverse() {
+	    var obs = this
+	    var changes = fakeDiff(obs._list.slice().reverse())
+	    var valueList = obs().slice().reverse()
+
+	    var valueChanges = changes.map(applyPatch.bind(obs, valueList))
+
+	    setNonEnumerable(valueList, "_diff", valueChanges)
+
+	    obs._observSet(valueList)
+	    return changes
+	}
+
+	function fakeDiff(arr) {
+	    var _diff
+	    var len = arr.length
+
+	    if(len % 2) {
+	        var midPoint = (len -1) / 2
+	        var a = [0, midPoint].concat(arr.slice(0, midPoint))
+	        var b = [midPoint +1, midPoint].concat(arr.slice(midPoint +1, len))
+	        var _diff = [a, b]
+	    } else {
+	        _diff = [ [0, len].concat(arr) ]
+	    }
+
+	    return _diff
+	}
+
+
+/***/ },
+/* 36 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var applyPatch = __webpack_require__(34)
+	var setNonEnumerable = __webpack_require__(33)
+
+	module.exports = sort
+
+	function sort(compare) {
+	    var obs = this
+	    var list = obs._list.slice()
+
+	    var unpacked = unpack(list)
+
+	    var sorted = unpacked
+	            .map(function(it) { return it.val })
+	            .sort(compare)
+
+	    var packed = repack(sorted, unpacked)
+
+	    //fake diff - for perf
+	    //adiff on 10k items === ~3200ms
+	    //fake on 10k items === ~110ms
+	    var changes = [ [ 0, packed.length ].concat(packed) ]
+
+	    var valueChanges = changes.map(applyPatch.bind(obs, sorted))
+
+	    setNonEnumerable(sorted, "_diff", valueChanges)
+
+	    obs._observSet(sorted)
+	    return changes
+	}
+
+	function unpack(list) {
+	    var unpacked = []
+	    for(var i = 0; i < list.length; i++) {
+	        unpacked.push({
+	            val: ("function" == typeof list[i]) ? list[i]() : list[i],
+	            obj: list[i]
+	        })
+	    }
+	    return unpacked
+	}
+
+	function repack(sorted, unpacked) {
+	    var packed = []
+
+	    while(sorted.length) {
+	        var s = sorted.shift()
+	        var indx = indexOf(s, unpacked)
+	        if(~indx) packed.push(unpacked.splice(indx, 1)[0].obj)
+	    }
+
+	    return packed
+	}
+
+	function indexOf(n, h) {
+	    for(var i = 0; i < h.length; i++) {
+	        if(n === h[i].val) return i
+	    }
+	    return -1
+	}
+
+
+/***/ },
+/* 37 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(31)
 
 	VirtualPatch.NONE = 0
 	VirtualPatch.VTEXT = 1
@@ -13341,7 +13707,7 @@ module.exports =
 
 
 /***/ },
-/* 33 */
+/* 38 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports = isThunk
@@ -13352,13 +13718,13 @@ module.exports =
 
 
 /***/ },
-/* 34 */
+/* 39 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isVNode = __webpack_require__(15)
-	var isVText = __webpack_require__(16)
-	var isWidget = __webpack_require__(17)
-	var isThunk = __webpack_require__(33)
+	var isVNode = __webpack_require__(16)
+	var isVText = __webpack_require__(17)
+	var isWidget = __webpack_require__(18)
+	var isThunk = __webpack_require__(38)
 
 	module.exports = handleThunk
 
@@ -13398,11 +13764,11 @@ module.exports =
 
 
 /***/ },
-/* 35 */
+/* 40 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isObject = __webpack_require__(50)
-	var isHook = __webpack_require__(41)
+	var isObject = __webpack_require__(58)
+	var isHook = __webpack_require__(43)
 
 	module.exports = diffProps
 
@@ -13462,11 +13828,234 @@ module.exports =
 
 
 /***/ },
-/* 36 */
+/* 41 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isObject = __webpack_require__(50)
-	var isHook = __webpack_require__(41)
+	var version = __webpack_require__(31)
+	var isVNode = __webpack_require__(16)
+	var isWidget = __webpack_require__(18)
+	var isThunk = __webpack_require__(38)
+	var isVHook = __webpack_require__(43)
+
+	module.exports = VirtualNode
+
+	var noProperties = {}
+	var noChildren = []
+
+	function VirtualNode(tagName, properties, children, key, namespace) {
+	    this.tagName = tagName
+	    this.properties = properties || noProperties
+	    this.children = children || noChildren
+	    this.key = key != null ? String(key) : undefined
+	    this.namespace = (typeof namespace === "string") ? namespace : null
+
+	    var count = (children && children.length) || 0
+	    var descendants = 0
+	    var hasWidgets = false
+	    var hasThunks = false
+	    var descendantHooks = false
+	    var hooks
+
+	    for (var propName in properties) {
+	        if (properties.hasOwnProperty(propName)) {
+	            var property = properties[propName]
+	            if (isVHook(property) && property.unhook) {
+	                if (!hooks) {
+	                    hooks = {}
+	                }
+
+	                hooks[propName] = property
+	            }
+	        }
+	    }
+
+	    for (var i = 0; i < count; i++) {
+	        var child = children[i]
+	        if (isVNode(child)) {
+	            descendants += child.count || 0
+
+	            if (!hasWidgets && child.hasWidgets) {
+	                hasWidgets = true
+	            }
+
+	            if (!hasThunks && child.hasThunks) {
+	                hasThunks = true
+	            }
+
+	            if (!descendantHooks && (child.hooks || child.descendantHooks)) {
+	                descendantHooks = true
+	            }
+	        } else if (!hasWidgets && isWidget(child)) {
+	            if (typeof child.destroy === "function") {
+	                hasWidgets = true
+	            }
+	        } else if (!hasThunks && isThunk(child)) {
+	            hasThunks = true;
+	        }
+	    }
+
+	    this.count = count + descendants
+	    this.hasWidgets = hasWidgets
+	    this.hasThunks = hasThunks
+	    this.hooks = hooks
+	    this.descendantHooks = descendantHooks
+	}
+
+	VirtualNode.prototype.version = version
+	VirtualNode.prototype.type = "VirtualNode"
+
+
+/***/ },
+/* 42 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(31)
+
+	module.exports = VirtualText
+
+	function VirtualText(text) {
+	    this.text = String(text)
+	}
+
+	VirtualText.prototype.version = version
+	VirtualText.prototype.type = "VirtualText"
+
+
+/***/ },
+/* 43 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = isHook
+
+	function isHook(hook) {
+	    return hook &&
+	      (typeof hook.hook === "function" && !hook.hasOwnProperty("hook") ||
+	       typeof hook.unhook === "function" && !hook.hasOwnProperty("unhook"))
+	}
+
+
+/***/ },
+/* 44 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	var split = __webpack_require__(60);
+
+	var classIdSplit = /([\.#]?[a-zA-Z0-9_:-]+)/;
+	var notClassId = /^\.|#/;
+
+	module.exports = parseTag;
+
+	function parseTag(tag, props) {
+	    if (!tag) {
+	        return 'DIV';
+	    }
+
+	    var noId = !(props.hasOwnProperty('id'));
+
+	    var tagParts = split(tag, classIdSplit);
+	    var tagName = null;
+
+	    if (notClassId.test(tagParts[1])) {
+	        tagName = 'DIV';
+	    }
+
+	    var classes, part, type, i;
+
+	    for (i = 0; i < tagParts.length; i++) {
+	        part = tagParts[i];
+
+	        if (!part) {
+	            continue;
+	        }
+
+	        type = part.charAt(0);
+
+	        if (!tagName) {
+	            tagName = part;
+	        } else if (type === '.') {
+	            classes = classes || [];
+	            classes.push(part.substring(1, part.length));
+	        } else if (type === '#' && noId) {
+	            props.id = part.substring(1, part.length);
+	        }
+	    }
+
+	    if (classes) {
+	        if (props.className) {
+	            classes.push(props.className);
+	        }
+
+	        props.className = classes.join(' ');
+	    }
+
+	    return props.namespace ? tagName : tagName.toUpperCase();
+	}
+
+
+/***/ },
+/* 45 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	module.exports = SoftSetHook;
+
+	function SoftSetHook(value) {
+	    if (!(this instanceof SoftSetHook)) {
+	        return new SoftSetHook(value);
+	    }
+
+	    this.value = value;
+	}
+
+	SoftSetHook.prototype.hook = function (node, propertyName) {
+	    if (node[propertyName] !== this.value) {
+	        node[propertyName] = this.value;
+	    }
+	};
+
+
+/***/ },
+/* 46 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	var EvStore = __webpack_require__(59);
+
+	module.exports = EvHook;
+
+	function EvHook(value) {
+	    if (!(this instanceof EvHook)) {
+	        return new EvHook(value);
+	    }
+
+	    this.value = value;
+	}
+
+	EvHook.prototype.hook = function (node, propertyName) {
+	    var es = EvStore(node);
+	    var propName = propertyName.substr(3);
+
+	    es[propName] = this.value;
+	};
+
+	EvHook.prototype.unhook = function(node, propertyName) {
+	    var es = EvStore(node);
+	    var propName = propertyName.substr(3);
+
+	    es[propName] = undefined;
+	};
+
+
+/***/ },
+/* 47 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var isObject = __webpack_require__(58)
+	var isHook = __webpack_require__(43)
 
 	module.exports = applyProperties
 
@@ -13565,7 +14154,7 @@ module.exports =
 
 
 /***/ },
-/* 37 */
+/* 48 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Maps a virtual DOM tree onto a real DOM tree in an efficient manner.
@@ -13656,16 +14245,16 @@ module.exports =
 
 
 /***/ },
-/* 38 */
+/* 49 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var applyProperties = __webpack_require__(36)
+	var applyProperties = __webpack_require__(47)
 
-	var isWidget = __webpack_require__(17)
-	var VPatch = __webpack_require__(32)
+	var isWidget = __webpack_require__(18)
+	var VPatch = __webpack_require__(37)
 
 	var render = __webpack_require__(28)
-	var updateWidget = __webpack_require__(48)
+	var updateWidget = __webpack_require__(55)
 
 	module.exports = applyPatch
 
@@ -13845,230 +14434,253 @@ module.exports =
 
 
 /***/ },
-/* 39 */
+/* 50 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var version = __webpack_require__(29)
-	var isVNode = __webpack_require__(15)
-	var isWidget = __webpack_require__(17)
-	var isThunk = __webpack_require__(33)
-	var isVHook = __webpack_require__(41)
+	// Load modules
 
-	module.exports = VirtualNode
+	var Utils = __webpack_require__(56);
 
-	var noProperties = {}
-	var noChildren = []
 
-	function VirtualNode(tagName, properties, children, key, namespace) {
-	    this.tagName = tagName
-	    this.properties = properties || noProperties
-	    this.children = children || noChildren
-	    this.key = key != null ? String(key) : undefined
-	    this.namespace = (typeof namespace === "string") ? namespace : null
+	// Declare internals
 
-	    var count = (children && children.length) || 0
-	    var descendants = 0
-	    var hasWidgets = false
-	    var hasThunks = false
-	    var descendantHooks = false
-	    var hooks
+	var internals = {
+	    delimiter: '&',
+	    indices: true
+	};
 
-	    for (var propName in properties) {
-	        if (properties.hasOwnProperty(propName)) {
-	            var property = properties[propName]
-	            if (isVHook(property) && property.unhook) {
-	                if (!hooks) {
-	                    hooks = {}
-	                }
 
-	                hooks[propName] = property
-	            }
+	internals.stringify = function (obj, prefix, options) {
+
+	    if (Utils.isBuffer(obj)) {
+	        obj = obj.toString();
+	    }
+	    else if (obj instanceof Date) {
+	        obj = obj.toISOString();
+	    }
+	    else if (obj === null) {
+	        obj = '';
+	    }
+
+	    if (typeof obj === 'string' ||
+	        typeof obj === 'number' ||
+	        typeof obj === 'boolean') {
+
+	        return [encodeURIComponent(prefix) + '=' + encodeURIComponent(obj)];
+	    }
+
+	    var values = [];
+
+	    if (typeof obj === 'undefined') {
+	        return values;
+	    }
+
+	    var objKeys = Object.keys(obj);
+	    for (var i = 0, il = objKeys.length; i < il; ++i) {
+	        var key = objKeys[i];
+	        if (!options.indices &&
+	            Array.isArray(obj)) {
+
+	            values = values.concat(internals.stringify(obj[key], prefix, options));
+	        }
+	        else {
+	            values = values.concat(internals.stringify(obj[key], prefix + '[' + key + ']', options));
 	        }
 	    }
 
-	    for (var i = 0; i < count; i++) {
-	        var child = children[i]
-	        if (isVNode(child)) {
-	            descendants += child.count || 0
+	    return values;
+	};
 
-	            if (!hasWidgets && child.hasWidgets) {
-	                hasWidgets = true
-	            }
 
-	            if (!hasThunks && child.hasThunks) {
-	                hasThunks = true
-	            }
+	module.exports = function (obj, options) {
 
-	            if (!descendantHooks && (child.hooks || child.descendantHooks)) {
-	                descendantHooks = true
-	            }
-	        } else if (!hasWidgets && isWidget(child)) {
-	            if (typeof child.destroy === "function") {
-	                hasWidgets = true
-	            }
-	        } else if (!hasThunks && isThunk(child)) {
-	            hasThunks = true;
-	        }
+	    options = options || {};
+	    var delimiter = typeof options.delimiter === 'undefined' ? internals.delimiter : options.delimiter;
+	    options.indices = typeof options.indices === 'boolean' ? options.indices : internals.indices;
+
+	    var keys = [];
+
+	    if (typeof obj !== 'object' ||
+	        obj === null) {
+
+	        return '';
 	    }
 
-	    this.count = count + descendants
-	    this.hasWidgets = hasWidgets
-	    this.hasThunks = hasThunks
-	    this.hooks = hooks
-	    this.descendantHooks = descendantHooks
-	}
-
-	VirtualNode.prototype.version = version
-	VirtualNode.prototype.type = "VirtualNode"
-
-
-/***/ },
-/* 40 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(29)
-
-	module.exports = VirtualText
-
-	function VirtualText(text) {
-	    this.text = String(text)
-	}
-
-	VirtualText.prototype.version = version
-	VirtualText.prototype.type = "VirtualText"
-
-
-/***/ },
-/* 41 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = isHook
-
-	function isHook(hook) {
-	    return hook &&
-	      (typeof hook.hook === "function" && !hook.hasOwnProperty("hook") ||
-	       typeof hook.unhook === "function" && !hook.hasOwnProperty("unhook"))
-	}
-
-
-/***/ },
-/* 42 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	var split = __webpack_require__(52);
-
-	var classIdSplit = /([\.#]?[a-zA-Z0-9_:-]+)/;
-	var notClassId = /^\.|#/;
-
-	module.exports = parseTag;
-
-	function parseTag(tag, props) {
-	    if (!tag) {
-	        return 'DIV';
+	    var objKeys = Object.keys(obj);
+	    for (var i = 0, il = objKeys.length; i < il; ++i) {
+	        var key = objKeys[i];
+	        keys = keys.concat(internals.stringify(obj[key], key, options));
 	    }
 
-	    var noId = !(props.hasOwnProperty('id'));
-
-	    var tagParts = split(tag, classIdSplit);
-	    var tagName = null;
-
-	    if (notClassId.test(tagParts[1])) {
-	        tagName = 'DIV';
-	    }
-
-	    var classes, part, type, i;
-
-	    for (i = 0; i < tagParts.length; i++) {
-	        part = tagParts[i];
-
-	        if (!part) {
-	            continue;
-	        }
-
-	        type = part.charAt(0);
-
-	        if (!tagName) {
-	            tagName = part;
-	        } else if (type === '.') {
-	            classes = classes || [];
-	            classes.push(part.substring(1, part.length));
-	        } else if (type === '#' && noId) {
-	            props.id = part.substring(1, part.length);
-	        }
-	    }
-
-	    if (classes) {
-	        if (props.className) {
-	            classes.push(props.className);
-	        }
-
-	        props.className = classes.join(' ');
-	    }
-
-	    return props.namespace ? tagName : tagName.toUpperCase();
-	}
-
-
-/***/ },
-/* 43 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	module.exports = SoftSetHook;
-
-	function SoftSetHook(value) {
-	    if (!(this instanceof SoftSetHook)) {
-	        return new SoftSetHook(value);
-	    }
-
-	    this.value = value;
-	}
-
-	SoftSetHook.prototype.hook = function (node, propertyName) {
-	    if (node[propertyName] !== this.value) {
-	        node[propertyName] = this.value;
-	    }
+	    return keys.join(delimiter);
 	};
 
 
 /***/ },
-/* 44 */
+/* 51 */
 /***/ function(module, exports, __webpack_require__) {
 
-	'use strict';
+	// Load modules
 
-	var EvStore = __webpack_require__(51);
+	var Utils = __webpack_require__(56);
 
-	module.exports = EvHook;
 
-	function EvHook(value) {
-	    if (!(this instanceof EvHook)) {
-	        return new EvHook(value);
-	    }
+	// Declare internals
 
-	    this.value = value;
-	}
-
-	EvHook.prototype.hook = function (node, propertyName) {
-	    var es = EvStore(node);
-	    var propName = propertyName.substr(3);
-
-	    es[propName] = this.value;
+	var internals = {
+	    delimiter: '&',
+	    depth: 5,
+	    arrayLimit: 20,
+	    parameterLimit: 1000
 	};
 
-	EvHook.prototype.unhook = function(node, propertyName) {
-	    var es = EvStore(node);
-	    var propName = propertyName.substr(3);
 
-	    es[propName] = undefined;
+	internals.parseValues = function (str, options) {
+
+	    var obj = {};
+	    var parts = str.split(options.delimiter, options.parameterLimit === Infinity ? undefined : options.parameterLimit);
+
+	    for (var i = 0, il = parts.length; i < il; ++i) {
+	        var part = parts[i];
+	        var pos = part.indexOf(']=') === -1 ? part.indexOf('=') : part.indexOf(']=') + 1;
+
+	        if (pos === -1) {
+	            obj[Utils.decode(part)] = '';
+	        }
+	        else {
+	            var key = Utils.decode(part.slice(0, pos));
+	            var val = Utils.decode(part.slice(pos + 1));
+
+	            if (!obj.hasOwnProperty(key)) {
+	                obj[key] = val;
+	            }
+	            else {
+	                obj[key] = [].concat(obj[key]).concat(val);
+	            }
+	        }
+	    }
+
+	    return obj;
+	};
+
+
+	internals.parseObject = function (chain, val, options) {
+
+	    if (!chain.length) {
+	        return val;
+	    }
+
+	    var root = chain.shift();
+
+	    var obj = {};
+	    if (root === '[]') {
+	        obj = [];
+	        obj = obj.concat(internals.parseObject(chain, val, options));
+	    }
+	    else {
+	        var cleanRoot = root[0] === '[' && root[root.length - 1] === ']' ? root.slice(1, root.length - 1) : root;
+	        var index = parseInt(cleanRoot, 10);
+	        var indexString = '' + index;
+	        if (!isNaN(index) &&
+	            root !== cleanRoot &&
+	            indexString === cleanRoot &&
+	            index >= 0 &&
+	            index <= options.arrayLimit) {
+
+	            obj = [];
+	            obj[index] = internals.parseObject(chain, val, options);
+	        }
+	        else {
+	            obj[cleanRoot] = internals.parseObject(chain, val, options);
+	        }
+	    }
+
+	    return obj;
+	};
+
+
+	internals.parseKeys = function (key, val, options) {
+
+	    if (!key) {
+	        return;
+	    }
+
+	    // The regex chunks
+
+	    var parent = /^([^\[\]]*)/;
+	    var child = /(\[[^\[\]]*\])/g;
+
+	    // Get the parent
+
+	    var segment = parent.exec(key);
+
+	    // Don't allow them to overwrite object prototype properties
+
+	    if (Object.prototype.hasOwnProperty(segment[1])) {
+	        return;
+	    }
+
+	    // Stash the parent if it exists
+
+	    var keys = [];
+	    if (segment[1]) {
+	        keys.push(segment[1]);
+	    }
+
+	    // Loop through children appending to the array until we hit depth
+
+	    var i = 0;
+	    while ((segment = child.exec(key)) !== null && i < options.depth) {
+
+	        ++i;
+	        if (!Object.prototype.hasOwnProperty(segment[1].replace(/\[|\]/g, ''))) {
+	            keys.push(segment[1]);
+	        }
+	    }
+
+	    // If there's a remainder, just add whatever is left
+
+	    if (segment) {
+	        keys.push('[' + key.slice(segment.index) + ']');
+	    }
+
+	    return internals.parseObject(keys, val, options);
+	};
+
+
+	module.exports = function (str, options) {
+
+	    if (str === '' ||
+	        str === null ||
+	        typeof str === 'undefined') {
+
+	        return {};
+	    }
+
+	    options = options || {};
+	    options.delimiter = typeof options.delimiter === 'string' || Utils.isRegExp(options.delimiter) ? options.delimiter : internals.delimiter;
+	    options.depth = typeof options.depth === 'number' ? options.depth : internals.depth;
+	    options.arrayLimit = typeof options.arrayLimit === 'number' ? options.arrayLimit : internals.arrayLimit;
+	    options.parameterLimit = typeof options.parameterLimit === 'number' ? options.parameterLimit : internals.parameterLimit;
+
+	    var tempObj = typeof str === 'string' ? internals.parseValues(str, options) : str;
+	    var obj = {};
+
+	    // Iterate over the keys and setup the new object
+
+	    var keys = Object.keys(tempObj);
+	    for (var i = 0, il = keys.length; i < il; ++i) {
+	        var key = keys[i];
+	        var newObj = internals.parseKeys(key, tempObj[key], options);
+	        obj = Utils.merge(obj, newObj);
+	    }
+
+	    return Utils.compact(obj);
 	};
 
 
 /***/ },
-/* 45 */
+/* 52 */
 /***/ function(module, exports, __webpack_require__) {
 
 	function head (a) {
@@ -14375,7 +14987,7 @@ module.exports =
 
 
 /***/ },
-/* 46 */
+/* 53 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var nativeIsArray = Array.isArray
@@ -14389,12 +15001,12 @@ module.exports =
 
 
 /***/ },
-/* 47 */
+/* 54 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {var topLevel = typeof global !== 'undefined' ? global :
 	    typeof window !== 'undefined' ? window : {}
-	var minDoc = __webpack_require__(49);
+	var minDoc = __webpack_require__(57);
 
 	if (typeof document !== 'undefined') {
 	    module.exports = document;
@@ -14411,10 +15023,10 @@ module.exports =
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 48 */
+/* 55 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isWidget = __webpack_require__(17)
+	var isWidget = __webpack_require__(18)
 
 	module.exports = updateWidget
 
@@ -14432,13 +15044,151 @@ module.exports =
 
 
 /***/ },
-/* 49 */
+/* 56 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// Load modules
+
+
+	// Declare internals
+
+	var internals = {};
+
+
+	exports.arrayToObject = function (source) {
+
+	    var obj = {};
+	    for (var i = 0, il = source.length; i < il; ++i) {
+	        if (typeof source[i] !== 'undefined') {
+
+	            obj[i] = source[i];
+	        }
+	    }
+
+	    return obj;
+	};
+
+
+	exports.merge = function (target, source) {
+
+	    if (!source) {
+	        return target;
+	    }
+
+	    if (typeof source !== 'object') {
+	        if (Array.isArray(target)) {
+	            target.push(source);
+	        }
+	        else {
+	            target[source] = true;
+	        }
+
+	        return target;
+	    }
+
+	    if (typeof target !== 'object') {
+	        target = [target].concat(source);
+	        return target;
+	    }
+
+	    if (Array.isArray(target) &&
+	        !Array.isArray(source)) {
+
+	        target = exports.arrayToObject(target);
+	    }
+
+	    var keys = Object.keys(source);
+	    for (var k = 0, kl = keys.length; k < kl; ++k) {
+	        var key = keys[k];
+	        var value = source[key];
+
+	        if (!target[key]) {
+	            target[key] = value;
+	        }
+	        else {
+	            target[key] = exports.merge(target[key], value);
+	        }
+	    }
+
+	    return target;
+	};
+
+
+	exports.decode = function (str) {
+
+	    try {
+	        return decodeURIComponent(str.replace(/\+/g, ' '));
+	    } catch (e) {
+	        return str;
+	    }
+	};
+
+
+	exports.compact = function (obj, refs) {
+
+	    if (typeof obj !== 'object' ||
+	        obj === null) {
+
+	        return obj;
+	    }
+
+	    refs = refs || [];
+	    var lookup = refs.indexOf(obj);
+	    if (lookup !== -1) {
+	        return refs[lookup];
+	    }
+
+	    refs.push(obj);
+
+	    if (Array.isArray(obj)) {
+	        var compacted = [];
+
+	        for (var i = 0, il = obj.length; i < il; ++i) {
+	            if (typeof obj[i] !== 'undefined') {
+	                compacted.push(obj[i]);
+	            }
+	        }
+
+	        return compacted;
+	    }
+
+	    var keys = Object.keys(obj);
+	    for (i = 0, il = keys.length; i < il; ++i) {
+	        var key = keys[i];
+	        obj[key] = exports.compact(obj[key], refs);
+	    }
+
+	    return obj;
+	};
+
+
+	exports.isRegExp = function (obj) {
+	    return Object.prototype.toString.call(obj) === '[object RegExp]';
+	};
+
+
+	exports.isBuffer = function (obj) {
+
+	    if (obj === null ||
+	        typeof obj === 'undefined') {
+
+	        return false;
+	    }
+
+	    return !!(obj.constructor &&
+	        obj.constructor.isBuffer &&
+	        obj.constructor.isBuffer(obj));
+	};
+
+
+/***/ },
+/* 57 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* (ignored) */
 
 /***/ },
-/* 50 */
+/* 58 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -14449,12 +15199,12 @@ module.exports =
 
 
 /***/ },
-/* 51 */
+/* 59 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var OneVersionConstraint = __webpack_require__(53);
+	var OneVersionConstraint = __webpack_require__(61);
 
 	var MY_VERSION = '7';
 	OneVersionConstraint('ev-store', MY_VERSION);
@@ -14475,7 +15225,7 @@ module.exports =
 
 
 /***/ },
-/* 52 */
+/* 60 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*!
@@ -14587,12 +15337,12 @@ module.exports =
 
 
 /***/ },
-/* 53 */
+/* 61 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var Individual = __webpack_require__(54);
+	var Individual = __webpack_require__(62);
 
 	module.exports = OneVersion;
 
@@ -14615,7 +15365,7 @@ module.exports =
 
 
 /***/ },
-/* 54 */
+/* 62 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
