@@ -232,9 +232,9 @@ module.exports =
 
 	_ = __webpack_require__(5);
 
-	observStruct = __webpack_require__(8);
+	observStruct = __webpack_require__(7);
 
-	observArray = __webpack_require__(7);
+	observArray = __webpack_require__(8);
 
 	observ = __webpack_require__(9);
 
@@ -414,11 +414,17 @@ module.exports =
 	  };
 
 	  Router.prototype.setUrl = function(url) {
+	    var hasRouted;
+	    hasRouted = this.currentPath;
 	    this.currentPath = url.pathname;
 	    this.currentHash = url.hash;
 	    this.currentSearch = url.search;
 	    if (this.mode === 'pathname') {
-	      window.history.pushState(null, null, url.pathname + url.search);
+	      if (hasRouted) {
+	        window.history.pushState(null, null, url.pathname + url.search);
+	      } else {
+	        window.history.replaceState(null, null, url.pathname + url.search);
+	      }
 	    } else {
 	      window.location.hash = url.pathname + url.search;
 	    }
@@ -12117,97 +12123,6 @@ module.exports =
 /***/ function(module, exports, __webpack_require__) {
 
 	var Observ = __webpack_require__(9)
-
-	// circular dep between ArrayMethods & this file
-	module.exports = ObservArray
-
-	var splice = __webpack_require__(20)
-	var put = __webpack_require__(21)
-	var set = __webpack_require__(22)
-	var transaction = __webpack_require__(23)
-	var ArrayMethods = __webpack_require__(24)
-	var addListener = __webpack_require__(25)
-
-
-	/*  ObservArray := (Array<T>) => Observ<
-	        Array<T> & { _diff: Array }
-	    > & {
-	        splice: (index: Number, amount: Number, rest...: T) =>
-	            Array<T>,
-	        push: (values...: T) => Number,
-	        filter: (lambda: Function, thisValue: Any) => Array<T>,
-	        indexOf: (item: T, fromIndex: Number) => Number
-	    }
-
-	    Fix to make it more like ObservHash.
-
-	    I.e. you write observables into it.
-	        reading methods take plain JS objects to read
-	        and the value of the array is always an array of plain
-	        objsect.
-
-	        The observ array instance itself would have indexed
-	        properties that are the observables
-	*/
-	function ObservArray(initialList) {
-	    // list is the internal mutable list observ instances that
-	    // all methods on `obs` dispatch to.
-	    var list = initialList
-	    var initialState = []
-
-	    // copy state out of initialList into initialState
-	    list.forEach(function (observ, index) {
-	        initialState[index] = typeof observ === "function" ?
-	            observ() : observ
-	    })
-
-	    var obs = Observ(initialState)
-	    obs.splice = splice
-
-	    // override set and store original for later use
-	    obs._observSet = obs.set
-	    obs.set = set
-
-	    obs.get = get
-	    obs.getLength = getLength
-	    obs.put = put
-	    obs.transaction = transaction
-
-	    // you better not mutate this list directly
-	    // this is the list of observs instances
-	    obs._list = list
-
-	    var removeListeners = list.map(function (observ) {
-	        return typeof observ === "function" ?
-	            addListener(obs, observ) :
-	            null
-	    });
-	    // this is a list of removal functions that must be called
-	    // when observ instances are removed from `obs.list`
-	    // not calling this means we do not GC our observ change
-	    // listeners. Which causes rage bugs
-	    obs._removeListeners = removeListeners
-
-	    obs._type = "observ-array"
-	    obs._version = "3"
-
-	    return ArrayMethods(obs, list)
-	}
-
-	function get(index) {
-	    return this._list[index]
-	}
-
-	function getLength() {
-	    return this._list.length
-	}
-
-
-/***/ },
-/* 8 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var Observ = __webpack_require__(9)
 	var extend = __webpack_require__(32)
 
 	var blackList = {
@@ -12318,6 +12233,97 @@ module.exports =
 
 
 /***/ },
+/* 8 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Observ = __webpack_require__(9)
+
+	// circular dep between ArrayMethods & this file
+	module.exports = ObservArray
+
+	var splice = __webpack_require__(20)
+	var put = __webpack_require__(21)
+	var set = __webpack_require__(22)
+	var transaction = __webpack_require__(23)
+	var ArrayMethods = __webpack_require__(24)
+	var addListener = __webpack_require__(25)
+
+
+	/*  ObservArray := (Array<T>) => Observ<
+	        Array<T> & { _diff: Array }
+	    > & {
+	        splice: (index: Number, amount: Number, rest...: T) =>
+	            Array<T>,
+	        push: (values...: T) => Number,
+	        filter: (lambda: Function, thisValue: Any) => Array<T>,
+	        indexOf: (item: T, fromIndex: Number) => Number
+	    }
+
+	    Fix to make it more like ObservHash.
+
+	    I.e. you write observables into it.
+	        reading methods take plain JS objects to read
+	        and the value of the array is always an array of plain
+	        objsect.
+
+	        The observ array instance itself would have indexed
+	        properties that are the observables
+	*/
+	function ObservArray(initialList) {
+	    // list is the internal mutable list observ instances that
+	    // all methods on `obs` dispatch to.
+	    var list = initialList
+	    var initialState = []
+
+	    // copy state out of initialList into initialState
+	    list.forEach(function (observ, index) {
+	        initialState[index] = typeof observ === "function" ?
+	            observ() : observ
+	    })
+
+	    var obs = Observ(initialState)
+	    obs.splice = splice
+
+	    // override set and store original for later use
+	    obs._observSet = obs.set
+	    obs.set = set
+
+	    obs.get = get
+	    obs.getLength = getLength
+	    obs.put = put
+	    obs.transaction = transaction
+
+	    // you better not mutate this list directly
+	    // this is the list of observs instances
+	    obs._list = list
+
+	    var removeListeners = list.map(function (observ) {
+	        return typeof observ === "function" ?
+	            addListener(obs, observ) :
+	            null
+	    });
+	    // this is a list of removal functions that must be called
+	    // when observ instances are removed from `obs.list`
+	    // not calling this means we do not GC our observ change
+	    // listeners. Which causes rage bugs
+	    obs._removeListeners = removeListeners
+
+	    obs._type = "observ-array"
+	    obs._version = "3"
+
+	    return ArrayMethods(obs, list)
+	}
+
+	function get(index) {
+	    return this._list[index]
+	}
+
+	function getLength() {
+	    return this._list.length
+	}
+
+
+/***/ },
 /* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -12372,7 +12378,7 @@ module.exports =
 /* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var patch = __webpack_require__(28)
+	var patch = __webpack_require__(29)
 
 	module.exports = patch
 
@@ -12381,7 +12387,7 @@ module.exports =
 /* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var createElement = __webpack_require__(29)
+	var createElement = __webpack_require__(28)
 
 	module.exports = createElement
 
@@ -12760,7 +12766,7 @@ module.exports =
 /* 24 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var ObservArray = __webpack_require__(7)
+	var ObservArray = __webpack_require__(8)
 
 	var slice = Array.prototype.slice
 
@@ -13008,14 +13014,14 @@ module.exports =
 
 	var isArray = __webpack_require__(53)
 
-	var VPatch = __webpack_require__(46)
+	var VPatch = __webpack_require__(44)
 	var isVNode = __webpack_require__(16)
 	var isVText = __webpack_require__(17)
 	var isWidget = __webpack_require__(18)
 	var isThunk = __webpack_require__(40)
-	var handleThunk = __webpack_require__(47)
+	var handleThunk = __webpack_require__(45)
 
-	var diffProps = __webpack_require__(48)
+	var diffProps = __webpack_require__(46)
 
 	module.exports = diff
 
@@ -13336,10 +13342,62 @@ module.exports =
 /***/ function(module, exports, __webpack_require__) {
 
 	var document = __webpack_require__(54)
+
+	var applyProperties = __webpack_require__(47)
+
+	var isVNode = __webpack_require__(16)
+	var isVText = __webpack_require__(17)
+	var isWidget = __webpack_require__(18)
+	var handleThunk = __webpack_require__(45)
+
+	module.exports = createElement
+
+	function createElement(vnode, opts) {
+	    var doc = opts ? opts.document || document : document
+	    var warn = opts ? opts.warn : null
+
+	    vnode = handleThunk(vnode).a
+
+	    if (isWidget(vnode)) {
+	        return vnode.init()
+	    } else if (isVText(vnode)) {
+	        return doc.createTextNode(vnode.text)
+	    } else if (!isVNode(vnode)) {
+	        if (warn) {
+	            warn("Item is not a valid virtual dom node", vnode)
+	        }
+	        return null
+	    }
+
+	    var node = (vnode.namespace === null) ?
+	        doc.createElement(vnode.tagName) :
+	        doc.createElementNS(vnode.namespace, vnode.tagName)
+
+	    var props = vnode.properties
+	    applyProperties(node, props)
+
+	    var children = vnode.children
+
+	    for (var i = 0; i < children.length; i++) {
+	        var childNode = createElement(children[i], opts)
+	        if (childNode) {
+	            node.appendChild(childNode)
+	        }
+	    }
+
+	    return node
+	}
+
+
+/***/ },
+/* 29 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var document = __webpack_require__(54)
 	var isArray = __webpack_require__(53)
 
-	var domIndex = __webpack_require__(44)
-	var patchOp = __webpack_require__(45)
+	var domIndex = __webpack_require__(48)
+	var patchOp = __webpack_require__(49)
 	module.exports = patch
 
 	function patch(rootNode, patches) {
@@ -13410,58 +13468,6 @@ module.exports =
 	    }
 
 	    return indices
-	}
-
-
-/***/ },
-/* 29 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var document = __webpack_require__(54)
-
-	var applyProperties = __webpack_require__(49)
-
-	var isVNode = __webpack_require__(16)
-	var isVText = __webpack_require__(17)
-	var isWidget = __webpack_require__(18)
-	var handleThunk = __webpack_require__(47)
-
-	module.exports = createElement
-
-	function createElement(vnode, opts) {
-	    var doc = opts ? opts.document || document : document
-	    var warn = opts ? opts.warn : null
-
-	    vnode = handleThunk(vnode).a
-
-	    if (isWidget(vnode)) {
-	        return vnode.init()
-	    } else if (isVText(vnode)) {
-	        return doc.createTextNode(vnode.text)
-	    } else if (!isVNode(vnode)) {
-	        if (warn) {
-	            warn("Item is not a valid virtual dom node", vnode)
-	        }
-	        return null
-	    }
-
-	    var node = (vnode.namespace === null) ?
-	        doc.createElement(vnode.tagName) :
-	        doc.createElementNS(vnode.namespace, vnode.tagName)
-
-	    var props = vnode.properties
-	    applyProperties(node, props)
-
-	    var children = vnode.children
-
-	    for (var i = 0; i < children.length; i++) {
-	        var childNode = createElement(children[i], opts)
-	        if (childNode) {
-	            node.appendChild(childNode)
-	        }
-	    }
-
-	    return node
 	}
 
 
@@ -13885,7 +13891,7 @@ module.exports =
 
 	'use strict';
 
-	var EvStore = __webpack_require__(58);
+	var EvStore = __webpack_require__(59);
 
 	module.exports = EvHook;
 
@@ -13914,6 +13920,247 @@ module.exports =
 
 /***/ },
 /* 44 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var version = __webpack_require__(31)
+
+	VirtualPatch.NONE = 0
+	VirtualPatch.VTEXT = 1
+	VirtualPatch.VNODE = 2
+	VirtualPatch.WIDGET = 3
+	VirtualPatch.PROPS = 4
+	VirtualPatch.ORDER = 5
+	VirtualPatch.INSERT = 6
+	VirtualPatch.REMOVE = 7
+	VirtualPatch.THUNK = 8
+
+	module.exports = VirtualPatch
+
+	function VirtualPatch(type, vNode, patch) {
+	    this.type = Number(type)
+	    this.vNode = vNode
+	    this.patch = patch
+	}
+
+	VirtualPatch.prototype.version = version
+	VirtualPatch.prototype.type = "VirtualPatch"
+
+
+/***/ },
+/* 45 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var isVNode = __webpack_require__(16)
+	var isVText = __webpack_require__(17)
+	var isWidget = __webpack_require__(18)
+	var isThunk = __webpack_require__(40)
+
+	module.exports = handleThunk
+
+	function handleThunk(a, b) {
+	    var renderedA = a
+	    var renderedB = b
+
+	    if (isThunk(b)) {
+	        renderedB = renderThunk(b, a)
+	    }
+
+	    if (isThunk(a)) {
+	        renderedA = renderThunk(a, null)
+	    }
+
+	    return {
+	        a: renderedA,
+	        b: renderedB
+	    }
+	}
+
+	function renderThunk(thunk, previous) {
+	    var renderedThunk = thunk.vnode
+
+	    if (!renderedThunk) {
+	        renderedThunk = thunk.vnode = thunk.render(previous)
+	    }
+
+	    if (!(isVNode(renderedThunk) ||
+	            isVText(renderedThunk) ||
+	            isWidget(renderedThunk))) {
+	        throw new Error("thunk did not return a valid node");
+	    }
+
+	    return renderedThunk
+	}
+
+
+/***/ },
+/* 46 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var isObject = __webpack_require__(58)
+	var isHook = __webpack_require__(39)
+
+	module.exports = diffProps
+
+	function diffProps(a, b) {
+	    var diff
+
+	    for (var aKey in a) {
+	        if (!(aKey in b)) {
+	            diff = diff || {}
+	            diff[aKey] = undefined
+	        }
+
+	        var aValue = a[aKey]
+	        var bValue = b[aKey]
+
+	        if (aValue === bValue) {
+	            continue
+	        } else if (isObject(aValue) && isObject(bValue)) {
+	            if (getPrototype(bValue) !== getPrototype(aValue)) {
+	                diff = diff || {}
+	                diff[aKey] = bValue
+	            } else if (isHook(bValue)) {
+	                 diff = diff || {}
+	                 diff[aKey] = bValue
+	            } else {
+	                var objectDiff = diffProps(aValue, bValue)
+	                if (objectDiff) {
+	                    diff = diff || {}
+	                    diff[aKey] = objectDiff
+	                }
+	            }
+	        } else {
+	            diff = diff || {}
+	            diff[aKey] = bValue
+	        }
+	    }
+
+	    for (var bKey in b) {
+	        if (!(bKey in a)) {
+	            diff = diff || {}
+	            diff[bKey] = b[bKey]
+	        }
+	    }
+
+	    return diff
+	}
+
+	function getPrototype(value) {
+	  if (Object.getPrototypeOf) {
+	    return Object.getPrototypeOf(value)
+	  } else if (value.__proto__) {
+	    return value.__proto__
+	  } else if (value.constructor) {
+	    return value.constructor.prototype
+	  }
+	}
+
+
+/***/ },
+/* 47 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var isObject = __webpack_require__(58)
+	var isHook = __webpack_require__(39)
+
+	module.exports = applyProperties
+
+	function applyProperties(node, props, previous) {
+	    for (var propName in props) {
+	        var propValue = props[propName]
+
+	        if (propValue === undefined) {
+	            removeProperty(node, propName, propValue, previous);
+	        } else if (isHook(propValue)) {
+	            removeProperty(node, propName, propValue, previous)
+	            if (propValue.hook) {
+	                propValue.hook(node,
+	                    propName,
+	                    previous ? previous[propName] : undefined)
+	            }
+	        } else {
+	            if (isObject(propValue)) {
+	                patchObject(node, props, previous, propName, propValue);
+	            } else {
+	                node[propName] = propValue
+	            }
+	        }
+	    }
+	}
+
+	function removeProperty(node, propName, propValue, previous) {
+	    if (previous) {
+	        var previousValue = previous[propName]
+
+	        if (!isHook(previousValue)) {
+	            if (propName === "attributes") {
+	                for (var attrName in previousValue) {
+	                    node.removeAttribute(attrName)
+	                }
+	            } else if (propName === "style") {
+	                for (var i in previousValue) {
+	                    node.style[i] = ""
+	                }
+	            } else if (typeof previousValue === "string") {
+	                node[propName] = ""
+	            } else {
+	                node[propName] = null
+	            }
+	        } else if (previousValue.unhook) {
+	            previousValue.unhook(node, propName, propValue)
+	        }
+	    }
+	}
+
+	function patchObject(node, props, previous, propName, propValue) {
+	    var previousValue = previous ? previous[propName] : undefined
+
+	    // Set attributes
+	    if (propName === "attributes") {
+	        for (var attrName in propValue) {
+	            var attrValue = propValue[attrName]
+
+	            if (attrValue === undefined) {
+	                node.removeAttribute(attrName)
+	            } else {
+	                node.setAttribute(attrName, attrValue)
+	            }
+	        }
+
+	        return
+	    }
+
+	    if(previousValue && isObject(previousValue) &&
+	        getPrototype(previousValue) !== getPrototype(propValue)) {
+	        node[propName] = propValue
+	        return
+	    }
+
+	    if (!isObject(node[propName])) {
+	        node[propName] = {}
+	    }
+
+	    var replacer = propName === "style" ? "" : undefined
+
+	    for (var k in propValue) {
+	        var value = propValue[k]
+	        node[propName][k] = (value === undefined) ? replacer : value
+	    }
+	}
+
+	function getPrototype(value) {
+	    if (Object.getPrototypeOf) {
+	        return Object.getPrototypeOf(value)
+	    } else if (value.__proto__) {
+	        return value.__proto__
+	    } else if (value.constructor) {
+	        return value.constructor.prototype
+	    }
+	}
+
+
+/***/ },
+/* 48 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Maps a virtual DOM tree onto a real DOM tree in an efficient manner.
@@ -14004,15 +14251,15 @@ module.exports =
 
 
 /***/ },
-/* 45 */
+/* 49 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var applyProperties = __webpack_require__(49)
+	var applyProperties = __webpack_require__(47)
 
 	var isWidget = __webpack_require__(18)
-	var VPatch = __webpack_require__(46)
+	var VPatch = __webpack_require__(44)
 
-	var render = __webpack_require__(29)
+	var render = __webpack_require__(28)
 	var updateWidget = __webpack_require__(55)
 
 	module.exports = applyPatch
@@ -14189,247 +14436,6 @@ module.exports =
 	    }
 
 	    return newRoot;
-	}
-
-
-/***/ },
-/* 46 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var version = __webpack_require__(31)
-
-	VirtualPatch.NONE = 0
-	VirtualPatch.VTEXT = 1
-	VirtualPatch.VNODE = 2
-	VirtualPatch.WIDGET = 3
-	VirtualPatch.PROPS = 4
-	VirtualPatch.ORDER = 5
-	VirtualPatch.INSERT = 6
-	VirtualPatch.REMOVE = 7
-	VirtualPatch.THUNK = 8
-
-	module.exports = VirtualPatch
-
-	function VirtualPatch(type, vNode, patch) {
-	    this.type = Number(type)
-	    this.vNode = vNode
-	    this.patch = patch
-	}
-
-	VirtualPatch.prototype.version = version
-	VirtualPatch.prototype.type = "VirtualPatch"
-
-
-/***/ },
-/* 47 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var isVNode = __webpack_require__(16)
-	var isVText = __webpack_require__(17)
-	var isWidget = __webpack_require__(18)
-	var isThunk = __webpack_require__(40)
-
-	module.exports = handleThunk
-
-	function handleThunk(a, b) {
-	    var renderedA = a
-	    var renderedB = b
-
-	    if (isThunk(b)) {
-	        renderedB = renderThunk(b, a)
-	    }
-
-	    if (isThunk(a)) {
-	        renderedA = renderThunk(a, null)
-	    }
-
-	    return {
-	        a: renderedA,
-	        b: renderedB
-	    }
-	}
-
-	function renderThunk(thunk, previous) {
-	    var renderedThunk = thunk.vnode
-
-	    if (!renderedThunk) {
-	        renderedThunk = thunk.vnode = thunk.render(previous)
-	    }
-
-	    if (!(isVNode(renderedThunk) ||
-	            isVText(renderedThunk) ||
-	            isWidget(renderedThunk))) {
-	        throw new Error("thunk did not return a valid node");
-	    }
-
-	    return renderedThunk
-	}
-
-
-/***/ },
-/* 48 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var isObject = __webpack_require__(59)
-	var isHook = __webpack_require__(39)
-
-	module.exports = diffProps
-
-	function diffProps(a, b) {
-	    var diff
-
-	    for (var aKey in a) {
-	        if (!(aKey in b)) {
-	            diff = diff || {}
-	            diff[aKey] = undefined
-	        }
-
-	        var aValue = a[aKey]
-	        var bValue = b[aKey]
-
-	        if (aValue === bValue) {
-	            continue
-	        } else if (isObject(aValue) && isObject(bValue)) {
-	            if (getPrototype(bValue) !== getPrototype(aValue)) {
-	                diff = diff || {}
-	                diff[aKey] = bValue
-	            } else if (isHook(bValue)) {
-	                 diff = diff || {}
-	                 diff[aKey] = bValue
-	            } else {
-	                var objectDiff = diffProps(aValue, bValue)
-	                if (objectDiff) {
-	                    diff = diff || {}
-	                    diff[aKey] = objectDiff
-	                }
-	            }
-	        } else {
-	            diff = diff || {}
-	            diff[aKey] = bValue
-	        }
-	    }
-
-	    for (var bKey in b) {
-	        if (!(bKey in a)) {
-	            diff = diff || {}
-	            diff[bKey] = b[bKey]
-	        }
-	    }
-
-	    return diff
-	}
-
-	function getPrototype(value) {
-	  if (Object.getPrototypeOf) {
-	    return Object.getPrototypeOf(value)
-	  } else if (value.__proto__) {
-	    return value.__proto__
-	  } else if (value.constructor) {
-	    return value.constructor.prototype
-	  }
-	}
-
-
-/***/ },
-/* 49 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var isObject = __webpack_require__(59)
-	var isHook = __webpack_require__(39)
-
-	module.exports = applyProperties
-
-	function applyProperties(node, props, previous) {
-	    for (var propName in props) {
-	        var propValue = props[propName]
-
-	        if (propValue === undefined) {
-	            removeProperty(node, propName, propValue, previous);
-	        } else if (isHook(propValue)) {
-	            removeProperty(node, propName, propValue, previous)
-	            if (propValue.hook) {
-	                propValue.hook(node,
-	                    propName,
-	                    previous ? previous[propName] : undefined)
-	            }
-	        } else {
-	            if (isObject(propValue)) {
-	                patchObject(node, props, previous, propName, propValue);
-	            } else {
-	                node[propName] = propValue
-	            }
-	        }
-	    }
-	}
-
-	function removeProperty(node, propName, propValue, previous) {
-	    if (previous) {
-	        var previousValue = previous[propName]
-
-	        if (!isHook(previousValue)) {
-	            if (propName === "attributes") {
-	                for (var attrName in previousValue) {
-	                    node.removeAttribute(attrName)
-	                }
-	            } else if (propName === "style") {
-	                for (var i in previousValue) {
-	                    node.style[i] = ""
-	                }
-	            } else if (typeof previousValue === "string") {
-	                node[propName] = ""
-	            } else {
-	                node[propName] = null
-	            }
-	        } else if (previousValue.unhook) {
-	            previousValue.unhook(node, propName, propValue)
-	        }
-	    }
-	}
-
-	function patchObject(node, props, previous, propName, propValue) {
-	    var previousValue = previous ? previous[propName] : undefined
-
-	    // Set attributes
-	    if (propName === "attributes") {
-	        for (var attrName in propValue) {
-	            var attrValue = propValue[attrName]
-
-	            if (attrValue === undefined) {
-	                node.removeAttribute(attrName)
-	            } else {
-	                node.setAttribute(attrName, attrValue)
-	            }
-	        }
-
-	        return
-	    }
-
-	    if(previousValue && isObject(previousValue) &&
-	        getPrototype(previousValue) !== getPrototype(propValue)) {
-	        node[propName] = propValue
-	        return
-	    }
-
-	    if (!isObject(node[propName])) {
-	        node[propName] = {}
-	    }
-
-	    var replacer = propName === "style" ? "" : undefined
-
-	    for (var k in propValue) {
-	        var value = propValue[k]
-	        node[propName][k] = (value === undefined) ? replacer : value
-	    }
-	}
-
-	function getPrototype(value) {
-	    if (Object.getPrototypeOf) {
-	        return Object.getPrototypeOf(value)
-	    } else if (value.__proto__) {
-	        return value.__proto__
-	    } else if (value.constructor) {
-	        return value.constructor.prototype
-	    }
 	}
 
 
@@ -15191,6 +15197,17 @@ module.exports =
 /* 58 */
 /***/ function(module, exports, __webpack_require__) {
 
+	"use strict";
+
+	module.exports = function isObject(x) {
+		return typeof x === "object" && x !== null;
+	};
+
+
+/***/ },
+/* 59 */
+/***/ function(module, exports, __webpack_require__) {
+
 	'use strict';
 
 	var OneVersionConstraint = __webpack_require__(61);
@@ -15211,17 +15228,6 @@ module.exports =
 
 	    return hash;
 	}
-
-
-/***/ },
-/* 59 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-
-	module.exports = function isObject(x) {
-		return typeof x === "object" && x !== null;
-	};
 
 
 /***/ },

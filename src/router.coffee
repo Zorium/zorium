@@ -55,12 +55,16 @@ class Router
     return node
 
   setUrl: (url) =>
+    hasRouted = @currentPath
     @currentPath = url.pathname
     @currentHash = url.hash
     @currentSearch = url.search
 
     if @mode is 'pathname'
-      window.history.pushState null, null, url.pathname + url.search
+      if hasRouted
+        window.history.pushState null, null, url.pathname + url.search
+      else
+        window.history.replaceState null, null, url.pathname + url.search
     else
       window.location.hash = url.pathname + url.search
 
