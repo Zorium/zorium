@@ -916,6 +916,20 @@ describe 'router', ->
     z.router.go '/test4'
     window.location.pathname.should.be '/test4'
 
+  it 'gets current path', ->
+    class App
+      render: ->
+        z 'div', 'Hello World'
+
+    root = document.createElement 'div'
+
+    z.router.setRoot root
+    z.router.add '/testPath', App
+    z.router.setMode 'pathname'
+    z.router.go '/testPath'
+
+    z.router.getCurrentPath().should.be '/testPath'
+
   it 'updates query param in hash mode', ->
     class App
       render: ->

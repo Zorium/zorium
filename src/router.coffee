@@ -5,6 +5,17 @@ z = require './z'
 util = require './util'
 renderer = require './renderer'
 
+getCurrentPath = (mode) ->
+  hash = window.location.hash.slice(1)
+  pathname = window.location.pathname
+  search = window.location.search
+  if pathname
+    pathname += search
+    pathname += '#' + hash
+
+  return if mode is 'pathname' then pathname or hash \
+         else hash or pathname
+
 class Router
   constructor: ->
     @router = new routes()
@@ -22,6 +33,8 @@ class Router
       if @currentPath
         setTimeout @go
 
+  getCurrentPath: =>
+    @currentPath
 
   setRoot: ($root) =>
     @routesRoot = $root
@@ -70,17 +83,6 @@ class Router
 
     @emit 'route', url.pathname
 
-  getCurrentPath: =>
-    hash = window.location.hash.slice(1)
-    pathname = window.location.pathname
-    search = window.location.search
-    if pathname
-      pathname += search
-      pathname += '#' + hash
-
-    return if @mode is 'pathname' then pathname or hash \
-           else hash or pathname
-
   parseUrl: (url) ->
     a = document.createElement 'a'
     a.href = url
@@ -101,7 +103,7 @@ class Router
   go: (path) =>
     # default path to current location
     unless path
-      path = @getCurrentPath()
+      path = getCurrentPath(@mode)
 
     url = @parseUrl path
     path = url.pathname

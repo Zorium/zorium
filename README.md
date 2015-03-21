@@ -207,9 +207,9 @@ z 'div',
 ```
 
 
-### z.router.currentPath
+### z.router.getCurrentPath()
 
-This value will be set to the currently routed path that the router has routed to.
+Returns the currently routed path that the router has routed to.
 
 ### z.router.on()
 
@@ -483,3 +483,11 @@ class AbcService
 
 module.exports = new AbcService()
 ```
+
+
+### Changelog
+
+0.8.0
+
+  - z.state() -> z.oldState()
+  - z.router.currentPath -> z.router.getCurrentPath()
