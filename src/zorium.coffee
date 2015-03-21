@@ -24,6 +24,7 @@ unless Function::bind
 # coffeelint: enable=missing_fat_arrows
 
 _ = require 'lodash'
+Rx = require 'rx-lite'
 
 z = require './z'
 observe = require './observe'
@@ -34,8 +35,10 @@ _.extend z,
   render: renderer.render
   redraw: renderer.redraw
   router: router
+
+  # START LEGACY
   observe: observe
-  state: (obj) ->
+  oldState: (obj) ->
     observed = observe obj
 
     _set = observed.set.bind observed
@@ -43,6 +46,36 @@ _.extend z,
       _set _.defaults diff, observed()
 
     return observed
+  # END LEGACY
+
+  state: (initialState) ->
+    currentValue = {}
+
+    state = new Rx.BehaviorSubject(currentValue)
+
+    # set currentState to all values of initialState
+    _.forEach initialState, (val, key) ->
+      if val?.subscribe
+        currentValue[key] = null
+        val.subscribe (update) ->
+          currentValue[key] = update
+          state.onNext currentValue
+      else
+        currentValue[key] = val
+
+    state.onNext currentValue
+
+    state.set = (diff) ->
+      _.forEach diff, (val, key) ->
+        if initialState[key]?.subscribe
+          throw new Error 'Attempted to set observable value'
+        else
+          currentValue[key] = val
+
+      state.onNext currentValue
+      return state
+
+    return state
   ev: (fn) ->
     # coffeelint: disable=missing_fat_arrows
     (e) ->

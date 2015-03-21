@@ -49,6 +49,7 @@ getOnBeforeUnmountHook = (child, onUnhook) ->
   child._zorium_OnBeforeUnmountHook = hook
   return hook
 
+# FIXME: reduce cyclomatic complexity
 renderChild = (child, props = {}) ->
   if util.isComponent child
     tree = child.render props
@@ -73,12 +74,23 @@ renderChild = (child, props = {}) ->
       tree.properties['zorium-onbeforeunmount'] = hook
       tree.hooks['zorium-onbeforeunmount'] = hook
 
-    if not child.zorium_isWatchingState and _.isFunction child.state
-      child.state ->
+    if not child.zorium_isWatchingState and _.isFunction child.state?.subscribe
+      child.state.subscribe ->
+        # TODO: Move this out, circular dependency with renderer
+        z.redraw()
+      , (err) ->
+        throw new Error err
+
+      child.zorium_isWatchingState = true
+
+    # START LEGACY
+    if not child.zorium_isWatchingOldState and _.isFunction child.oldState
+      child.oldState ->
         # TODO: Move this out, circular dependency with renderer
         z.redraw()
 
-      child.zorium_isWatchingState = true
+      child.zorium_isWatchingOldState = true
+    # ENG LEGACY
 
     return tree
 

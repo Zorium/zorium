@@ -4,7 +4,7 @@
 #### [zorium.org](https://zorium.org/)
 
 (╯°□°)╯︵ ┻━┻  
-v0.7.0
+v0.8.0
 
 ## Examples
 
@@ -14,7 +14,7 @@ z = require 'zorium'
 class AppComponent
   constructor: (params) ->
     @state = z.state
-      z: 'Zorium'
+      zoo: 'Zorium'
 
   clicker: (e) =>
     console.log 'Click!'
@@ -22,7 +22,7 @@ class AppComponent
       zoo: 'AllOfTheThings'
 
   render: =>
-    {zoo} = @state()
+    {zoo} = @state.getValue()
 
     z 'a.zorium-link[href=/]',
       z "img[src=#{zoo}.png]", onclick: @clicker
@@ -89,7 +89,7 @@ class B
     @state = z.state
       $a: new A()
   render: =>
-    {$a} = @state()
+    {$a} = @state.getValue()
     z $a, {world: 'world'}
 
 $b = new B()
@@ -127,7 +127,7 @@ class App
       key: params.key or 'none'
 
   render: =>
-    {key} = @state()
+    {key} = @state.getValue()
     z 'div', 'Hello ' + key
 
 root = document.createElement 'div'
@@ -248,8 +248,53 @@ z.redraw()
 
 ### State
 
-#### z.state()
+#### z.state({initialValue})
 
+returns an `Rx.BehaviorSubject`, with a `set()` method for partial updates  
+When set as a property of a Zorium Component, `z.redraw()` will automatically be called  
+If passed an `Rx.Observable`, an update is triggered on child updates
+
+```coffee
+promise = new Promise()
+
+state = z.state
+  a: 'abc'
+  b: 123
+  c: [1, 2, 3]
+  d: new Rx.Observable.fromPromise promise
+
+state.getValue() is {
+  a: 'abc'
+  b: 123
+  c: [1, 2, 3]
+  d: null
+}
+
+promise.resolve(123)
+
+# promise resolved
+state.getValue().d is 123
+
+# watch for changes
+state.subscribe (state) ->
+  state.b is 321
+
+# partial update
+state.set
+  b: 321
+
+state.getValue() is {
+  a: 'abc'
+  b: 123
+  c: [1, 2, 3]
+  d: 123
+}
+```
+
+#### WARNING: WILL BE REMOVED in 1.0
+#### z.oldState()
+
+Previously z.state  
 Partial updating state object  
 When set as a property of a Zorium Component, `z.redraw()` will automatically be called  
 If passed a `z.observe`, an update is triggered on child updates
@@ -291,6 +336,7 @@ state() is {
 }
 ```
 
+#### WARNING: WILL BE REMOVED in 1.0
 #### z.observe()
 
 Create an observable  
@@ -391,7 +437,7 @@ module.exports = class HomePage
       $body: new Body(params.key)
 
   render: =>
-    {$nav, $body} = @state()
+    {$nav, $body} = @state.getValue()
     z 'div',
       z $nav
       z $body
@@ -413,7 +459,7 @@ class RootPage
         $footer: new Footer()
 
   render: =>
-    {$nav, $footer} = @state()
+    {$nav, $footer} = @state.getValue()
     z 'div',
       z $nav
       z $footer

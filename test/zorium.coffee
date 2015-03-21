@@ -1,6 +1,7 @@
 should = require('clay-chai').should()
 createElement = require 'virtual-dom/create-element'
 Promise = window.Promise or require 'promiz'
+Rx = require 'rx-lite'
 
 z = require 'zorium'
 
@@ -49,32 +50,6 @@ describe 'Virtual DOM', ->
     $el = createElement(dom)
     $el.style.lineHeight.should.be '1rem'
     $el.style.backgroundColor.should.be 'red'
-
-
-  it 'javascript format check', ->
-    AppComponent = (params) ->
-      state = z.state(z: 'Zorium')
-      clicker = (e) ->
-        state.set z: 'AllOfTheThings'
-        return
-
-      state: state
-      render: ->
-        return z 'a.zorium-link[href=/]', z('img[src=' + state().z + '.png]',
-          onclick: clicker
-        )
-
-    comp = new AppComponent()
-    dom = z 'div', comp
-
-    $el = createElement(dom)
-
-    result = '<div><a href="/" class="zorium-link">' +
-             '<img src="Zorium.png"></a></div>'
-
-    $el.isEqualNode(htmlToNode(result)).should.be true
-
-    z.render document.body, new AppComponent()
 
   it 'renders numbers', ->
     dom = z 'div', 123
@@ -702,13 +677,80 @@ describe 'z.observe()', ->
       p1.then ->
         obj().should.be 'a'
 
-
 describe 'z.state', ->
+  it 'obesrves state, returning an observable', ->
+    subject = new Rx.BehaviorSubject(null)
+    promise = Promise.resolve 'b'
+    state = z.state
+      a: 'a'
+      b: Rx.Observable.fromPromise promise
+      c: subject
+
+    _.isFunction(state.subscribe).should.be true
+
+    state.subscribe (state) ->
+      state.a.should.be 'a'
+
+    state.getValue().should.be {a: 'a', b: null, c: null}
+
+    promise.then ->
+      state.getValue().should.be {a: 'a', b: 'b', c: null}
+      subject.onNext 'c'
+      state.getValue().should.be {a: 'a', b: 'b', c: 'c'}
+
+      state.set x: 'x'
+      state.getValue().x.should.be 'x'
+      state.set x: 'X'
+      state.getValue().x.should.be 'X'
+
+  it 'redraws on state observable change', ->
+    subject = new Rx.BehaviorSubject(null)
+    redrawCnt = 0
+
+    class App
+      constructor: ->
+        @state = z.state
+          subject: subject
+      render: ->
+        redrawCnt += 1
+        z 'div'
+
+    root = document.createElement 'div'
+    app = new App()
+    z.render root, app
+    redrawCnt.should.be 1
+
+    subject.onNext 'abc'
+
+    redrawCnt.should.be 2
+
+  it 'errors when setting observable values in diff', ->
+    subject = new Rx.BehaviorSubject(null)
+
+    state = z.state
+      subject: subject
+
+    (->
+      state.set subject: 'subject'
+    ).should.throw()
+
+  it 'throws errors', ->
+    subject = new Rx.BehaviorSubject(null)
+
+    state = z.state
+      subject: subject
+
+    (->
+      subject.onError new Error 'err'
+    ).should.throw()
+
+# START LEGACY
+describe 'z.oldState', ->
   it 'observes state', ->
 
     promise = deferred()
 
-    state = z.state
+    state = z.oldState
       a: 'abc'
       b: 123
       c: [1, 2, 3]
@@ -743,7 +785,7 @@ describe 'z.state', ->
     cnt = 0
     class App
       constructor: ->
-        @state = z.state
+        @oldState = z.oldState
           abc: 'def'
       render: ->
         cnt += 1
@@ -755,10 +797,10 @@ describe 'z.state', ->
     z.render root, app
     z.render root, app
 
-    app.state.set
+    app.oldState.set
       abc: 'fed'
 
-    app.state.set
+    app.oldState.set
       abc: 'den'
 
     cnt.should.be 5
@@ -769,7 +811,7 @@ describe 'z.state', ->
     cnt = 0
     class App
       constructor: ->
-        @state = z.state
+        @oldState = z.oldState
           p: z.observe promise
           p2: z.observe p2
       render: ->
@@ -783,12 +825,12 @@ describe 'z.state', ->
     promise.resolve 'abc'
 
     promise.then ->
-      app.state().p.should.be 'abc'
+      app.oldState().p.should.be 'abc'
       cnt.should.be 2
 
   it 'allows overriding of promised params', ->
     p = deferred()
-    state = z.state
+    state = z.oldState
       p: z.observe p
 
     state.set
@@ -797,6 +839,7 @@ describe 'z.state', ->
     p.resolve('p')
     p.then ->
       state().p.should.be 'y'
+# END LEGACY
 
 describe 'router', ->
   beforeEach (done) ->

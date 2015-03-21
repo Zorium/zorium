@@ -48,6 +48,7 @@
     "observ-struct": "^6.0.0",
     "qs": "^2.3.3",
     "routes": "^2.0.0",
+    "rx-lite": "^2.4.4",
     "virtual-dom": "^1.2.0"
   }
 }
