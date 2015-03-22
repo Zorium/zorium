@@ -65,16 +65,19 @@ z 'ul',
 
 Zorium components can be used in place of a dom tag.  
 Zorium components must have a `render()` method
+Zorium components must be `pure` - `render()` must only rely on `@state` and props
 
 ```coffee
 class HelloWorldComponent
-  render: ->
-    z 'span', 'Hello World'
+  constructor: ->
+    @state = z.state({x: 'x'})
+  render: ({name}) ->
+    z 'span', "Hello #{name}!"
 
 $hello = new HelloWorldComponent()
 
 z 'div',
-  z $hello # <div><span>Hello World</span></div>
+  z $hello, {name: 'Jim'} # <div><span>Hello Jim!</span></div>
 ```
 
 Parameters can also be passed to the render method
