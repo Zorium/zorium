@@ -125,7 +125,7 @@ class BindComponent
 
 ```coffee
 class App
-  constructor: (params) ->
+  constructor: ({params}) ->
     @state = z.state
       key: params.key or 'none'
 
@@ -138,8 +138,8 @@ root = document.createElement 'div'
 z.router.setMode 'pathname' # 'pathname' or 'hash' (default is 'hash')
 
 z.router.setRoot root
-z.router.add '/test', App
-z.router.add '/test/:key', App
+z.router.add '/test', ({params, query}) -> new App({params, query})
+z.router.add '/test/:key', ({params, query}) -> new App({params, query})
 
 z.router.go '/test'
 ```
@@ -166,17 +166,12 @@ z.router.setRoot(document.body)
 
 #### z.router.add()
 
-Variables will be passed into the component constructor.  
-pathTransform will be called if provided, and may return a promise.
-If the path returned by pathTransform differs from the original route, a redirect to the new route will occur.
-
 ```coffee
 ###
 @param {String} path
-@param {ZoriumComponent} App
-@param {Function<String, Promise<String>>} [pathTransform=((path) -> path)]
+@param {Function<ZoriumComponent>} ({params, query})
 ###
-z.router.add '/test/:key', App, pathTransform
+z.router.add '/test/:key', ({params, query}) -> new App({params, query})
 
 class App
   constructor: (params) -> null
@@ -208,11 +203,6 @@ It is a mistake to use `onclick` on the element
 z 'div',
   z.router.link z 'a.myclass[href=/abc]', 'click me'
 ```
-
-
-### z.router.getCurrentPath()
-
-Returns the currently routed path that the router has routed to.
 
 ### z.router.on()
 
@@ -493,5 +483,7 @@ module.exports = new AbcService()
 0.8.0
 
   - z.state() -> z.oldState()
-  - z.router.currentPath -> z.router.getCurrentPath()
+  - z.router.currentPath -> removed
   - z.redraw() is no longer synchronous
+  - z.router.add() requires a component from a function - use `({params, query}) -> new Component(params, query)`
+  - z.router.add() removed pathTransform param

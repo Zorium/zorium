@@ -11,20 +11,37 @@ getCurrentPath = (mode) ->
   search = window.location.search
   if pathname
     pathname += search
-    pathname += '#' + hash
 
   return if mode is 'pathname' then pathname or hash \
          else hash or pathname
+
+parseUrl = (url) ->
+  a = document.createElement 'a'
+  a.href = url
+
+  {
+    pathname: a.pathname
+    hash: a.hash
+    search: a.search
+    path: a.pathname + a.search
+  }
+
+setPath = (path, mode, isReplacement) ->
+  if mode is 'pathname'
+    if isReplacement
+      window.history.replaceState null, null, path
+    else
+      window.history.pushState null, null, path
+  else
+    window.location.hash = path
 
 class Router
   constructor: ->
     @router = new routes()
     @events = {}
     @routesRoot = null
-    @mode = 'hash'
+    @mode = if window.history?.pushState then 'pathname' else 'hash'
     @currentPath = null
-    @currentHash = '' # only valid when using pathname
-    @currentSearch = ''
 
     # some browsers erroneously call popstate on intial page load (iOS Safari)
     # We need to ignore that first event.
@@ -33,116 +50,53 @@ class Router
       if @currentPath
         setTimeout @go
 
-  getCurrentPath: =>
-    @currentPath
-
-  setRoot: ($root) =>
-    @routesRoot = $root
-
-  add: (path, componentClass, pathTransformFn = ((path) -> path)) =>
-    @router.addRoute path, ->
-      return [componentClass, pathTransformFn]
+  setRoot: ($$root) =>
+    @routesRoot = $$root
 
   setMode: (mode) =>
-    @mode = if mode is 'pathname' and window.history.pushState \
-      then 'pathname'
-      else 'hash'
+    @mode = mode
+
+  add: (path, cb) =>
+    @router.addRoute path, cb
 
   link: (node) =>
     if node.properties.onclick
       throw new Error 'onclick already bound, invalid usage'
 
-    node.properties.onclick = do =>
-      router = this
-      mode = @mode
-      # coffeelint: disable=missing_fat_arrows
-      (e) ->
-        $el = this
-        isLocal = $el.hostname is window.location.hostname
+    go = @go
 
-        if isLocal
-          e.preventDefault()
-          router.go $el.pathname + $el.search + $el.hash
+    # coffeelint: disable=missing_fat_arrows
+    node.properties.onclick = (e) ->
+      $el = this
+      isLocal = $el.hostname is window.location.hostname
+
+      if isLocal
+        e.preventDefault()
+        go $el.pathname + $el.search
       # coffeelint: enable=missing_fat_arrows
 
     return node
 
-  setUrl: (url) =>
-    hasRouted = @currentPath
-    @currentPath = url.pathname
-    @currentHash = url.hash
-    @currentSearch = url.search
-
-    if @mode is 'pathname'
-      if hasRouted
-        window.history.pushState null, null, url.pathname + url.search
-      else
-        window.history.replaceState null, null, url.pathname + url.search
-    else
-      window.location.hash = url.pathname + url.search
-
-    @emit 'route', url.pathname
-
-  parseUrl: (url) ->
-    a = document.createElement 'a'
-    a.href = url
-
-    {
-      pathname: a.pathname
-      hash: a.hash
-      search: a.search
-    }
-
-  hasPathChanged: (path) ->
-    path and @routesRoot and path isnt @currentPath
-
-  hasSearchChanged: (search) ->
-    search isnt @currentSearch
-
-  # TODO: fix cyclomatic complexity
   go: (path) =>
-    # default path to current location
-    unless path
-      path = getCurrentPath(@mode)
-
-    url = @parseUrl path
-    path = url.pathname
+    isReplacement = not Boolean @currentPath
+    url = parseUrl(path or getCurrentPath(@mode))
     queryParams = Qs.parse(url.search.slice(1))
+    route = @router.match(url.pathname)
 
-    unless @hasPathChanged(path) or @hasSearchChanged(url.search)
-      if url.hash isnt @currentHash and @mode is 'pathname'
-        @currentHash = url.hash
-        window.location.hash = url.hash
-      return
-
-    route = @router.match(path)
-
+    # no match found
     unless route
       return
 
-    [componentClass, pathTransformFn] = route.fn()
+    setPath url.path, @mode, isReplacement
+    @currentPath = url.path
+    @emit 'route', url.path
 
-    transformedPath = pathTransformFn(path)
+    tree = route.fn({
+      params: route.params
+      query: queryParams
+    })
 
-    enter = (transformedPath) =>
-      if transformedPath isnt path
-        @go transformedPath
-      else
-        isHashDifferent = @currentHash isnt url.hash
-        @setUrl url
-        renderer.render @routesRoot,
-          new componentClass(route.params, queryParams)
-        if @mode is 'pathname' and isHashDifferent
-          window.location.hash = url.hash
-
-    if _.isFunction transformedPath?.then
-      transformedPath.then enter
-      # It is a mistake to pass a rejected promise
-      .catch (err) ->
-        setTimeout ->
-          throw err
-    else
-      enter(transformedPath)
+    renderer.render @routesRoot, tree
 
   on: (name, fn) =>
     (@events[name] = @events[name] or []).push(fn)
