@@ -487,3 +487,4 @@ module.exports = new AbcService()
   - z.redraw() is no longer synchronous
   - z.router.add() requires a component from a function - use `({params, query}) -> new Component(params, query)`
   - z.router.add() removed pathTransform param
+  - components must be `pure`
