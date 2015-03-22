@@ -237,7 +237,7 @@ z.render document.body, App
 
 #### z.redraw()
 
-Redraw all previously rendered elements  
+Redraw all previously rendered elements, batched by requestAnimationFrame  
 This is called whenever a component's `state` is changed  
 Call this whenever something changes the DOM state
 
@@ -491,3 +491,4 @@ module.exports = new AbcService()
 
   - z.state() -> z.oldState()
   - z.router.currentPath -> z.router.getCurrentPath()
+  - z.redraw() is no longer synchronous

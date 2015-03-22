@@ -527,15 +527,18 @@ describe 'Lifecycle Callbacks', ->
 
       root = document.createElement 'div'
       z.render root, bind
-      z.redraw()
-      z.redraw()
-      z.redraw()
+      window.requestAnimationFrame ->
+        z.redraw()
+        window.requestAnimationFrame ->
+          z.redraw()
+          window.requestAnimationFrame ->
+            z.redraw()
 
-      setTimeout ->
-        mountCalled.should.be 1
-        unmountCalled.should.be 0
-        done()
-      , 20
+            setTimeout ->
+              mountCalled.should.be 1
+              unmountCalled.should.be 0
+              done()
+            , 20
 
     # https://github.com/claydotio/zorium/issues/13
     it 'property replacing diff calls unhook method', ->
@@ -565,7 +568,7 @@ describe 'Lifecycle Callbacks', ->
       unmountsCalled.should.be 2
 
 describe 'redraw()', ->
-  it 'redraws all bound root nodes', ->
+  it 'redraws all bound root nodes', (done) ->
     drawCnt = 0
     class RedrawComponent
       render: ->
@@ -576,9 +579,30 @@ describe 'redraw()', ->
     root = document.createElement 'div'
     z.render root, draw
     z.redraw()
-    drawCnt.should.be 2
+    window.requestAnimationFrame ->
+      drawCnt.should.be 2
+      done()
 
-  it 'renders properly after multiple redraws', ->
+  it 'renders properly after multiple redraws', (done) ->
+    drawCnt = 0
+    class RedrawComponent
+      render: ->
+        drawCnt += 1
+        z 'div'
+
+    draw = new RedrawComponent()
+    root = document.createElement 'div'
+    z.render root, draw
+    z.redraw()
+    window.requestAnimationFrame ->
+      z.redraw()
+      window.requestAnimationFrame ->
+        result = '<div><div></div></div>'
+        root.isEqualNode(htmlToNode(result)).should.be true
+        drawCnt.should.be 3
+        done()
+
+  it 'batches redraws', (done) ->
     drawCnt = 0
     class RedrawComponent
       render: ->
@@ -590,9 +614,12 @@ describe 'redraw()', ->
     z.render root, draw
     z.redraw()
     z.redraw()
-    result = '<div><div></div></div>'
-    root.isEqualNode(htmlToNode(result)).should.be true
-    drawCnt.should.be 3
+    z.redraw()
+    z.redraw()
+    drawCnt.should.be 1
+    window.requestAnimationFrame ->
+      drawCnt.should.be 2
+      done()
 
 describe 'z.observe()', ->
   it 'observes values', ->
@@ -703,7 +730,7 @@ describe 'z.state', ->
       state.set x: 'X'
       state.getValue().x.should.be 'X'
 
-  it 'redraws on state observable change', ->
+  it 'redraws on state observable change', (done) ->
     subject = new Rx.BehaviorSubject(null)
     redrawCnt = 0
 
@@ -722,7 +749,9 @@ describe 'z.state', ->
 
     subject.onNext 'abc'
 
-    redrawCnt.should.be 2
+    window.requestAnimationFrame ->
+      redrawCnt.should.be 2
+      done()
 
   it 'errors when setting observable values in diff', ->
     subject = new Rx.BehaviorSubject(null)
@@ -781,7 +810,7 @@ describe 'z.oldState', ->
         c: [1, 2, 3]
         d: 123
 
-  it 'redraws on state observable change', ->
+  it 'redraws on state observable change', (done) ->
     cnt = 0
     class App
       constructor: ->
@@ -800,12 +829,15 @@ describe 'z.oldState', ->
     app.oldState.set
       abc: 'fed'
 
-    app.oldState.set
-      abc: 'den'
+    window.requestAnimationFrame ->
+      app.oldState.set
+        abc: 'den'
 
-    cnt.should.be 5
+      window.requestAnimationFrame ->
+        cnt.should.be 5
+        done()
 
-  it 'redraws on promise resolution', ->
+  it 'redraws on promise resolution', (done) ->
     promise = deferred()
     p2 = deferred()
     cnt = 0
@@ -822,11 +854,14 @@ describe 'z.oldState', ->
     app = new App()
     z.render root, app
 
-    promise.resolve 'abc'
+    window.requestAnimationFrame ->
+      promise.resolve 'abc'
 
-    promise.then ->
-      app.oldState().p.should.be 'abc'
-      cnt.should.be 2
+      promise.then ->
+        window.requestAnimationFrame ->
+          app.oldState().p.should.be 'abc'
+          cnt.should.be 2
+          done()
 
   it 'allows overriding of promised params', ->
     p = deferred()

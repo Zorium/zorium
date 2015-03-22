@@ -4,9 +4,48 @@ createElement = require 'virtual-dom/create-element'
 
 z = require './z'
 
+# requestAnimationFrame polyfill
+# https://gist.github.com/paulirish/1579671
+# MIT license
+do ->
+  lastTime = 0
+  vendors = [
+    'ms'
+    'moz'
+    'webkit'
+    'o'
+  ]
+  x = 0
+  while x < vendors.length and not window.requestAnimationFrame
+    window.requestAnimationFrame = window[vendors[x] + 'RequestAnimationFrame']
+    window.cancelAnimationFrame = window[vendors[x] + 'CancelAnimationFrame'] or
+      window[vendors[x] + 'CancelRequestAnimationFrame']
+    x += 1
+  if not window.requestAnimationFrame
+
+    window.requestAnimationFrame = (callback, element) ->
+      currTime = (new Date()).getTime()
+      timeToCall = Math.max(0, 16 - (currTime - lastTime))
+      id = window.setTimeout((->
+        callback currTime + timeToCall
+        return
+      ), timeToCall)
+      lastTime = currTime + timeToCall
+      id
+
+  if not window.cancelAnimationFrame
+
+    window.cancelAnimationFrame = (id) ->
+      clearTimeout id
+      return
+
+  return
+# end polyfill
+
 class Renderer
   constructor: ->
     @registeredRoots = {}
+    @isRedrawScheduled = false
 
     id = 0
     @nextRootId = ->
@@ -40,7 +79,11 @@ class Renderer
     return $root
 
   redraw: =>
-    for id, root of @registeredRoots
-      @render root.$root, root.tree
+    unless @isRedrawScheduled
+      @isRedrawScheduled = true
+      window.requestAnimationFrame =>
+        @isRedrawScheduled = false
+        for id, root of @registeredRoots
+          @render root.$root, root.tree
 
 module.exports = new Renderer()
