@@ -84,7 +84,7 @@ class Router
     route = @router.match(url.pathname)
 
     # no match found
-    unless route
+    if not route or @currentPath is url.path
       return
 
     setPath url.path, @mode, isReplacement

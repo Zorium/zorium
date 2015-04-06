@@ -955,6 +955,25 @@ describe 'router', ->
     z.router.go '/test4'
     window.location.pathname.should.be '/test4'
 
+  it 'doesn\'t render same route twice', ->
+    rendered = 0
+    class App
+      render: ->
+        rendered += 1
+        z 'div', 'Hello World'
+
+    root = document.createElement 'div'
+
+    z.router.setRoot root
+    z.router.add '/twice', -> new App()
+
+    z.router.setMode 'hash'
+
+    z.router.go '/twice'
+    rendered.should.be 1
+    z.router.go '/twice'
+    rendered.should.be 1
+
   it 'updates query param in hash mode', ->
     class App
       render: ->
