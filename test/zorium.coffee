@@ -735,6 +735,14 @@ describe 'z.state', ->
       state.set x: 'X'
       state.getValue().x.should.be 'X'
 
+  it 'sets state with false values', ->
+    state = z.state
+      a: 'a'
+      b: false
+      c: 123
+
+    state.getValue().should.be {a: 'a', b: false, c: 123}
+
   it 'redraws on state observable change', (done) ->
     subject = new Rx.BehaviorSubject(null)
     redrawCnt = 0

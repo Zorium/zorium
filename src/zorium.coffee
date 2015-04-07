@@ -63,6 +63,8 @@ _.extend z,
       else
         currentValue[key] = val
 
+      return null
+
     state.onNext currentValue
 
     state.set = (diff) ->
@@ -71,6 +73,8 @@ _.extend z,
           throw new Error 'Attempted to set observable value'
         else
           currentValue[key] = val
+
+        return null
 
       state.onNext currentValue
       return state
