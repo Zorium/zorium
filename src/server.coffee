@@ -40,26 +40,29 @@ class Server
     @events = {}
     @root = null
     @routers = []
-    @mode = if window.history?.pushState then 'pathname' else 'hash'
+    @mode = if window?.history?.pushState then 'pathname' else 'hash'
     @currentPath = null
 
+    # coffeelint: disable=missing_fat_arrows
     @Redirect = (message) ->
       @name = 'Redirect'
       @message = message
       @stack = (new Error()).stack
     @Redirect.prototype = new Error()
+    # coffeelint: enable=missing_fat_arrows
 
-    # used for full-page rendering
-    @globalRoot = document.createElement 'div'
-    @globalRoot.id = 'zorium-root'
-    document.body.appendChild @globalRoot
+    if window?
+      # used for full-page rendering
+      @globalRoot = document.createElement 'div'
+      @globalRoot.id = 'zorium-root'
+      document.body.appendChild @globalRoot
 
-    # some browsers erroneously call popstate on intial page load (iOS Safari)
-    # We need to ignore that first event.
-    # https://code.google.com/p/chromium/issues/detail?id=63040
-    window.addEventListener 'popstate', (e) =>
-      if @currentPath
-        setTimeout @go
+      # some browsers erroneously call popstate on intial page load (iOS Safari)
+      # We need to ignore that first event.
+      # https://code.google.com/p/chromium/issues/detail?id=63040
+      window.addEventListener 'popstate', (e) =>
+        if @currentPath
+          setTimeout @go
 
   setRoot: ($$root) =>
     @root = $$root
@@ -109,7 +112,27 @@ class Server
     @currentPath = url.path
     @emit 'route', url.path
 
-    renderer.render @root, tree
+    # Because the DOM doesn't let us directly manipulate top-level elements
+    # We have to standardize a hack around it
+    if @root is document
+      unless tree?.tagName is 'HTML'
+        throw new Error 'Invalid HTML base element'
+
+      head = tree.children[0]
+      body = tree.children[1]
+      title = head?.children[0]
+      appRoot = body?.children[0]
+
+      unless head?.tagName is 'HEAD' and title?.tagName is 'TITLE'
+        throw new Error 'Invalid HEAD base element'
+
+      unless body?.tagName is 'BODY' and appRoot.properties.id is 'zorium-root'
+        throw new Error 'Invalid BODY base element'
+
+      document.title = title.innerHTML
+      renderer.render @globalRoot, appRoot
+    else
+      renderer.render @root, tree
 
   on: (name, fn) =>
     (@events[name] = @events[name] or []).push(fn)

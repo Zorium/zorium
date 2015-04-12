@@ -1,3 +1,4 @@
+_ = require 'lodash'
 isVNode = require 'virtual-dom/vnode/is-vnode'
 isVText = require 'virtual-dom/vnode/is-vtext'
 isWidget = require 'virtual-dom/vnode/is-widget'

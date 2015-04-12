@@ -2,15 +2,29 @@ routes = require 'routes'
 Qs = require 'qs'
 
 parseUrl = (url) ->
-  a = document.createElement 'a'
-  a.href = url
+  if window?
+    a = document.createElement 'a'
+    a.href = url
 
-  {
-    pathname: a.pathname
-    hash: a.hash
-    search: a.search
-    path: a.pathname + a.search
-  }
+    {
+      pathname: a.pathname
+      hash: a.hash
+      search: a.search
+      path: a.pathname + a.search
+    }
+  else
+    # Avoid webpack include
+    module = 'url'
+    URL = require(module)
+    parsed = URL.parse url
+
+    {
+      pathname: parsed.pathname
+      hash: parsed.hash
+      search: parsed.search
+      path: parsed.path
+    }
+
 
 class Router
   constructor: ->
@@ -21,7 +35,7 @@ class Router
 
   resolve: ({path}) ->
     url = parseUrl path
-    queryParams = Qs.parse(url.search.slice(1))
+    queryParams = Qs.parse(url.search?.slice(1))
     route = @router.match(url.pathname)
 
     # no match found

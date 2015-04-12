@@ -25,6 +25,7 @@ unless Function::bind
 
 _ = require 'lodash'
 Rx = require 'rx-lite'
+toHTML = require 'vdom-to-html'
 
 z = require './z'
 observe = require './observe'
@@ -37,6 +38,10 @@ _.extend z,
   redraw: renderer.redraw
   Router: Router
   server: server
+  routerToMiddleware: (router) ->
+    (req, res) ->
+      tree = router.resolve path: req.url
+      res.send '<!DOCTYPE html>' + toHTML tree
 
   # START LEGACY
   observe: observe

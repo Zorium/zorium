@@ -1,6 +1,7 @@
 _ = require 'lodash'
 del = require 'del'
 gulp = require 'gulp'
+mocha = require 'gulp-mocha'
 karma = require('karma').server
 rename = require 'gulp-rename'
 webpack = require 'gulp-webpack'
@@ -27,6 +28,7 @@ paths =
   coffee: ['./src/**/*.coffee', './*.coffee', './test/**/*.coffee']
   rootScripts: './src/zorium.coffee'
   rootTests: './test/zorium.coffee'
+  rootServerTests: './test/zorium_server.coffee'
   dist: './dist/'
   build: './build/'
 
@@ -44,11 +46,15 @@ webpackProdConfig =
 
 gulp.task 'build', ['clean:dist', 'scripts:dist', 'scripts:dist-min']
 
-gulp.task 'test', ['scripts:test', 'lint'], (cb) ->
+gulp.task 'test', ['scripts:test', 'lint', 'test:server'], (cb) ->
   karma.start _.defaults(singleRun: true, karmaConf), cb
 
+gulp.task 'test:server', ->
+  gulp.src paths.rootServerTests
+    .pipe mocha()
+
 gulp.task 'watch', ->
-  gulp.watch paths.coffee, ['test:phantom']
+  gulp.watch paths.coffee, ['test:phantom', 'test:server']
 
 gulp.task 'lint', ->
   gulp.src paths.coffee
