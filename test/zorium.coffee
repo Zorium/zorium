@@ -251,12 +251,12 @@ describe 'Virtual DOM', ->
       preventDefaultCalled = 0
       goCalled = 0
 
-      oldGo = z.router.go
-      z.router.go = (path) ->
+      oldGo = z.server.go
+      z.server.go = (path) ->
         goCalled += 1
         path.should.be '/pathname/here'
 
-      dom = z.router.link z 'a[href=/pathname/here]'
+      dom = z.server.link z 'a[href=/pathname/here]'
       $el = createElement(dom)
 
       (typeof dom.properties.onclick).should.be 'function'
@@ -268,7 +268,7 @@ describe 'Virtual DOM', ->
 
       dom.properties.onclick.call($el, e)
 
-      z.router.go = oldGo
+      z.server.go = oldGo
 
       preventDefaultCalled.should.be 1
       goCalled.should.be 1
@@ -279,11 +279,11 @@ describe 'Virtual DOM', ->
       preventDefaultCalled = 0
       goCalled = 0
 
-      oldGo = z.router.go
-      z.router.go = (path) ->
+      oldGo = z.server.go
+      z.server.go = (path) ->
         goCalled += 1
 
-      dom = z.router.link z 'a[href=http://google.com]'
+      dom = z.server.link z 'a[href=http://google.com]'
       $el = createElement(dom)
 
       (typeof dom.properties.onclick).should.be 'function'
@@ -296,7 +296,7 @@ describe 'Virtual DOM', ->
 
       dom.properties.onclick.call($el, e)
 
-      z.router.go = oldGo
+      z.server.go = oldGo
 
       preventDefaultCalled.should.be 0
       goCalled.should.be 0
@@ -307,12 +307,12 @@ describe 'Virtual DOM', ->
       preventDefaultCalled = 0
       goCalled = 0
 
-      oldGo = z.router.go
-      z.router.go = (path) ->
+      oldGo = z.server.go
+      z.server.go = (path) ->
         goCalled += 1
         path.should.be '/'
 
-      dom = z.router.link z 'a[href=/][name=test]', {onmousedown: -> null}
+      dom = z.server.link z 'a[href=/][name=test]', {onmousedown: -> null}
       $el = createElement(dom)
 
       (typeof dom.properties.onclick).should.be 'function'
@@ -325,7 +325,7 @@ describe 'Virtual DOM', ->
 
       dom.properties.onclick.call($el, e)
 
-      z.router.go = oldGo
+      z.server.go = oldGo
 
       preventDefaultCalled.should.be 1
       goCalled.should.be 1
@@ -334,7 +334,7 @@ describe 'Virtual DOM', ->
 
     it 'throws if attempted to override onclick', (done) ->
       try
-        z.router.link z 'a[href=/][name=test]',
+        z.server.link z 'a[href=/][name=test]',
           {onclick: -> clickCalled += 1}
         done(new Error 'Error expected')
       catch
@@ -882,12 +882,16 @@ describe 'z.oldState', ->
 # END LEGACY
 
 describe 'router', ->
-  beforeEach (done) ->
-    # Allow routes to settle
-    setTimeout ->
-      done()
-    , 100
+  it 'resolves', ->
+    router = new z.Router()
+    tree = z 'div', 'test'
+    router.add '/', ->
+      tree
 
+    router.resolve {path: '/'}
+    .should.be tree
+
+describe 'server', ->
   it 'renders updated DOM', ->
     class App
       render: ->
@@ -897,18 +901,21 @@ describe 'router', ->
       render: ->
         z 'div', 'World Hello'
 
+    router = new z.Router()
+    router.add '/testa1', -> new App()
+    router.add '/testa2', -> new App2()
+
     root = document.createElement 'div'
 
-    z.router.setRoot root
-    z.router.add '/testa1', -> new App()
-    z.router.add '/testa2', -> new App2()
+    z.server.setRoot root
+    z.server.use router
 
     result1 = '<div><div>Hello World</div></div>'
     result2 = '<div><div>World Hello</div></div>'
 
-    z.router.go '/testa1'
+    z.server.go '/testa1'
     root.isEqualNode(htmlToNode(result1)).should.be true
-    z.router.go '/testa2'
+    z.server.go '/testa2'
     root.isEqualNode(htmlToNode(result2)).should.be true
 
   it 'updates location hash', ->
@@ -922,15 +929,17 @@ describe 'router', ->
 
     root = document.createElement 'div'
 
-    z.router.setRoot root
-    z.router.add '/test', -> new App()
-    z.router.add '/test2', -> new App2()
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/test', -> new App()
+    router.add '/test2', -> new App2()
 
-    z.router.setMode 'hash'
+    z.server.setMode 'hash'
 
-    z.router.go '/test'
+    z.server.go '/test'
     window.location.hash.should.be '#/test'
-    z.router.go '/test2'
+    z.server.go '/test2'
     window.location.hash.should.be '#/test2'
 
   it 'updated pathname', ->
@@ -944,15 +953,17 @@ describe 'router', ->
 
     root = document.createElement 'div'
 
-    z.router.setRoot root
-    z.router.add '/test3', -> new App()
-    z.router.add '/test4', -> new App()
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/test3', -> new App()
+    router.add '/test4', -> new App()
 
-    z.router.setMode 'pathname'
+    z.server.setMode 'pathname'
 
-    z.router.go '/test3'
+    z.server.go '/test3'
     window.location.pathname.should.be '/test3'
-    z.router.go '/test4'
+    z.server.go '/test4'
     window.location.pathname.should.be '/test4'
 
   it 'updates query param in hash mode', ->
@@ -969,17 +980,19 @@ describe 'router', ->
 
     root = document.createElement 'div'
 
-    z.router.setRoot root
-    z.router.add '/test-qs', -> new App()
-    z.router.add '/test-qs2', ({params, query}) -> new App2(params, query)
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/test-qs', -> new App()
+    router.add '/test-qs2', ({params, query}) -> new App2(params, query)
 
-    z.router.setMode 'hash'
+    z.server.setMode 'hash'
 
-    z.router.go '/test-qs?x=abc'
+    z.server.go '/test-qs?x=abc'
     window.location.hash.should.be '#/test-qs?x=abc'
-    z.router.go '/test-qs?x=xxx'
+    z.server.go '/test-qs?x=xxx'
     window.location.hash.should.be '#/test-qs?x=xxx'
-    z.router.go '/test-qs2?y=abc'
+    z.server.go '/test-qs2?y=abc'
     window.location.hash.should.be '#/test-qs2?y=abc'
 
   it 'updates query string in path mode', ->
@@ -996,19 +1009,21 @@ describe 'router', ->
 
     root = document.createElement 'div'
 
-    z.router.setRoot root
-    z.router.add '/test-qs3', -> new App()
-    z.router.add '/test-qs4', ({params, query}) -> new App2(params, query)
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/test-qs3', -> new App()
+    router.add '/test-qs4', ({params, query}) -> new App2(params, query)
 
-    z.router.setMode 'pathname'
+    z.server.setMode 'pathname'
 
-    z.router.go '/test-qs3?x=abc'
+    z.server.go '/test-qs3?x=abc'
     window.location.pathname.should.be '/test-qs3'
     window.location.search.should.be '?x=abc'
-    z.router.go '/test-qs3?x=xxx'
+    z.server.go '/test-qs3?x=xxx'
     window.location.pathname.should.be '/test-qs3'
     window.location.search.should.be '?x=xxx'
-    z.router.go '/test-qs4?y=abc'
+    z.server.go '/test-qs4?y=abc'
     window.location.pathname.should.be '/test-qs4'
     window.location.search.should.be '?y=abc'
 
@@ -1023,15 +1038,17 @@ describe 'router', ->
 
     root = document.createElement 'div'
 
-    z.router.setRoot root
-    z.router.add '/test-ignore-hash', -> new App()
-    z.router.add '/test-ignore-hash2', -> new App2()
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/test-ignore-hash', -> new App()
+    router.add '/test-ignore-hash2', -> new App2()
 
-    z.router.setMode 'hash'
+    z.server.setMode 'hash'
 
-    z.router.go '/test-ignore-hash#abc'
+    z.server.go '/test-ignore-hash#abc'
     window.location.hash.should.be '#/test-ignore-hash'
-    z.router.go '/test-ignore-hash2#efg'
+    z.server.go '/test-ignore-hash2#efg'
     window.location.hash.should.be '#/test-ignore-hash2'
 
   it 'ignores hash if in pathname mode', ->
@@ -1045,19 +1062,21 @@ describe 'router', ->
 
     root = document.createElement 'div'
 
-    z.router.setRoot root
-    z.router.add '/test-use-path', -> new App()
-    z.router.add '/test-use-path2', -> new App2()
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/test-use-path', -> new App()
+    router.add '/test-use-path2', -> new App2()
 
-    z.router.setMode 'pathname'
+    z.server.setMode 'pathname'
 
-    z.router.go '/test-use-path#abc'
+    z.server.go '/test-use-path#abc'
     window.location.pathname.should.be '/test-use-path'
     window.location.hash.should.be ''
-    z.router.go '/test-use-path#def'
+    z.server.go '/test-use-path#def'
     window.location.pathname.should.be '/test-use-path'
     window.location.hash.should.be ''
-    z.router.go '/test-use-path2#abc'
+    z.server.go '/test-use-path2#abc'
     window.location.pathname.should.be '/test-use-path2'
     window.location.hash.should.be ''
 
@@ -1073,12 +1092,14 @@ describe 'router', ->
 
     window.location.hash = '/test-pre-hash'
 
-    z.router.setRoot root
-    z.router.add '/test-pre-hash', -> new App()
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/test-pre-hash', -> new App()
 
-    z.router.setMode 'hash'
+    z.server.setMode 'hash'
     root.isEqualNode(htmlToNode(result1)).should.be true
-    z.router.go()
+    z.server.go()
     root.isEqualNode(htmlToNode(result2)).should.be true
     window.location.hash.should.be '#/test-pre-hash'
 
@@ -1096,13 +1117,15 @@ describe 'router', ->
 
     window.location.hash = '/test-pre-hash-search?x=abc'
 
-    z.router.setRoot root
-    z.router.add '/test-pre-hash-search',
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/test-pre-hash-search',
       ({params, query}) -> new App(params, query)
 
-    z.router.setMode 'hash'
+    z.server.setMode 'hash'
     root.isEqualNode(htmlToNode(result1)).should.be true
-    z.router.go()
+    z.server.go()
     root.isEqualNode(htmlToNode(result2)).should.be true
     window.location.hash.should.be '#/test-pre-hash-search?x=abc'
 
@@ -1118,12 +1141,14 @@ describe 'router', ->
 
     window.history.pushState null, null, '/test-pre'
 
-    z.router.setRoot root
-    z.router.add '/test-pre', -> new App()
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/test-pre', -> new App()
 
-    z.router.setMode 'pathname'
+    z.server.setMode 'pathname'
     root.isEqualNode(htmlToNode(result1)).should.be true
-    z.router.go()
+    z.server.go()
     root.isEqualNode(htmlToNode(result2)).should.be true
     window.location.pathname.should.be '/test-pre'
 
@@ -1141,12 +1166,14 @@ describe 'router', ->
 
     window.history.pushState null, null, '/test-pre-search?x=abc'
 
-    z.router.setRoot root
-    z.router.add '/test-pre-search', ({params, query}) -> new App(params, query)
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/test-pre-search', ({params, query}) -> new App(params, query)
 
-    z.router.setMode 'pathname'
+    z.server.setMode 'pathname'
     root.isEqualNode(htmlToNode(result1)).should.be true
-    z.router.go()
+    z.server.go()
     root.isEqualNode(htmlToNode(result2)).should.be true
     window.location.pathname.should.be '/test-pre-search'
     window.location.search.should.be '?x=abc'
@@ -1163,15 +1190,17 @@ describe 'router', ->
 
     root = document.createElement 'div'
 
-    z.router.setRoot root
-    z.router.add '/test5', -> new App()
-    z.router.add '/test6', -> new App2()
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/test5', -> new App()
+    router.add '/test6', -> new App2()
 
     result1 = '<div><div>Hello World</div></div>'
     result2 = '<div><div>World Hello</div></div>'
 
-    z.router.setMode 'hash'
-    z.router.go '/test5'
+    z.server.setMode 'hash'
+    z.server.go '/test5'
 
     window.location.hash = '/test5'
     setTimeout ->
@@ -1198,22 +1227,24 @@ describe 'router', ->
 
     root = document.createElement 'div'
 
-    z.router.setRoot root
-    z.router.add '/testa', -> new App()
-    z.router.add '/testb', -> new App2()
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/testa', -> new App()
+    router.add '/testb', -> new App2()
 
     result1 = '<div><div>Hello World</div></div>'
     result2 = '<div><div>World Hello</div></div>'
 
-    z.router.setMode 'pathname'
+    z.server.setMode 'pathname'
 
-    z.router.go '/testa'
-    z.router.go '/testb'
+    z.server.go '/testa'
+    z.server.go '/testb'
     window.history.back()
     setTimeout ->
       root.isEqualNode(htmlToNode(result1)).should.be true
-      z.router.go '/testb'
-      z.router.go '/testa'
+      z.server.go '/testb'
+      z.server.go '/testa'
       window.history.back()
       setTimeout ->
         root.isEqualNode(htmlToNode(result2)).should.be true
@@ -1229,20 +1260,22 @@ describe 'router', ->
 
     root = document.createElement 'div'
 
-    z.router.setRoot root
-    z.router.add '/', -> new App()
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/', -> new App()
 
     result1 = '<div></div>'
     result2 = '<div><div>Hello World</div></div>'
 
-    z.router.setMode 'pathname'
+    z.server.setMode 'pathname'
 
     event = new Event 'popstate'
     window.dispatchEvent event
 
     root.isEqualNode(htmlToNode(result1)).should.be true
 
-    z.router.go '/'
+    z.server.go '/'
     root.isEqualNode(htmlToNode(result2)).should.be true
 
   it 'passes params', ->
@@ -1255,11 +1288,13 @@ describe 'router', ->
 
     root = document.createElement 'div'
 
-    z.router.setRoot root
-    z.router.add '/test/:key', ({params, query}) -> new App(params, query)
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/test/:key', ({params, query}) -> new App(params, query)
 
     result = '<div><div>Hello world</div></div>'
-    z.router.go('/test/world')
+    z.server.go('/test/world')
 
     root.isEqualNode(htmlToNode(result)).should.be true
 
@@ -1271,19 +1306,21 @@ describe 'router', ->
 
     root = document.createElement 'div'
 
-    z.router.setRoot root
-    z.router.add '/test7', -> new App()
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/test7', -> new App()
 
-    z.router.setMode 'hash'
+    z.server.setMode 'hash'
 
     callbackCalled = 0
     listener = (path) ->
       callbackCalled += 1
       path.should.be '/test7'
 
-    z.router.on('route', listener)
-    z.router.go '/test7'
-    z.router.off('route', listener)
+    z.server.on('route', listener)
+    z.server.go '/test7'
+    z.server.off('route', listener)
 
     setTimeout ->
       callbackCalled.should.be 1
@@ -1296,19 +1333,21 @@ describe 'router', ->
 
     root = document.createElement 'div'
 
-    z.router.setRoot root
-    z.router.add '/test8', -> new App()
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/test8', -> new App()
 
-    z.router.setMode 'pathname'
+    z.server.setMode 'pathname'
 
     callbackCalled = 0
     listener = (path) ->
       callbackCalled += 1
       path.should.be '/test8'
 
-    z.router.on('route', listener)
-    z.router.go '/test8'
-    z.router.off('route', listener)
+    z.server.on('route', listener)
+    z.server.go '/test8'
+    z.server.off('route', listener)
 
     setTimeout ->
       callbackCalled.should.be 1
@@ -1325,13 +1364,16 @@ describe 'router', ->
 
     root = document.createElement 'div'
 
-    z.router.setRoot root
-    z.router.add '/test9', -> z.router.go '/login1'
-    z.router.add '/login1', -> new Login()
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/test9', ->
+      throw new z.server.Redirect '/login1'
+    router.add '/login1', -> new Login()
 
-    z.router.setMode 'pathname'
+    z.server.setMode 'pathname'
 
-    z.router.go '/test9'
+    z.server.go '/test9'
 
     setTimeout ->
       window.location.pathname.should.be '/login1'
@@ -1348,15 +1390,17 @@ describe 'router', ->
 
     root = document.createElement 'div'
 
-    z.router.setRoot root
-    z.router.add '/test10', ->
-      setTimeout -> z.router.go '/login2'
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/test10', ->
+      setTimeout -> z.server.go '/login2'
       z 'div'
-    z.router.add '/login2', -> new Login()
+    router.add '/login2', -> new Login()
 
-    z.router.setMode 'pathname'
+    z.server.setMode 'pathname'
 
-    z.router.go '/test10'
+    z.server.go '/test10'
 
     setTimeout ->
       window.location.pathname.should.be '/login2'

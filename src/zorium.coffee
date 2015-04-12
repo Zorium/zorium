@@ -28,13 +28,15 @@ Rx = require 'rx-lite'
 
 z = require './z'
 observe = require './observe'
-router = require './router'
+Router = require './router'
 renderer = require './renderer'
+server = require './server'
 
 _.extend z,
   render: renderer.render
   redraw: renderer.redraw
-  router: router
+  Router: Router
+  server: server
 
   # START LEGACY
   observe: observe
