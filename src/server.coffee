@@ -125,7 +125,7 @@ class Server
       unless body?.tagName is 'BODY' and appRoot.properties.id is 'zorium-root'
         throw new Error 'Invalid BODY base element'
 
-      document.title = title.innerHTML
+      document.title = title.children[0].text
       renderer.render @globalRoot, appRoot
     else
       renderer.render @root, tree
