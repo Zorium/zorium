@@ -40,17 +40,9 @@ class Server
   constructor: ->
     @events = {}
     @root = null
-    @routers = []
+    @router = null
     @mode = if window?.history?.pushState then 'pathname' else 'hash'
     @currentPath = null
-
-    # coffeelint: disable=missing_fat_arrows
-    @Redirect = (message) ->
-      @name = 'Redirect'
-      @message = message
-      @stack = (new Error()).stack
-    @Redirect.prototype = new Error()
-    # coffeelint: enable=missing_fat_arrows
 
     if window?
       # used for full-page rendering
@@ -71,8 +63,8 @@ class Server
   setMode: (mode) =>
     @mode = mode
 
-  use: (router) ->
-    @routers.push router
+  setRouter: (router) ->
+    @router = router
 
   link: (node) =>
     if node.properties.onclick
@@ -96,15 +88,17 @@ class Server
     path ?= getCurrentPath(@mode)
     isReplacement = not Boolean @currentPath
     url = parseUrl(path)
+    cookies = cookie.parse document.cookie or ''
+
+    unless @router
+      return
 
     try
-      cookies = cookie.parse document.cookie or ''
-      tree = _.reduce @routers, (result, router) ->
-        return result or router.resolve {path, cookies}
-      , null
+      tree = @router.resolve {path, cookies}
     catch err
-      if err instanceof @Redirect
-        return @go err.message
+      if err instanceof @router.Redirect
+        return @go err.path
+      else throw err
 
     # no match found
     unless tree

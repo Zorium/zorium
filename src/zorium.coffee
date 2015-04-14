@@ -40,12 +40,18 @@ _.extend z,
   Router: Router
   server: server
   routerToMiddleware: (router) ->
-    (req, res) ->
-      tree = router.resolve {
-        path: req.url
-        cookies: cookie.parse req.headers?.cookie or ''
-      }
-      res.send '<!DOCTYPE html>' + toHTML tree
+    (req, res, next) ->
+      try
+        tree = router.resolve {
+          path: req.url
+          cookies: cookie.parse req.headers?.cookie or ''
+        }
+        res.send '<!DOCTYPE html>' + toHTML tree
+      catch err
+        if err instanceof router.Redirect
+          return res.redirect err.path
+        else
+          return next err
 
   # START LEGACY
   observe: observe

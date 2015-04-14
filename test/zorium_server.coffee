@@ -28,3 +28,19 @@ describe 'router', ->
       html.should.be '<!DOCTYPE html><div>bar</div>'
       done()
     })
+
+  it 'supports redirects', (done) ->
+    router = new z.Router()
+    router.add '/', ({cookies}) ->
+      throw new router.Redirect '/login'
+      z 'div', cookies.foo
+
+    middleware = z.routerToMiddleware router
+    middleware({
+      url: '/'
+      headers:
+        cookie: 'foo=bar;'
+    }, {redirect: (path) ->
+      path.should.be '/login'
+      done()
+    })

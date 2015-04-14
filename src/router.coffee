@@ -30,6 +30,15 @@ class Router
   constructor: ->
     @router = new routes()
 
+    # coffeelint: disable=missing_fat_arrows
+    @Redirect = (path) ->
+      @name = 'redirect'
+      @path = path
+      @message = "Redirecting to #{path}"
+      @stack = (new Error()).stack
+    @Redirect.prototype = new Error()
+    # coffeelint: enable=missing_fat_arrows
+
   add: (path, cb) =>
     @router.addRoute path, cb
 

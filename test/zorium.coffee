@@ -908,7 +908,7 @@ describe 'server', ->
     root = document.createElement 'div'
 
     z.server.setRoot root
-    z.server.use router
+    z.server.setRouter router
 
     result1 = '<div><div>Hello World</div></div>'
     result2 = '<div><div>World Hello</div></div>'
@@ -931,7 +931,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/test', -> new App()
     router.add '/test2', -> new App2()
 
@@ -955,7 +955,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/test3', -> new App()
     router.add '/test4', -> new App()
 
@@ -982,7 +982,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/test-qs', -> new App()
     router.add '/test-qs2', ({params, query}) -> new App2(params, query)
 
@@ -1011,7 +1011,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/test-qs3', -> new App()
     router.add '/test-qs4', ({params, query}) -> new App2(params, query)
 
@@ -1040,7 +1040,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/test-ignore-hash', -> new App()
     router.add '/test-ignore-hash2', -> new App2()
 
@@ -1064,7 +1064,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/test-use-path', -> new App()
     router.add '/test-use-path2', -> new App2()
 
@@ -1094,7 +1094,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/test-pre-hash', -> new App()
 
     z.server.setMode 'hash'
@@ -1119,7 +1119,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/test-pre-hash-search',
       ({params, query}) -> new App(params, query)
 
@@ -1143,7 +1143,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/test-pre', -> new App()
 
     z.server.setMode 'pathname'
@@ -1168,7 +1168,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/test-pre-search', ({params, query}) -> new App(params, query)
 
     z.server.setMode 'pathname'
@@ -1192,7 +1192,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/test5', -> new App()
     router.add '/test6', -> new App2()
 
@@ -1229,7 +1229,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/testa', -> new App()
     router.add '/testb', -> new App2()
 
@@ -1262,7 +1262,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/', -> new App()
 
     result1 = '<div></div>'
@@ -1290,7 +1290,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/test/:key', ({params, query}) -> new App(params, query)
 
     result = '<div><div>Hello world</div></div>'
@@ -1311,7 +1311,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/testCookie', ({cookies}) ->
       new App({cookies})
 
@@ -1330,7 +1330,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/test7', -> new App()
 
     z.server.setMode 'hash'
@@ -1357,7 +1357,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/test8', -> new App()
 
     z.server.setMode 'pathname'
@@ -1388,9 +1388,9 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/test9', ->
-      throw new z.server.Redirect '/login1'
+      throw new router.Redirect '/login1'
     router.add '/login1', -> new Login()
 
     z.server.setMode 'pathname'
@@ -1414,7 +1414,7 @@ describe 'server', ->
 
     z.server.setRoot root
     router = new z.Router()
-    z.server.use router
+    z.server.setRouter router
     router.add '/test10', ->
       setTimeout -> z.server.go '/login2'
       z 'div'
