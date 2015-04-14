@@ -43,6 +43,7 @@
   "dependencies": {
     "clay-coffeescript-style-guide": "^1.0.0",
     "coffee-script": "^1.8.0",
+    "cookie": "^0.1.2",
     "lodash": "^3.0.0",
     "observ": "^0.2.0",
     "observ-array": "^3.1.0",
@@ -50,7 +51,7 @@
     "qs": "^2.3.3",
     "routes": "^2.0.0",
     "rx-lite": "^2.4.4",
-    "virtual-dom": "^2.0.0",
-    "vdom-to-html": "^2.0.0"
+    "vdom-to-html": "^2.0.0",
+    "virtual-dom": "^2.0.0"
   }
 }

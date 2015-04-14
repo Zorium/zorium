@@ -1298,6 +1298,28 @@ describe 'server', ->
 
     root.isEqualNode(htmlToNode(result)).should.be true
 
+  it 'passes cookies', ->
+    class App
+      constructor: ({cookies}) ->
+        @foo = cookies.foo
+
+      render: =>
+        z 'div', 'Hello ' + @foo
+
+    root = document.createElement 'div'
+    document.cookie = 'foo=bar;'
+
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.use router
+    router.add '/testCookie', ({cookies}) ->
+      new App({cookies})
+
+    result = '<div><div>Hello bar</div></div>'
+    z.server.go('/testCookie')
+
+    root.isEqualNode(htmlToNode(result)).should.be true
+
 
   it 'emits route events (hash mode)', (done) ->
     class App

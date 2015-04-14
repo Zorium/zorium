@@ -26,6 +26,7 @@ unless Function::bind
 _ = require 'lodash'
 Rx = require 'rx-lite'
 toHTML = require 'vdom-to-html'
+cookie = require 'cookie'
 
 z = require './z'
 observe = require './observe'
@@ -40,7 +41,10 @@ _.extend z,
   server: server
   routerToMiddleware: (router) ->
     (req, res) ->
-      tree = router.resolve path: req.url
+      tree = router.resolve {
+        path: req.url
+        cookies: cookie.parse req.headers?.cookie or ''
+      }
       res.send '<!DOCTYPE html>' + toHTML tree
 
   # START LEGACY

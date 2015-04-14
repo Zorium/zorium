@@ -1,5 +1,6 @@
 routes = require 'routes'
 Qs = require 'qs'
+cookie = require 'cookie'
 
 z = require './z'
 util = require './util'
@@ -97,8 +98,9 @@ class Server
     url = parseUrl(path)
 
     try
+      cookies = cookie.parse document.cookie or ''
       tree = _.reduce @routers, (result, router) ->
-        return result or router.resolve {path}
+        return result or router.resolve {path, cookies}
       , null
     catch err
       if err instanceof @Redirect

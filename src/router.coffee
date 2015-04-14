@@ -33,7 +33,7 @@ class Router
   add: (path, cb) =>
     @router.addRoute path, cb
 
-  resolve: ({path}) ->
+  resolve: ({path, cookies}) ->
     url = parseUrl path
     queryParams = Qs.parse(url.search?.slice(1))
     route = @router.match(url.pathname)
@@ -45,6 +45,7 @@ class Router
     return route.fn({
       params: route.params
       query: queryParams
+      cookies
     })
 
 
