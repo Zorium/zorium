@@ -778,6 +778,31 @@ describe 'z.state', ->
       subject.onError new Error 'err'
     ).should.throw()
 
+  it 'listens for global settlements', (done) ->
+    pendingSettled = 2
+
+    settled = new Rx.BehaviorSubject(null)
+    pending1 = new Rx.ReplaySubject(1)
+    pending2 = new Rx.ReplaySubject(1)
+
+    z.state {
+      settled
+      pending1
+      pending2
+    }
+
+    z.state.onNextAllSettlemenmt ->
+      pendingSettled.should.be 0
+      done()
+
+    setTimeout ->
+      pendingSettled -= 1
+      pending1.onNext(null)
+
+      setTimeout ->
+        pendingSettled -= 1
+        pending2.onNext(null)
+
 # START LEGACY
 describe 'z.oldState', ->
   it 'observes state', ->
