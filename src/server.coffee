@@ -90,7 +90,7 @@ class Server
     url = parseUrl(path)
     cookies = cookie.parse document.cookie or ''
 
-    unless @router
+    if not @router or path is @currentPath
       return
 
     try

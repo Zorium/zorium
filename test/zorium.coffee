@@ -1008,14 +1008,16 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.router.setRoot root
-    z.router.add '/twice', -> new App()
+    z.server.setRoot root
+    router = new z.Router()
+    router.add '/twice', -> new App()
+    z.server.setRouter router
 
-    z.router.setMode 'hash'
+    z.server.setMode 'hash'
 
-    z.router.go '/twice'
+    z.server.go '/twice'
     rendered.should.be 1
-    z.router.go '/twice'
+    z.server.go '/twice'
     rendered.should.be 1
 
   it 'updates query param in hash mode', ->
