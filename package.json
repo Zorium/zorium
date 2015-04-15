@@ -1,8 +1,8 @@
 {
   "name": "zorium",
-  "version": "0.8.2",
+  "version": "1.0.0-rc1",
   "description": "",
-  "main": "dist/zorium.js",
+  "main": "src/zorium.coffee",
   "scripts": {
     "test": "node_modules/gulp/bin/gulp.js test",
     "build": "node_modules/gulp/bin/gulp.js build",
@@ -23,6 +23,7 @@
     "envify": "^3.1.0",
     "gulp": "^3.8.10",
     "gulp-coffeelint": "^0.4.0",
+    "gulp-mocha": "^2.0.1",
     "gulp-rename": "^1.2.0",
     "gulp-webpack": "^1.0.0",
     "json-loader": "^0.5.1",
@@ -42,6 +43,7 @@
   "dependencies": {
     "clay-coffeescript-style-guide": "^1.0.0",
     "coffee-script": "^1.8.0",
+    "cookie": "^0.1.2",
     "lodash": "^3.0.0",
     "observ": "^0.2.0",
     "observ-array": "^3.1.0",
@@ -49,6 +51,7 @@
     "qs": "^2.3.3",
     "routes": "^2.0.0",
     "rx-lite": "^2.4.4",
-    "virtual-dom": "^1.2.0"
+    "vdom-to-html": "^2.0.0",
+    "virtual-dom": "^2.0.0"
   }
 }

@@ -24,17 +24,22 @@ unless Function::bind
 # coffeelint: enable=missing_fat_arrows
 
 _ = require 'lodash'
-Rx = require 'rx-lite'
+toHTML = require 'vdom-to-html'
+cookie = require 'cookie'
 
 z = require './z'
 observe = require './observe'
-router = require './router'
+Router = require './router'
 renderer = require './renderer'
+server = require './server'
+state = require './state'
 
 _.extend z,
   render: renderer.render
   redraw: renderer.redraw
-  router: router
+  Router: Router
+  server: server
+  state: state
 
   # START LEGACY
   observe: observe
@@ -48,38 +53,6 @@ _.extend z,
     return observed
   # END LEGACY
 
-  state: (initialState) ->
-    currentValue = {}
-
-    state = new Rx.BehaviorSubject(currentValue)
-
-    # set currentState to all values of initialState
-    _.forEach initialState, (val, key) ->
-      if val?.subscribe
-        currentValue[key] = null
-        val.subscribe (update) ->
-          currentValue[key] = update
-          state.onNext currentValue
-      else
-        currentValue[key] = val
-
-      return null
-
-    state.onNext currentValue
-
-    state.set = (diff) ->
-      _.forEach diff, (val, key) ->
-        if initialState[key]?.subscribe
-          throw new Error 'Attempted to set observable value'
-        else
-          currentValue[key] = val
-
-        return null
-
-      state.onNext currentValue
-      return state
-
-    return state
   ev: (fn) ->
     # coffeelint: disable=missing_fat_arrows
     (e) ->
@@ -89,5 +62,27 @@ _.extend z,
   classKebab: (classes) ->
     _.map _.keys(_.pick classes, _.identity), _.kebabCase
     .join ' '
+
+  routerToMiddleware: (router) ->
+    (req, res, next) ->
+      try
+        # Initialize tree, kicking off async fetches
+        router.resolve {
+          path: req.url
+          cookies: cookie.parse req.headers?.cookie or ''
+        }
+
+        state.onNextAllSettlemenmt ->
+          tree = router.resolve {
+            path: req.url
+            cookies: cookie.parse req.headers?.cookie or ''
+          }
+
+          res.send '<!DOCTYPE html>' + toHTML tree
+      catch err
+        if err instanceof router.Redirect
+          return res.redirect err.path
+        else
+          return next err
 
 module.exports = z
