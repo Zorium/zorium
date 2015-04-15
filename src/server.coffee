@@ -36,6 +36,26 @@ setPath = (path, mode, isReplacement) ->
   else
     window.location.hash = path
 
+parseFullTree = (tree) ->
+  unless tree?.tagName is 'HTML'
+    throw new Error 'Invalid HTML base element'
+
+  $head = tree.children[0]
+  $body = tree.children[1]
+  $title = $head?.children[0]
+  $appRoot = $body?.children[0]
+
+  unless $head?.tagName is 'HEAD' and $title?.tagName is 'TITLE'
+    throw new Error 'Invalid HEAD base element'
+
+  unless $body?.tagName is 'BODY' and $appRoot.properties.id is 'zorium-root'
+    throw new Error 'Invalid BODY base element'
+
+  return {
+    $appRoot
+    title: $title?.children[0]?.text
+  }
+
 class Server
   constructor: ->
     @events = {}
@@ -111,22 +131,10 @@ class Server
     # Because the DOM doesn't let us directly manipulate top-level elements
     # We have to standardize a hack around it
     if @root is document
-      unless tree?.tagName is 'HTML'
-        throw new Error 'Invalid HTML base element'
+      {title, $appRoot} = parseFullTree tree
 
-      head = tree.children[0]
-      body = tree.children[1]
-      title = head?.children[0]
-      appRoot = body?.children[0]
-
-      unless head?.tagName is 'HEAD' and title?.tagName is 'TITLE'
-        throw new Error 'Invalid HEAD base element'
-
-      unless body?.tagName is 'BODY' and appRoot.properties.id is 'zorium-root'
-        throw new Error 'Invalid BODY base element'
-
-      document.title = title.children[0].text
-      renderer.render @globalRoot, appRoot
+      document.title = title
+      renderer.render @globalRoot, $appRoot
     else
       renderer.render @root, tree
 

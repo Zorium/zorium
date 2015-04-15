@@ -98,34 +98,6 @@ describe 'Virtual DOM', ->
 
     $el.isEqualNode(htmlToNode(result)).should.be true
 
-  it 'allows component render to return an array', ->
-    class HelloWorldComponent
-      render: ->
-        [
-          z 'span', 'Hello'
-          z 'span', 'World'
-        ]
-
-    hello = new HelloWorldComponent()
-
-    dom = z 'div',
-      z 'div', 'a'
-      z 'div', 'b'
-      hello or null
-
-    $el = createElement(dom)
-
-    result = '<div>' +
-      '<div>a</div>' +
-      '<div>b</div>' +
-      '<div>' +
-        '<span>Hello</span>' +
-        '<span>World</span>' +
-      '</div>' +
-    '</div>'
-
-    $el.isEqualNode(htmlToNode(result)).should.be true
-
   it 'allows component render to return undefined', ->
     class HelloWorldComponent
       render: ->
@@ -142,7 +114,7 @@ describe 'Virtual DOM', ->
     result = '<div><div>' +
       '<div>a</div>' +
       '<div>b</div>' +
-      '<div></div>' +
+      '<span></span>' +
     '</div></div>'
 
     z.render root, dom

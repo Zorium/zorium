@@ -49,16 +49,12 @@ getOnBeforeUnmountHook = (child, onUnhook) ->
   child._zorium_OnBeforeUnmountHook = hook
   return hook
 
-# FIXME: reduce cyclomatic complexity
 renderChild = (child, props = {}) ->
   if util.isComponent child
     tree = child.render props
 
     unless tree
-      tree = z 'div'
-
-    if _.isArray tree
-      tree = z 'div', tree
+      tree = z 'span'
 
     tree.hooks ?= {}
 
