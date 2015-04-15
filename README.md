@@ -4,7 +4,7 @@
 #### [zorium.org](https://zorium.org/)
 
 (╯°□°)╯︵ ┻━┻  
-v0.8.0
+v1.0.0-rc1
 
 ## Examples
 
@@ -64,7 +64,7 @@ z 'ul',
 ### Zorium Components
 
 Zorium components can be used in place of a dom tag.  
-Zorium components must have a `render()` method
+Zorium components must have a `render()` method  
 Zorium components must be `pure` - `render()` must only rely on `@state` and props
 
 ```coffee
@@ -80,7 +80,7 @@ z 'div',
   z $hello, {name: 'Jim'} # <div><span>Hello Jim!</span></div>
 ```
 
-Parameters can also be passed to the render method
+Props can also be passed to the render method
 
 ```coffee
 class A
@@ -134,26 +134,29 @@ class App
     z 'div', 'Hello ' + key
 
 root = document.createElement 'div'
+router = new z.Router()
 
-z.router.setMode 'pathname' # 'pathname' or 'hash' (default is 'hash')
+z.server.setMode 'pathname' # 'pathname' or 'hash' (default is 'hash')
+z.server.setRoot root
 
-z.router.setRoot root
-z.router.add '/test', ({params, query}) -> new App({params, query})
-z.router.add '/test/:key', ({params, query}) -> new App({params, query})
+router.add '/test', ({params, query}) -> new App({params, query})
+router.add '/test/:key', ({params, query}) -> new App({params, query})
+
+z.server.setRouter router
 
 z.router.go '/test'
 ```
 
 
-#### z.router.setMode()
+#### z.server.setMode()
 
 ```coffee
-z.router.setMode 'hash' # (default) clay.io/#/path
-z.router.setMode 'pathname' # clay.io/pathname
+z.server.setMode 'hash' # (default) clay.io/#/path
+z.server.setMode 'pathname' # clay.io/pathname
 ```
 
 
-#### z.router.setRoot()
+#### z.server.setRoot()
 
 Accepts a DOM node to append to
 
@@ -161,17 +164,18 @@ Accepts a DOM node to append to
 ###
 @param {HtmlElement}
 ###
-z.router.setRoot(document.body)
+z.server.setRoot(document.body)
 ```
 
-#### z.router.add()
+#### Router.add()
 
 ```coffee
+router = new z.Router()
 ###
 @param {String} path
 @param {Function<ZoriumComponent>} ({params, query})
 ###
-z.router.add '/test/:key', ({params, query}) -> new App({params, query})
+router.add '/test/:key', ({params, query}) -> new App({params, query})
 
 class App
   constructor: (params) -> null
@@ -186,15 +190,15 @@ pathTransform = (path) ->
     return path
 ```
 
-#### z.router.go()
+#### z.server.go()
 
 Navigate to a route
 
 ```coffee
-z.router.go '/test/one'
+z.server.go '/test/one'
 ```
 
-### z.router.link()
+### z.server.link()
 
 automatically route anchor `<a>` tag elements
 It is a mistake to use `onclick` on the element
@@ -204,7 +208,7 @@ z 'div',
   z.router.link z 'a.myclass[href=/abc]', 'click me'
 ```
 
-### z.router.on()
+### z.server.on()
 
 Listen for events. Currently the only event is `route`, which emits the path.
 
@@ -282,77 +286,6 @@ state.getValue() is {
   c: [1, 2, 3]
   d: 123
 }
-```
-
-#### WARNING: WILL BE REMOVED in 1.0
-#### z.oldState()
-
-Previously z.state  
-Partial updating state object  
-When set as a property of a Zorium Component, `z.redraw()` will automatically be called  
-If passed a `z.observe`, an update is triggered on child updates
-
-```coffee
-promise = new Promise()
-
-state = z.state
-  a: 'abc'
-  b: 123
-  c: [1, 2, 3]
-  d: z.observe promise
-
-state() is {
-  a: 'abc'
-  b: 123
-  c: [1, 2, 3]
-  d: null
-}
-
-promise.resolve(123)
-
-# promise resolved
-state().d is 123
-
-# watch for changes
-state (state) ->
-  state.b is 321
-
-# partial update
-state.set
-  b: 321
-
-state() is {
-  a: 'abc'
-  b: 123
-  c: [1, 2, 3]
-  d: 123
-}
-```
-
-#### WARNING: WILL BE REMOVED in 1.0
-#### z.observe()
-
-Create an observable  
-Promises observe to `null` until resolved (but still have promise methods)
-
-```coffee
-a = z.observe 'a'
-a() is 'a'
-
-a (change) ->
-  change is 'b'
-
-a.set('b')
-
-resolve = null
-promise = new Promise (_resolve) -> resolve = _resolve
-p = z.observe(promise)
-p() is null
-resolve(1)
-
-p.then ->
-  p() is 1
-
 ```
 
 ### Helpers
@@ -480,7 +413,12 @@ module.exports = new AbcService()
 
 ### Changelog
 
-0.8.0
+0.8.x -> 1.0.0-rc1
+  - removed z.oldState()
+  - removed z.observe()
+  - z.router was split between z.Router and z.server
+
+0.7.x -> 0.8.0
 
   - z.state() -> z.oldState()
   - z.router.currentPath -> removed
