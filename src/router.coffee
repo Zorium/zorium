@@ -14,8 +14,8 @@ parseUrl = (url) ->
     }
   else
     # Avoid webpack include
-    module = 'url'
-    URL = require(module)
+    _url = 'url'
+    URL = require(_url)
     parsed = URL.parse url
 
     {

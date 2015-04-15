@@ -34,6 +34,8 @@ paths =
 
 webpackProdConfig =
   module:
+    exprContextRegExp: /$^/
+    exprContextCritical: false
     postLoaders: [
       { test: /\.coffee$/, loader: 'transform/cacheable?envify' }
     ]
@@ -72,6 +74,8 @@ gulp.task 'scripts:test', ->
   .pipe webpack
     devtool: '#inline-source-map'
     module:
+      exprContextRegExp: /$^/
+      exprContextCritical: false
       postLoaders: [
         { test: /\.coffee$/, loader: 'transform/cacheable?envify' }
       ]
