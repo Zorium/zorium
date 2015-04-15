@@ -28,7 +28,6 @@ toHTML = require 'vdom-to-html'
 cookie = require 'cookie'
 
 z = require './z'
-observe = require './observe'
 Router = require './router'
 renderer = require './renderer'
 server = require './server'
@@ -40,25 +39,13 @@ _.extend z,
   Router: Router
   server: server
   state: state
-
-  # START LEGACY
-  observe: observe
-  oldState: (obj) ->
-    observed = observe obj
-
-    _set = observed.set.bind observed
-    observed.set = (diff) ->
-      _set _.defaults diff, observed()
-
-    return observed
-  # END LEGACY
-
   ev: (fn) ->
     # coffeelint: disable=missing_fat_arrows
     (e) ->
       $$el = this
       fn(e, $$el)
     # coffeelint: enable=missing_fat_arrows
+
   classKebab: (classes) ->
     _.map _.keys(_.pick classes, _.identity), _.kebabCase
     .join ' '

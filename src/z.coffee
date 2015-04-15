@@ -84,15 +84,6 @@ renderChild = (child, props = {}) ->
 
       child.zorium_isWatchingState = true
 
-    # START LEGACY
-    if not child.zorium_isWatchingOldState and _.isFunction child.oldState
-      child.oldState ->
-        # TODO: Move this out, circular dependency with renderer
-        z.redraw()
-
-      child.zorium_isWatchingOldState = true
-    # ENG LEGACY
-
     return tree
 
   if _.isNumber(child)
