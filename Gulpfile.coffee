@@ -29,7 +29,6 @@ paths =
   rootScripts: './src/zorium.coffee'
   rootTests: './test/zorium.coffee'
   rootServerTests: './test/zorium_server.coffee'
-  dist: './dist/'
   build: './build/'
 
 webpackProdConfig =
@@ -45,8 +44,6 @@ webpackProdConfig =
     ]
   resolve:
     extensions: ['.coffee', '.js', '.json', '']
-
-gulp.task 'build', ['clean:dist', 'scripts:dist', 'scripts:dist-min']
 
 gulp.task 'test', ['scripts:test', 'lint', 'test:server'], (cb) ->
   karma.start _.defaults(singleRun: true, karmaConf), cb
@@ -92,31 +89,5 @@ gulp.task 'scripts:test', ->
   .pipe rename 'tests.js'
   .pipe gulp.dest paths.build
 
-gulp.task 'clean:dist', (cb) ->
-  del paths.dist, cb
-
 gulp.task 'watch:test', ->
   gulp.watch paths.scripts.concat([paths.tests]), ['test:phantom']
-
-gulp.task 'scripts:dist', ->
-  gulp.src paths.rootScripts
-  .pipe webpack _.defaults
-    output:
-      library: 'zorium'
-      libraryTarget: 'commonjs2'
-  , webpackProdConfig
-
-  .pipe rename 'zorium.js'
-  .pipe gulp.dest paths.dist
-
-gulp.task 'scripts:dist-min', ->
-  gulp.src paths.rootScripts
-  .pipe webpack _.defaults {
-    output:
-      library: 'zorium'
-    plugins: [
-      new webpackSource.optimize.UglifyJsPlugin()
-    ]
-  }, webpackProdConfig
-  .pipe rename 'zorium.min.js'
-  .pipe gulp.dest paths.dist
