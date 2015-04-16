@@ -37,6 +37,14 @@ class Router
       @message = "Redirecting to #{path}"
       @stack = (new Error()).stack
     @Redirect.prototype = new Error()
+
+    @Error = ({tree, status}) ->
+      @name = String status
+      @tree = tree
+      @status = status
+      @message = "Error #{status}"
+      @stack = (new Error()).stack
+    @Error.prototype = new Error()
     # coffeelint: enable=missing_fat_arrows
 
   add: (path, cb) =>

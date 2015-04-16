@@ -69,6 +69,9 @@ _.extend z,
       catch err
         if err instanceof router.Redirect
           return res.redirect err.path
+        else if err instanceof router.Error
+          return res.status(err.status)
+            .send '<!DOCTYPE html>' + toHTML err.tree
         else
           return next err
 

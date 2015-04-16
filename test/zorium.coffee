@@ -1241,6 +1241,36 @@ describe 'server', ->
       window.location.pathname.should.be '/login1'
       done()
 
+  it 'allows 404 errors', ->
+    root = document.createElement 'div'
+
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.setRouter router
+    router.add '/test404', ->
+      tree = z 'div', '404'
+      throw new router.Error {tree, status: 404}
+
+    result = '<div><div>404</div></div>'
+    z.server.go('/test404')
+
+    root.isEqualNode(htmlToNode(result)).should.be true
+
+  it 'allows 500 errors', ->
+    root = document.createElement 'div'
+
+    z.server.setRoot root
+    router = new z.Router()
+    z.server.setRouter router
+    router.add '/test500', ->
+      tree = z 'div', '500'
+      throw new router.Error {tree, status: 500}
+
+    result = '<div><div>500</div></div>'
+    z.server.go('/test500')
+
+    root.isEqualNode(htmlToNode(result)).should.be true
+
   it 'allows async redirect', (done) ->
     class App
       render: ->

@@ -118,6 +118,8 @@ class Server
     catch err
       if err instanceof @router.Redirect
         return @go err.path
+      else if err instanceof @router.Error
+        tree = err.tree
       else throw err
 
     # no match found
