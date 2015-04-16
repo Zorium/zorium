@@ -32,7 +32,7 @@ describe 'router', ->
   it 'supports redirects', (done) ->
     router = new z.Router()
     router.add '/', ({cookies}) ->
-      throw new router.Redirect '/login'
+      throw new router.Redirect path: '/login'
       z 'div', cookies.foo
 
     middleware = z.routerToMiddleware router

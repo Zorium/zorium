@@ -31,7 +31,7 @@ class Router
     @router = new routes()
 
     # coffeelint: disable=missing_fat_arrows
-    @Redirect = (path) ->
+    @Redirect = ({path}) ->
       @name = 'redirect'
       @path = path
       @message = "Redirecting to #{path}"

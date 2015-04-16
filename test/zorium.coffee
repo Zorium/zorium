@@ -1230,7 +1230,7 @@ describe 'server', ->
     router = new z.Router()
     z.server.setRouter router
     router.add '/test9', ->
-      throw new router.Redirect '/login1'
+      throw new router.Redirect path: '/login1'
     router.add '/login1', -> new Login()
 
     z.server.setMode 'pathname'
