@@ -2,12 +2,17 @@ _ = require 'lodash'
 Rx = require 'rx-lite'
 
 settlementListeners = []
+anyUpdateListeners = []
 pendingSettlement = 0
 
 fireSettlement = ->
   _.map settlementListeners, (fn) ->
     fn()
   settlementListeners = []
+
+fireAnyUpdateListeners = ->
+  _.map anyUpdateListeners, (fn) ->
+    fn()
 
 State = (initialState) ->
   currentValue = {}
@@ -48,8 +53,14 @@ State = (initialState) ->
     state.onNext currentValue
     return state
 
+  state.subscribe fireAnyUpdateListeners, (err) -> throw err
+
   return state
 
+
+State.onAnyUpdate = (fn) ->
+  anyUpdateListeners.push fn
+  return null
 
 State.onNextAllSettlemenmt = (fn) ->
   if pendingSettlement is 0

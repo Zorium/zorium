@@ -1,5 +1,4 @@
 routes = require 'routes'
-Qs = require 'qs'
 
 parseUrl = (url) ->
   if window?
@@ -34,7 +33,7 @@ class Router
     @Redirect = ({path}) ->
       @name = 'redirect'
       @path = path
-      @message = "Redirecting to #{path}"
+      @message = "Redirect to #{path}"
       @stack = (new Error()).stack
     @Redirect.prototype = new Error()
 
@@ -50,20 +49,7 @@ class Router
   add: (path, cb) =>
     @router.addRoute path, cb
 
-  resolve: ({path, cookies}) ->
-    url = parseUrl path
-    queryParams = Qs.parse(url.search?.slice(1))
-    route = @router.match(url.pathname)
-
-    # no match found
-    if not route
-      return null
-
-    return route.fn({
-      params: route.params
-      query: queryParams
-      cookies
-    })
-
+  match: (pathname) ->
+    @router.match(pathname)
 
 module.exports = Router

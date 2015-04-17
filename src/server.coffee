@@ -1,11 +1,11 @@
 routes = require 'routes'
 Qs = require 'qs'
 cookie = require 'cookie'
-virtualize = require 'vdom-virtualize'
 
 z = require './z'
 util = require './util'
 renderer = require './renderer'
+state = require './state'
 
 getCurrentPath = (mode) ->
   hash = window.location.hash.slice(1)
@@ -17,17 +17,6 @@ getCurrentPath = (mode) ->
   return if mode is 'pathname' then pathname or hash \
          else hash or pathname
 
-parseUrl = (url) ->
-  a = document.createElement 'a'
-  a.href = url
-
-  {
-    pathname: a.pathname
-    hash: a.hash
-    search: a.search
-    path: a.pathname + a.search
-  }
-
 setPath = (path, mode, isReplacement) ->
   if mode is 'pathname'
     if isReplacement
@@ -37,33 +26,29 @@ setPath = (path, mode, isReplacement) ->
   else
     window.location.hash = path
 
-parseFullTree = (tree) ->
-  unless tree?.tagName is 'HTML'
-    throw new Error 'Invalid HTML base element'
+parseUrl = (url) ->
+  if window?
+    a = document.createElement 'a'
+    a.href = url
 
-  $head = tree.children[0]
-  $body = tree.children[1]
-  $title = $head?.children[0]
-  $appRoot = $body?.children[0]
+    {
+      pathname: a.pathname
+      hash: a.hash
+      search: a.search
+      path: a.pathname + a.search
+    }
+  else
+    # Avoid webpack include
+    _url = 'url'
+    URL = require(_url)
+    parsed = URL.parse url
 
-  unless $head?.tagName is 'HEAD' and $title?.tagName is 'TITLE'
-    throw new Error 'Invalid HEAD base element'
-
-  unless $body?.tagName is 'BODY' and $appRoot.properties.id is 'zorium-root'
-    throw new Error 'Invalid BODY base element'
-
-  unless $appRoot.children.length is 1
-    throw new Error 'zorium-root must only contain 1 direct child'
-
-  return {
-    $appRoot: $appRoot.children[0]
-    title: $title?.children[0]?.text
-  }
-
-removeContentEditable = (vnode) ->
-  delete vnode.properties?.contentEditable
-  _.map vnode.children, removeContentEditable
-  return vnode
+    {
+      pathname: parsed.pathname
+      hash: parsed.hash
+      search: parsed.search
+      path: parsed.path
+    }
 
 class Server
   constructor: ->
@@ -72,6 +57,13 @@ class Server
     @router = null
     @mode = if window?.history?.pushState then 'pathname' else 'hash'
     @currentPath = null
+    @cachedPaths = {}
+    @isRedrawScheduled = false
+    @animationRequestId = null
+
+    state.onAnyUpdate =>
+      if window? and @router
+        @go @currentPath
 
     if window?
       # used for full-page rendering
@@ -116,17 +108,9 @@ class Server
 
     return node
 
-  go: (path) =>
-    path ?= getCurrentPath(@mode)
-    isReplacement = not Boolean @currentPath
-    url = parseUrl(path)
-    cookies = cookie.parse document.cookie or ''
-
-    if not @router or path is @currentPath
-      return
-
+  render: (route, props) =>
     try
-      tree = @router.resolve {path, cookies}
+      tree = route.fn props
     catch err
       if err instanceof @router.Redirect
         return @go err.path
@@ -134,28 +118,45 @@ class Server
         tree = err.tree
       else throw err
 
-    # no match found
-    unless tree
-      return
-
-    setPath url.path, @mode, isReplacement
-    @currentPath = url.path
-    @emit 'route', url.path
-
     # Because the DOM doesn't let us directly manipulate top-level elements
     # We have to standardize a hack around it
     if @root is document
-      {title, $appRoot} = parseFullTree tree
-
-      # TODO: fix implicit dependency between this and renderer (_zoriumId)
-      unless @globalRoot._zoriumId
-        root = removeContentEditable virtualize @globalRoot.children[0]
-        renderer.render @globalRoot, root
-
-      document.title = title
       renderer.render @globalRoot, $appRoot
     else
       renderer.render @root, tree
+
+  go: (path) =>
+    path ?= getCurrentPath(@mode)
+    isReplacement = not Boolean @currentPath
+    cookies = cookie.parse document.cookie or ''
+    isRedraw = path is @currentPath
+    url = parseUrl path
+    queryParams = Qs.parse(url.search?.slice(1))
+
+    if @isRedrawScheduled and isRedraw
+      return
+    else if @isRedrawScheduled
+      @isRedrawScheduled = false
+      window.cancelAnimationFrame @animationRequestId
+
+    route = @router.match(url.pathname)
+
+    props = {
+      params: route.params
+      query: queryParams
+      cookies
+    }
+
+    if not isRedraw
+      @currentPath = path
+      setPath path, @mode, isReplacement
+      @emit 'route', path
+      @render(route, props)
+    else
+      @isRedrawScheduled = true
+      @animationRequestId = window.requestAnimationFrame =>
+        @isRedrawScheduled = false
+        @render(route, props)
 
   on: (name, fn) =>
     (@events[name] = @events[name] or []).push(fn)

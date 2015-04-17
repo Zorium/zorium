@@ -1,6 +1,7 @@
 diff = require 'virtual-dom/diff'
 patch = require 'virtual-dom/patch'
 createElement = require 'virtual-dom/create-element'
+virtualize = require 'vdom-virtualize'
 
 z = require './z'
 
@@ -45,6 +46,34 @@ if window?
     return
   # end polyfill
 
+parseFullTree = (tree) ->
+  unless tree?.tagName is 'HTML'
+    throw new Error 'Invalid HTML base element'
+
+  $head = tree.children[0]
+  $body = tree.children[1]
+  $title = $head?.children[0]
+  $appRoot = $body?.children[0]
+
+  unless $head?.tagName is 'HEAD' and $title?.tagName is 'TITLE'
+    throw new Error 'Invalid HEAD base element'
+
+  unless $body?.tagName is 'BODY' and $appRoot.properties.id is 'zorium-root'
+    throw new Error 'Invalid BODY base element'
+
+  unless $appRoot.children.length is 1
+    throw new Error 'zorium-root must only contain 1 direct child'
+
+  return {
+    $appRoot: $appRoot.children[0]
+    title: $title?.children[0]?.text
+  }
+
+removeContentEditable = (vnode) ->
+  delete vnode.properties?.contentEditable
+  _.map vnode.children, removeContentEditable
+  return vnode
+
 class Renderer
   constructor: ->
     @registeredRoots = {}
@@ -56,6 +85,18 @@ class Renderer
 
   render: ($root, tree) =>
     renderedTree = z tree
+
+    # Because the DOM doesn't let us directly manipulate top-level elements
+    # We have to standardize a hack around it
+    if $root is document
+      {title, $appRoot} = parseFullTree renderedTree
+
+      unless $root._zoriumId
+        root = removeContentEditable virtualize @globalRoot.children[0]
+        @render $root, root
+
+      document.title = title
+      $root = $appRoot
 
     if $root._zoriumId
       root = @registeredRoots[$root._zoriumId]
@@ -80,13 +121,5 @@ class Renderer
     $root.appendChild $el
 
     return $root
-
-  redraw: =>
-    unless @isRedrawScheduled
-      @isRedrawScheduled = true
-      window.requestAnimationFrame =>
-        @isRedrawScheduled = false
-        for id, root of @registeredRoots
-          @render root.$root, root.tree
 
 module.exports = new Renderer()

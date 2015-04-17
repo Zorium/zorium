@@ -385,20 +385,19 @@ describe 'Lifecycle Callbacks', ->
       root = document.createElement 'div'
       z.render root, dom
 
-      dom = z 'div',
-        bind
-        z 'span', 'world'
-
       setTimeout ->
-        z.redraw()
+        z.render root, dom
 
         setTimeout ->
-          z.redraw()
+          z.render root, dom
 
+          dom = z 'div',
+            bind
+            z 'span', 'world'
           z.render root, dom
 
           setTimeout ->
-            z.redraw()
+            z.render root, dom
 
             setTimeout ->
               mountCalled.should.be 1
@@ -505,11 +504,11 @@ describe 'Lifecycle Callbacks', ->
       root = document.createElement 'div'
       z.render root, bind
       window.requestAnimationFrame ->
-        z.redraw()
+        z.render root, bind
         window.requestAnimationFrame ->
-          z.redraw()
+          z.render root, bind
           window.requestAnimationFrame ->
-            z.redraw()
+            z.render root, bind
 
             setTimeout ->
               mountCalled.should.be 1
@@ -544,60 +543,6 @@ describe 'Lifecycle Callbacks', ->
 
       unmountsCalled.should.be 2
 
-describe 'redraw()', ->
-  it 'redraws all bound root nodes', (done) ->
-    drawCnt = 0
-    class RedrawComponent
-      render: ->
-        drawCnt += 1
-        z 'div'
-
-    draw = new RedrawComponent()
-    root = document.createElement 'div'
-    z.render root, draw
-    z.redraw()
-    window.requestAnimationFrame ->
-      drawCnt.should.be 2
-      done()
-
-  it 'renders properly after multiple redraws', (done) ->
-    drawCnt = 0
-    class RedrawComponent
-      render: ->
-        drawCnt += 1
-        z 'div'
-
-    draw = new RedrawComponent()
-    root = document.createElement 'div'
-    z.render root, draw
-    z.redraw()
-    window.requestAnimationFrame ->
-      z.redraw()
-      window.requestAnimationFrame ->
-        result = '<div><div></div></div>'
-        root.isEqualNode(htmlToNode(result)).should.be true
-        drawCnt.should.be 3
-        done()
-
-  it 'batches redraws', (done) ->
-    drawCnt = 0
-    class RedrawComponent
-      render: ->
-        drawCnt += 1
-        z 'div'
-
-    draw = new RedrawComponent()
-    root = document.createElement 'div'
-    z.render root, draw
-    z.redraw()
-    z.redraw()
-    z.redraw()
-    z.redraw()
-    drawCnt.should.be 1
-    window.requestAnimationFrame ->
-      drawCnt.should.be 2
-      done()
-
 describe 'z.state', ->
   it 'obesrves state, returning an observable', ->
     subject = new Rx.BehaviorSubject(null)
@@ -631,29 +576,6 @@ describe 'z.state', ->
       c: 123
 
     state.getValue().should.be {a: 'a', b: false, c: 123}
-
-  it 'redraws on state observable change', (done) ->
-    subject = new Rx.BehaviorSubject(null)
-    redrawCnt = 0
-
-    class App
-      constructor: ->
-        @state = z.state
-          subject: subject
-      render: ->
-        redrawCnt += 1
-        z 'div'
-
-    root = document.createElement 'div'
-    app = new App()
-    z.render root, app
-    redrawCnt.should.be 1
-
-    subject.onNext 'abc'
-
-    window.requestAnimationFrame ->
-      redrawCnt.should.be 2
-      done()
 
   it 'errors when setting observable values in diff', ->
     subject = new Rx.BehaviorSubject(null)
@@ -700,15 +622,42 @@ describe 'z.state', ->
         pendingSettled -= 1
         pending2.onNext(null)
 
+  it 'listens for global updates', (done) ->
+    updateCnt = 0
+
+    settled = new Rx.BehaviorSubject(null)
+    pending1 = new Rx.ReplaySubject(1)
+    pending2 = new Rx.ReplaySubject(1)
+
+    z.state {
+      settled
+      pending1
+      pending2
+    }
+
+    z.state.onAnyUpdate ->
+      updateCnt += 1
+
+    setTimeout ->
+      pending1.onNext(null)
+
+      setTimeout ->
+        pending2.onNext(null)
+
+        setTimeout ->
+          updateCnt.should.be 2
+          done()
+
+
 describe 'router', ->
-  it 'resolves', ->
+  it 'matches', ->
     router = new z.Router()
     tree = z 'div', 'test'
     router.add '/', ->
       tree
 
-    router.resolve {path: '/'}
-    .should.be tree
+    route = router.match '/'
+    route.fn().should.be tree
 
 describe 'server', ->
   it 'renders updated DOM', ->
@@ -721,8 +670,10 @@ describe 'server', ->
         z 'div', 'World Hello'
 
     router = new z.Router()
-    router.add '/testa1', -> new App()
-    router.add '/testa2', -> new App2()
+    $app = new App()
+    $app2 = new App2()
+    router.add '/testa1', -> $app
+    router.add '/testa2', -> $app2
 
     root = document.createElement 'div'
 
@@ -736,6 +687,37 @@ describe 'server', ->
     root.isEqualNode(htmlToNode(result1)).should.be true
     z.server.go '/testa2'
     root.isEqualNode(htmlToNode(result2)).should.be true
+
+  it 'redraws on state observable change', (done) ->
+    drawCnt = 0
+    subject = new Rx.BehaviorSubject(null)
+
+    class App
+      constructor: ->
+        @state = z.state
+          subject: subject
+
+      render: ->
+        drawCnt += 1
+        z 'div', 'Hello World'
+
+    router = new z.Router()
+    $app = new App()
+    router.add '/testaRedraw', -> $app
+
+    root = document.createElement 'div'
+
+    z.server.setRoot root
+    z.server.setRouter router
+
+    z.server.go '/testaRedraw'
+    drawCnt.should.be 1
+
+    subject.onNext 'abc'
+
+    window.requestAnimationFrame ->
+      drawCnt.should.be 2
+      done()
 
   it 'updates location hash', ->
     class App
@@ -751,8 +733,10 @@ describe 'server', ->
     z.server.setRoot root
     router = new z.Router()
     z.server.setRouter router
-    router.add '/test', -> new App()
-    router.add '/test2', -> new App2()
+    $app = new App()
+    $app2 = new App2()
+    router.add '/test', -> $app
+    router.add '/test2', -> $app2
 
     z.server.setMode 'hash'
 
@@ -775,8 +759,10 @@ describe 'server', ->
     z.server.setRoot root
     router = new z.Router()
     z.server.setRouter router
-    router.add '/test3', -> new App()
-    router.add '/test4', -> new App()
+    $app = new App()
+    $app2 = new App2()
+    router.add '/test3', -> $app
+    router.add '/test4', -> $app2
 
     z.server.setMode 'pathname'
 
@@ -785,37 +771,14 @@ describe 'server', ->
     z.server.go '/test4'
     window.location.pathname.should.be '/test4'
 
-  it 'doesn\'t render same route twice', ->
-    rendered = 0
-    class App
-      render: ->
-        rendered += 1
-        z 'div', 'Hello World'
-
-    root = document.createElement 'div'
-
-    z.server.setRoot root
-    router = new z.Router()
-    router.add '/twice', -> new App()
-    z.server.setRouter router
-
-    z.server.setMode 'hash'
-
-    z.server.go '/twice'
-    rendered.should.be 1
-    z.server.go '/twice'
-    rendered.should.be 1
-
   it 'updates query param in hash mode', ->
     class App
       render: ->
         z 'div', 'Hello World'
 
     class App2
-      constructor: (pathParams, {x, y} = {}) ->
-        should.not.exist x
-        y.should.be 'abc'
-      render: ->
+      render: ({params, query}) ->
+        query.y.should.be 'abc'
         z 'div', 'World Hello'
 
     root = document.createElement 'div'
@@ -823,8 +786,10 @@ describe 'server', ->
     z.server.setRoot root
     router = new z.Router()
     z.server.setRouter router
-    router.add '/test-qs', -> new App()
-    router.add '/test-qs2', ({params, query}) -> new App2(params, query)
+    $app = new App()
+    $app2 = new App2()
+    router.add '/test-qs', -> $app
+    router.add '/test-qs2', ({params, query}) -> z $app2, {params, query}
 
     z.server.setMode 'hash'
 
@@ -841,10 +806,8 @@ describe 'server', ->
         z 'div', 'Hello World'
 
     class App2
-      constructor: (pathParams, {x, y}) ->
-        should.not.exist x
-        y.should.be 'abc'
-      render: ->
+      render: ({params, query}) ->
+        query.y.should.be 'abc'
         z 'div', 'World Hello'
 
     root = document.createElement 'div'
@@ -852,8 +815,10 @@ describe 'server', ->
     z.server.setRoot root
     router = new z.Router()
     z.server.setRouter router
-    router.add '/test-qs3', -> new App()
-    router.add '/test-qs4', ({params, query}) -> new App2(params, query)
+    $app = new App()
+    $app2 = new App2()
+    router.add '/test-qs3', -> $app
+    router.add '/test-qs4', ({params, query}) -> z $app2, {params, query}
 
     z.server.setMode 'pathname'
 
@@ -866,59 +831,6 @@ describe 'server', ->
     z.server.go '/test-qs4?y=abc'
     window.location.pathname.should.be '/test-qs4'
     window.location.search.should.be '?y=abc'
-
-  it 'ignores hash if in hash mode', ->
-    class App
-      render: ->
-        z 'div', 'Hello World'
-
-    class App2
-      render: ->
-        z 'div', 'World Hello'
-
-    root = document.createElement 'div'
-
-    z.server.setRoot root
-    router = new z.Router()
-    z.server.setRouter router
-    router.add '/test-ignore-hash', -> new App()
-    router.add '/test-ignore-hash2', -> new App2()
-
-    z.server.setMode 'hash'
-
-    z.server.go '/test-ignore-hash#abc'
-    window.location.hash.should.be '#/test-ignore-hash'
-    z.server.go '/test-ignore-hash2#efg'
-    window.location.hash.should.be '#/test-ignore-hash2'
-
-  it 'ignores hash if in pathname mode', ->
-    class App
-      render: ->
-        z 'div', 'Hello World'
-
-    class App2
-      render: ->
-        z 'div', 'World Hello'
-
-    root = document.createElement 'div'
-
-    z.server.setRoot root
-    router = new z.Router()
-    z.server.setRouter router
-    router.add '/test-use-path', -> new App()
-    router.add '/test-use-path2', -> new App2()
-
-    z.server.setMode 'pathname'
-
-    z.server.go '/test-use-path#abc'
-    window.location.pathname.should.be '/test-use-path'
-    window.location.hash.should.be ''
-    z.server.go '/test-use-path#def'
-    window.location.pathname.should.be '/test-use-path'
-    window.location.hash.should.be ''
-    z.server.go '/test-use-path2#abc'
-    window.location.pathname.should.be '/test-use-path2'
-    window.location.hash.should.be ''
 
   it 'routes to default current path in hash mode', ->
     class App
@@ -935,7 +847,8 @@ describe 'server', ->
     z.server.setRoot root
     router = new z.Router()
     z.server.setRouter router
-    router.add '/test-pre-hash', -> new App()
+    $app = new App()
+    router.add '/test-pre-hash', -> $app
 
     z.server.setMode 'hash'
     root.isEqualNode(htmlToNode(result1)).should.be true
@@ -945,9 +858,8 @@ describe 'server', ->
 
   it 'routes to default current path in hash mode with query string', ->
     class App
-      constructor: (pathParams, {x}) ->
-        x.should.be 'abc'
-      render: ->
+      render: ({params, query}) ->
+        query.x.should.be 'abc'
         z 'div', 'Hello World'
 
     root = document.createElement 'div'
@@ -960,8 +872,9 @@ describe 'server', ->
     z.server.setRoot root
     router = new z.Router()
     z.server.setRouter router
+    $app = new App()
     router.add '/test-pre-hash-search',
-      ({params, query}) -> new App(params, query)
+      ({params, query}) -> z $app, {params, query}
 
     z.server.setMode 'hash'
     root.isEqualNode(htmlToNode(result1)).should.be true
@@ -984,7 +897,8 @@ describe 'server', ->
     z.server.setRoot root
     router = new z.Router()
     z.server.setRouter router
-    router.add '/test-pre', -> new App()
+    $app = new App()
+    router.add '/test-pre', -> $app
 
     z.server.setMode 'pathname'
     root.isEqualNode(htmlToNode(result1)).should.be true
@@ -994,9 +908,8 @@ describe 'server', ->
 
   it 'routes to default current path in pathname mode with query string', ->
     class App
-      constructor: (pathParams, {x}) ->
-        x.should.be 'abc'
-      render: ->
+      render: ({params, query}) ->
+        query.x.should.be 'abc'
         z 'div', 'Hello World'
 
     root = document.createElement 'div'
@@ -1009,7 +922,8 @@ describe 'server', ->
     z.server.setRoot root
     router = new z.Router()
     z.server.setRouter router
-    router.add '/test-pre-search', ({params, query}) -> new App(params, query)
+    $app = new App()
+    router.add '/test-pre-search', ({params, query}) -> z $app, {params, query}
 
     z.server.setMode 'pathname'
     root.isEqualNode(htmlToNode(result1)).should.be true
@@ -1033,8 +947,10 @@ describe 'server', ->
     z.server.setRoot root
     router = new z.Router()
     z.server.setRouter router
-    router.add '/test5', -> new App()
-    router.add '/test6', -> new App2()
+    $app = new App()
+    $app2 = new App2()
+    router.add '/test5', -> $app
+    router.add '/test6', -> $app2
 
     result1 = '<div><div>Hello World</div></div>'
     result2 = '<div><div>World Hello</div></div>'
@@ -1070,8 +986,10 @@ describe 'server', ->
     z.server.setRoot root
     router = new z.Router()
     z.server.setRouter router
-    router.add '/testa', -> new App()
-    router.add '/testb', -> new App2()
+    $app = new App()
+    $app2 = new App2()
+    router.add '/testa', -> $app
+    router.add '/testb', -> $app2
 
     result1 = '<div><div>Hello World</div></div>'
     result2 = '<div><div>World Hello</div></div>'
@@ -1103,7 +1021,8 @@ describe 'server', ->
     z.server.setRoot root
     router = new z.Router()
     z.server.setRouter router
-    router.add '/', -> new App()
+    $app = new App()
+    router.add '/', -> $app
 
     result1 = '<div></div>'
     result2 = '<div><div>Hello World</div></div>'
@@ -1120,18 +1039,16 @@ describe 'server', ->
 
   it 'passes params', ->
     class App
-      constructor: (params) ->
-        @key = params?.key or 'FALSE'
-
-      render: =>
-        z 'div', 'Hello ' + @key
+      render: ({params}) ->
+        z 'div', 'Hello ' + params.key
 
     root = document.createElement 'div'
 
     z.server.setRoot root
     router = new z.Router()
     z.server.setRouter router
-    router.add '/test/:key', ({params, query}) -> new App(params, query)
+    $app = new App()
+    router.add '/test/:key', ({params, query}) -> z $app, {params, query}
 
     result = '<div><div>Hello world</div></div>'
     z.server.go('/test/world')
@@ -1140,11 +1057,8 @@ describe 'server', ->
 
   it 'passes cookies', ->
     class App
-      constructor: ({cookies}) ->
-        @foo = cookies.foo
-
-      render: =>
-        z 'div', 'Hello ' + @foo
+      render: ({cookies}) ->
+        z 'div', 'Hello ' + cookies.foo
 
     root = document.createElement 'div'
     document.cookie = 'foo=bar;'
@@ -1152,8 +1066,9 @@ describe 'server', ->
     z.server.setRoot root
     router = new z.Router()
     z.server.setRouter router
+    $app = new App()
     router.add '/testCookie', ({cookies}) ->
-      new App({cookies})
+      z $app, {cookies}
 
     result = '<div><div>Hello bar</div></div>'
     z.server.go('/testCookie')
@@ -1171,7 +1086,8 @@ describe 'server', ->
     z.server.setRoot root
     router = new z.Router()
     z.server.setRouter router
-    router.add '/test7', -> new App()
+    $app = new App()
+    router.add '/test7', -> $app
 
     z.server.setMode 'hash'
 
@@ -1198,7 +1114,8 @@ describe 'server', ->
     z.server.setRoot root
     router = new z.Router()
     z.server.setRouter router
-    router.add '/test8', -> new App()
+    $app = new App()
+    router.add '/test8', -> $app
 
     z.server.setMode 'pathname'
 
@@ -1229,9 +1146,10 @@ describe 'server', ->
     z.server.setRoot root
     router = new z.Router()
     z.server.setRouter router
+    $login = new Login()
     router.add '/test9', ->
       throw new router.Redirect path: '/login1'
-    router.add '/login1', -> new Login()
+    router.add '/login1', -> $login
 
     z.server.setMode 'pathname'
 
@@ -1288,7 +1206,8 @@ describe 'server', ->
     router.add '/test10', ->
       setTimeout -> z.server.go '/login2'
       z 'div'
-    router.add '/login2', -> new Login()
+    $login = new Login()
+    router.add '/login2', -> $login
 
     z.server.setMode 'pathname'
 
@@ -1298,10 +1217,46 @@ describe 'server', ->
       window.location.pathname.should.be '/login2'
       done()
 
-  describe 'z.ev', ->
-    it 'wraps the this', ->
-      fn = z.ev (e, $$el) ->
-        e.ev.should.be 'x'
-        $$el.a.should.be 'b'
+  it 'batches redraws', (done) ->
+    drawCnt = 0
+    class App
+      render: ->
+        drawCnt += 1
+        z 'div', 'Hello World'
 
-      fn.call {a: 'b'}, {ev: 'x'}
+    router = new z.Router()
+    $app = new App()
+    router.add '/testBatchRedraw', -> $app
+
+    root = document.createElement 'div'
+
+    z.server.setRoot root
+    z.server.setRouter router
+
+    z.server.go '/testBatchRedraw'
+    z.server.go '/testBatchRedraw'
+    z.server.go '/testBatchRedraw'
+    z.server.go '/testBatchRedraw'
+    z.server.go '/testBatchRedraw'
+
+    drawCnt.should.be 1
+    window.requestAnimationFrame ->
+      drawCnt.should.be 2
+
+      z.server.go '/testBatchRedraw'
+      z.server.go '/testBatchRedraw'
+      z.server.go '/testBatchRedraw'
+      z.server.go '/testBatchRedraw'
+      z.server.go '/testBatchRedraw'
+
+      window.requestAnimationFrame ->
+        drawCnt.should.be 3
+        done()
+
+describe 'z.ev', ->
+  it 'wraps the this', ->
+    fn = z.ev (e, $$el) ->
+      e.ev.should.be 'x'
+      $$el.a.should.be 'b'
+
+    fn.call {a: 'b'}, {ev: 'x'}

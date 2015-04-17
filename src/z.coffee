@@ -70,16 +70,6 @@ renderChild = (child, props = {}) ->
       tree.properties['zorium-onbeforeunmount'] = hook
       tree.hooks['zorium-onbeforeunmount'] = hook
 
-    if not child.zorium_isWatchingState and _.isFunction child.state?.subscribe
-      child.state.subscribe ->
-        # TODO: Move this out, circular dependency with renderer
-        if window?
-          z.redraw()
-      , (err) ->
-        throw new Error err
-
-      child.zorium_isWatchingState = true
-
     return tree
 
   if _.isNumber(child)

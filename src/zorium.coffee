@@ -44,7 +44,6 @@ handleRouteError = (router, err, req, res, next) ->
 
 _.extend z,
   render: renderer.render
-  redraw: renderer.redraw
   Router: Router
   server: server
   state: state
@@ -61,19 +60,21 @@ _.extend z,
 
   routerToMiddleware: (router) ->
     (req, res, next) ->
+      route = router.match(req.url)
+      props = {
+        path: req.url
+        params: route.params
+        query: req.query
+        cookies: cookie.parse req.headers?.cookie or ''
+      }
+
       try
         # Initialize tree, kicking off async fetches
-        router.resolve {
-          path: req.url
-          cookies: cookie.parse req.headers?.cookie or ''
-        }
+        route.fn props
 
         state.onNextAllSettlemenmt ->
           try
-            tree = router.resolve {
-              path: req.url
-              cookies: cookie.parse req.headers?.cookie or ''
-            }
+            tree = route.fn props
 
             res.send '<!DOCTYPE html>' + toHTML tree
 
