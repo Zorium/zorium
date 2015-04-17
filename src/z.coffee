@@ -19,10 +19,12 @@ module.exports = z = ->
   tag = tagName.match(/(^[^.\[]+)/)[1]
 
   if props.onfastclick
-    debouncedFn = _.debounce props.onfastclick, 300,
-      {leading: true, trailing: false}
-    props.onclick = debouncedFn
-    props.ontouchstart = debouncedFn
+    fastFn = (e) ->
+      e.stopPropagation()
+      e.preventDefault()
+      props.onfastclick.call props, e
+    props.onclick = fastFn
+    props.ontouchstart = fastFn
 
   # Extract shortcut attributes
   attributes = util.getTagAttributes tagName

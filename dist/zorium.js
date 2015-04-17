@@ -153,7 +153,7 @@ module.exports =
 	util = __webpack_require__(7);
 
 	module.exports = z = function() {
-	  var attributes, child, children, debouncedFn, props, ref, tag, tagName;
+	  var attributes, child, children, fastFn, props, ref, tag, tagName;
 	  ref = util.parseZfuncArgs.apply(null, arguments), child = ref.child, tagName = ref.tagName, props = ref.props, children = ref.children;
 	  if (child) {
 	    return renderChild(child, props);
@@ -166,12 +166,13 @@ module.exports =
 	  }
 	  tag = tagName.match(/(^[^.\[]+)/)[1];
 	  if (props.onfastclick) {
-	    debouncedFn = _.debounce(props.onfastclick, 300, {
-	      leading: true,
-	      trailing: false
-	    });
-	    props.onclick = debouncedFn;
-	    props.ontouchstart = debouncedFn;
+	    fastFn = function(e) {
+	      e.stopPropagation();
+	      e.preventDefault();
+	      return props.onfastclick.call(props, e);
+	    };
+	    props.onclick = fastFn;
+	    props.ontouchstart = fastFn;
 	  }
 	  attributes = util.getTagAttributes(tagName);
 	  props = _.merge(props, {
