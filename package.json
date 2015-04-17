@@ -50,6 +50,7 @@
     "routes": "^2.0.0",
     "rx-lite": "^2.5.2",
     "vdom-to-html": "^2.0.0",
+    "vdom-virtualize": "0.0.7",
     "virtual-dom": "^2.0.1"
   }
 }

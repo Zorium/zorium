@@ -1,6 +1,7 @@
 routes = require 'routes'
 Qs = require 'qs'
 cookie = require 'cookie'
+virtualize = require 'vdom-virtualize'
 
 z = require './z'
 util = require './util'
@@ -58,6 +59,11 @@ parseFullTree = (tree) ->
     $appRoot: $appRoot.children[0]
     title: $title?.children[0]?.text
   }
+
+removeContentEditable = (vnode) ->
+  delete vnode.properties?.contentEditable
+  _.map vnode.children, removeContentEditable
+  return vnode
 
 class Server
   constructor: ->
@@ -140,6 +146,11 @@ class Server
     # We have to standardize a hack around it
     if @root is document
       {title, $appRoot} = parseFullTree tree
+
+      # TODO: fix implicit dependency between this and renderer (_zoriumId)
+      unless @globalRoot._zoriumId
+        root = removeContentEditable virtualize @globalRoot.children[0]
+        renderer.render @globalRoot, root
 
       document.title = title
       renderer.render @globalRoot, $appRoot
