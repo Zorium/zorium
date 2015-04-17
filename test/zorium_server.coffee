@@ -1,6 +1,7 @@
 should = require('clay-chai').should()
-z = require '../src/zorium'
+Rx = require 'rx-lite'
 
+z = require '../src/zorium'
 
 describe 'router', ->
   it 'creates express middleware', (done) ->
@@ -90,3 +91,31 @@ describe 'router', ->
     }
 
     middleware({url: '/404'}, res, -> done(new Error 'next()'))
+
+  it 'supports async redirects', (done) ->
+    router = new z.Router()
+
+    class Root
+      constructor: ->
+        @pending = new Rx.ReplaySubject(1)
+        @state = z.state
+          pending: @pending
+      render: ->
+        {pending} = @state.getValue()
+
+        if pending
+          throw new router.Redirect path: '/login'
+        else
+          @pending.onNext true
+
+        z 'div', 'x'
+
+    $root = new Root()
+    router.add '/', ({cookies}) ->
+      z $root, {cookies}
+
+    middleware = z.routerToMiddleware router
+    middleware({url: '/'}, {redirect: (path) ->
+      path.should.be '/login'
+      done()
+    })

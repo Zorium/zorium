@@ -33,6 +33,15 @@ renderer = require './renderer'
 server = require './server'
 state = require './state'
 
+handleRouteError = (router, err, req, res, next) ->
+  if err instanceof router.Redirect
+    return res.redirect err.path
+  else if err instanceof router.Error
+    return res.status(err.status)
+      .send '<!DOCTYPE html>' + toHTML err.tree
+  else
+    return next err
+
 _.extend z,
   render: renderer.render
   redraw: renderer.redraw
@@ -60,19 +69,17 @@ _.extend z,
         }
 
         state.onNextAllSettlemenmt ->
-          tree = router.resolve {
-            path: req.url
-            cookies: cookie.parse req.headers?.cookie or ''
-          }
+          try
+            tree = router.resolve {
+              path: req.url
+              cookies: cookie.parse req.headers?.cookie or ''
+            }
 
-          res.send '<!DOCTYPE html>' + toHTML tree
+            res.send '<!DOCTYPE html>' + toHTML tree
+
+          catch err
+            handleRouteError(router, err, req, res, next)
       catch err
-        if err instanceof router.Redirect
-          return res.redirect err.path
-        else if err instanceof router.Error
-          return res.status(err.status)
-            .send '<!DOCTYPE html>' + toHTML err.tree
-        else
-          return next err
+        handleRouteError(router, err, req, res, next)
 
 module.exports = z
