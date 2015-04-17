@@ -120,10 +120,12 @@ class Server
 
     # Because the DOM doesn't let us directly manipulate top-level elements
     # We have to standardize a hack around it
-    if @root is document
-      renderer.render @globalRoot, $appRoot
-    else
-      renderer.render @root, tree
+
+    $root = if @root is document \
+      then @globalRoot \
+      else @root
+
+    renderer.render $root, tree
 
   go: (path) =>
     path ?= getCurrentPath(@mode)

@@ -53,19 +53,19 @@ parseFullTree = (tree) ->
   $head = tree.children[0]
   $body = tree.children[1]
   $title = $head?.children[0]
-  $appRoot = $body?.children[0]
+  appTree = $body?.children[0]
 
   unless $head?.tagName is 'HEAD' and $title?.tagName is 'TITLE'
     throw new Error 'Invalid HEAD base element'
 
-  unless $body?.tagName is 'BODY' and $appRoot.properties.id is 'zorium-root'
+  unless $body?.tagName is 'BODY' and appTree.properties.id is 'zorium-root'
     throw new Error 'Invalid BODY base element'
 
-  unless $appRoot.children.length is 1
+  unless appTree.children.length is 1
     throw new Error 'zorium-root must only contain 1 direct child'
 
   return {
-    $appRoot: $appRoot.children[0]
+    appTree: appTree.children[0]
     title: $title?.children[0]?.text
   }
 
@@ -77,38 +77,36 @@ removeContentEditable = (vnode) ->
 class Renderer
   constructor: ->
     @registeredRoots = {}
-    @isRedrawScheduled = false
 
     id = 0
     @nextRootId = ->
       id += 1
 
   render: ($root, tree) =>
-    renderedTree = z tree
+    tree = z tree
 
     # Because the DOM doesn't let us directly manipulate top-level elements
     # We have to standardize a hack around it
-    if $root is document
-      {title, $appRoot} = parseFullTree renderedTree
+    if tree?.tagName is 'HTML'
+      {title, appTree} = parseFullTree tree
 
       unless $root._zoriumId
-        root = removeContentEditable virtualize @globalRoot.children[0]
-        @render $root, root
+        seedTree = removeContentEditable virtualize $root.children[0]
+        @render $root, seedTree
 
       document.title = title
-      $root = $appRoot
+      tree = appTree
 
     if $root._zoriumId
       root = @registeredRoots[$root._zoriumId]
 
-      patches = diff root.renderedTree, renderedTree
+      patches = diff root.tree, tree
       root.node = patch root.node, patches
       root.tree = tree
-      root.renderedTree = renderedTree
 
       return $root
 
-    $el = createElement renderedTree
+    $el = createElement tree
 
     id = @nextRootId()
     $root._zoriumId = id
@@ -116,7 +114,6 @@ class Renderer
       $root: $root
       node: $el
       tree: tree
-      renderedTree: renderedTree
 
     $root.appendChild $el
 
