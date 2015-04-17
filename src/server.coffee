@@ -51,8 +51,11 @@ parseFullTree = (tree) ->
   unless $body?.tagName is 'BODY' and $appRoot.properties.id is 'zorium-root'
     throw new Error 'Invalid BODY base element'
 
+  unless $appRoot.children.length is 1
+    throw new Error 'zorium-root must only contain 1 direct child'
+
   return {
-    $appRoot
+    $appRoot: $appRoot.children[0]
     title: $title?.children[0]?.text
   }
 
@@ -66,9 +69,12 @@ class Server
 
     if window?
       # used for full-page rendering
-      @globalRoot = document.createElement 'div'
-      @globalRoot.id = 'zorium-root'
-      document.body.appendChild @globalRoot
+      @globalRoot = document.getElementById 'zorium-root'
+
+      unless @globalRoot
+        @globalRoot = document.createElement 'div'
+        @globalRoot.id = 'zorium-root'
+        document.body.appendChild @globalRoot
 
       # some browsers erroneously call popstate on intial page load (iOS Safari)
       # We need to ignore that first event.
