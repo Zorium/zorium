@@ -5,22 +5,20 @@ z = require '../src/zorium'
 
 describe 'router', ->
   it 'creates express middleware', (done) ->
-    router = new z.Router()
-    router.add '/', ->
+    factory = ->
       z 'div', 'test'
 
-    middleware = z.routerToMiddleware router
+    middleware = z.factoryToMiddleware factory
     middleware({url: '/'}, {send: (html) ->
       html.should.be '<!DOCTYPE html><div>test</div>'
       done()
     })
 
-  it 'passes in cookies to routes via express middleware', (done) ->
-    router = new z.Router()
-    router.add '/', ({cookies}) ->
+  it 'passes in cookies to facrory via express middleware', (done) ->
+    factory = ({cookies}) ->
       z 'div', cookies.foo
 
-    middleware = z.routerToMiddleware router
+    middleware = z.factoryToMiddleware factory
     middleware({
       url: '/'
       headers:
@@ -31,12 +29,11 @@ describe 'router', ->
     })
 
   it 'supports redirects', (done) ->
-    router = new z.Router()
-    router.add '/', ({cookies}) ->
-      throw new router.Redirect path: '/login'
-      z 'div', cookies.foo
+    factory = ->
+      render: ->
+        throw new z.server.Redirect path: '/login'
 
-    middleware = z.routerToMiddleware router
+    middleware = z.factoryToMiddleware factory
     middleware({
       url: '/'
       headers:
@@ -48,15 +45,12 @@ describe 'router', ->
 
   it 'supports 404 errors', (done) ->
     status = 200
-    router = new z.Router()
-    router.add '/', ->
-      z 'div', 'test'
+    factory = ->
+      render: ->
+        tree = z 'div', '404'
+        throw new z.server.Error({status: 404, tree})
 
-    router.add '*', ->
-      tree = z 'div', '404'
-      throw new router.Error({status: 404, tree})
-
-    middleware = z.routerToMiddleware router
+    middleware = z.factoryToMiddleware factory
     res = {
       status: (_status) ->
         status = _status
@@ -71,15 +65,12 @@ describe 'router', ->
 
   it 'supports 500 errors', (done) ->
     status = 200
-    router = new z.Router()
-    router.add '/', ->
-      z 'div', 'test'
+    factory = ->
+      render: ->
+        tree = z 'div', '500'
+        throw new z.server.Error({status: 500, tree})
 
-    router.add '*', ->
-      tree = z 'div', '500'
-      throw new router.Error({status: 500, tree})
-
-    middleware = z.routerToMiddleware router
+    middleware = z.factoryToMiddleware factory
     res = {
       status: (_status) ->
         status = _status
@@ -93,8 +84,6 @@ describe 'router', ->
     middleware({url: '/404'}, res, -> done(new Error 'next()'))
 
   it 'supports async redirects', (done) ->
-    router = new z.Router()
-
     class Root
       constructor: ->
         @pending = new Rx.ReplaySubject(1)
@@ -104,17 +93,16 @@ describe 'router', ->
         {pending} = @state.getValue()
 
         if pending
-          throw new router.Redirect path: '/login'
+          throw new z.server.Redirect path: '/login'
         else
           @pending.onNext true
 
         z 'div', 'x'
 
-    $root = new Root()
-    router.add '/', ({cookies}) ->
-      z $root, {cookies}
+    factory = ->
+      new Root()
 
-    middleware = z.routerToMiddleware router
+    middleware = z.factoryToMiddleware factory
     middleware({url: '/'}, {redirect: (path) ->
       path.should.be '/login'
       done()

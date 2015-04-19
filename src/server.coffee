@@ -1,5 +1,3 @@
-routes = require 'routes'
-Qs = require 'qs'
 cookie = require 'cookie'
 
 z = require './z'
@@ -26,43 +24,35 @@ setPath = (path, mode, isReplacement) ->
   else
     window.location.hash = path
 
-parseUrl = (url) ->
-  if window?
-    a = document.createElement 'a'
-    a.href = url
-
-    {
-      pathname: a.pathname
-      hash: a.hash
-      search: a.search
-      path: a.pathname + a.search
-    }
-  else
-    # Avoid webpack include
-    _url = 'url'
-    URL = require(_url)
-    parsed = URL.parse url
-
-    {
-      pathname: parsed.pathname
-      hash: parsed.hash
-      search: parsed.search
-      path: parsed.path
-    }
-
 class Server
   constructor: ->
     @events = {}
     @root = null
-    @router = null
     @mode = if window?.history?.pushState then 'pathname' else 'hash'
     @currentPath = null
-    @cachedPaths = {}
     @isRedrawScheduled = false
     @animationRequestId = null
+    @$rootComponent = null
+
+    # coffeelint: disable=missing_fat_arrows
+    @Redirect = ({path}) ->
+      @name = 'redirect'
+      @path = path
+      @message = "Redirect to #{path}"
+      @stack = (new Error()).stack
+    @Redirect.prototype = new Error()
+
+    @Error = ({tree, status}) ->
+      @name = String status
+      @tree = tree
+      @status = status
+      @message = "Error #{status}"
+      @stack = (new Error()).stack
+    @Error.prototype = new Error()
+    # coffeelint: enable=missing_fat_arrows
 
     state.onAnyUpdate =>
-      if window? and @router
+      if window? and @$rootComponent
         @go @currentPath
 
     if window?
@@ -81,14 +71,14 @@ class Server
         if @currentPath
           setTimeout @go
 
-  setRoot: ($$root) =>
-    @root = $$root
+  setRootNode: (@root) => null
 
   setMode: (mode) =>
     @mode = mode
 
-  setRouter: (router) ->
-    @router = router
+  setRootFactory: (factory) ->
+    @$rootComponent = factory
+      cookies: cookie.parse document.cookie or ''
 
   link: (node) =>
     if node.properties.onclick
@@ -108,13 +98,13 @@ class Server
 
     return node
 
-  render: (route, props) =>
+  render: (props) =>
     try
-      tree = route.fn props
+      tree = z @$rootComponent, props
     catch err
-      if err instanceof @router.Redirect
+      if err instanceof @Redirect
         return @go err.path
-      else if err instanceof @router.Error
+      else if err instanceof @Error
         tree = err.tree
       else throw err
 
@@ -129,11 +119,8 @@ class Server
 
   go: (path) =>
     path ?= getCurrentPath(@mode)
-    isReplacement = not Boolean @currentPath
-    cookies = cookie.parse document.cookie or ''
+    hasRouted = not Boolean @currentPath
     isRedraw = path is @currentPath
-    url = parseUrl path
-    queryParams = Qs.parse(url.search?.slice(1))
 
     if @isRedrawScheduled and isRedraw
       return
@@ -141,24 +128,20 @@ class Server
       @isRedrawScheduled = false
       window.cancelAnimationFrame @animationRequestId
 
-    route = @router.match(url.pathname)
-
     props = {
-      params: route.params
-      query: queryParams
-      cookies
+      path: path
     }
 
     if not isRedraw
       @currentPath = path
-      setPath path, @mode, isReplacement
+      setPath path, @mode, hasRouted
       @emit 'route', path
-      @render(route, props)
+      @render(props)
     else
       @isRedrawScheduled = true
       @animationRequestId = window.requestAnimationFrame =>
         @isRedrawScheduled = false
-        @render(route, props)
+        @render(props)
 
   on: (name, fn) =>
     (@events[name] = @events[name] or []).push(fn)

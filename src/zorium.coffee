@@ -28,15 +28,14 @@ toHTML = require 'vdom-to-html'
 cookie = require 'cookie'
 
 z = require './z'
-Router = require './router'
 renderer = require './renderer'
 server = require './server'
 state = require './state'
 
-handleRouteError = (router, err, req, res, next) ->
-  if err instanceof router.Redirect
+handleRenderError = (err, req, res, next) ->
+  if err instanceof server.Redirect
     return res.redirect err.path
-  else if err instanceof router.Error
+  else if err instanceof server.Error
     return res.status(err.status)
       .send '<!DOCTYPE html>' + toHTML err.tree
   else
@@ -44,7 +43,6 @@ handleRouteError = (router, err, req, res, next) ->
 
 _.extend z,
   render: renderer.render
-  Router: Router
   server: server
   state: state
   ev: (fn) ->
@@ -58,29 +56,32 @@ _.extend z,
     _.map _.keys(_.pick classes, _.identity), _.kebabCase
     .join ' '
 
-  routerToMiddleware: (router) ->
+  factoryToMiddleware: (factory) ->
     (req, res, next) ->
-      route = router.match(req.url)
-      props = {
-        path: req.url
-        params: route.params
-        query: req.query
+      initialState = {
+        initialPath: req.url
         cookies: cookie.parse req.headers?.cookie or ''
       }
 
+      $root = factory(initialState)
+
+      # Initialize tree, kicking off async fetches
       try
-        # Initialize tree, kicking off async fetches
-        route.fn props
+        z $root, {
+          path: req.url
+        }
 
         state.onNextAllSettlemenmt ->
           try
-            tree = route.fn props
+            tree = z $root, {
+              path: req.url
+            }
 
             res.send '<!DOCTYPE html>' + toHTML tree
-
           catch err
-            handleRouteError(router, err, req, res, next)
+            handleRenderError(err, req, res, next)
+
       catch err
-        handleRouteError(router, err, req, res, next)
+        handleRenderError(err, req, res, next)
 
 module.exports = z
