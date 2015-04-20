@@ -76,7 +76,7 @@ class Server
   setMode: (mode) =>
     @mode = mode
 
-  setRootFactory: (factory) ->
+  setRootFactory: (factory) =>
     @$rootComponent = factory
       cookies: cookie.parse document.cookie or ''
 
