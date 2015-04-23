@@ -1305,6 +1305,66 @@ describe 'server', ->
         drawCnt.should.be 3
         done()
 
+  it 'renders full page, setting title and #zorium-root content', ->
+    class Root
+      render: ->
+        z 'html',
+          z 'head',
+            z 'title', 'test_title'
+          z 'body',
+            z '#zorium-root',
+              z 'div', 'test-content'
+
+
+    factory = ->
+      new Root()
+
+    root = document
+
+    z.server.setRootNode root
+    z.server.setRootFactory factory
+
+    rootNode = document.getElementById 'zorium-root'
+    rootNode.innerHTML = ''
+    document.title.should.not.be 'test_title'
+
+    z.server.go '/renderFullPage'
+
+    result = '<div id="zorium-root"><div>test-content</div></div>'
+
+    document.title.should.be 'test_title'
+    rootNode.isEqualNode(htmlToNode(result)).should.be true
+
+  it 'diffs full page', ->
+    class Root
+      render: ->
+        z 'html',
+          z 'head',
+            z 'title', 'some_title'
+          z 'body',
+            z '#zorium-root',
+              z '.t', 'test-content'
+
+
+    factory = ->
+      new Root()
+
+    root = document
+
+    z.server.setRootNode root
+    z.server.setRootFactory factory
+
+    rootNode = document.getElementById 'zorium-root'
+    rootNode._zoriumId = null
+    rootNode.innerHTML = '<div class="t"></div>'
+
+    z.server.go '/diffFullPage'
+
+    result = '<div id="zorium-root"><div class="t">test-content</div></div>'
+
+    rootNode.isEqualNode(htmlToNode(result)).should.be true
+
+
 describe 'z.ev', ->
   it 'wraps the this', ->
     fn = z.ev (e, $$el) ->

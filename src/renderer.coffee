@@ -58,7 +58,7 @@ parseFullTree = (tree) ->
   unless $head?.tagName is 'HEAD' and $title?.tagName is 'TITLE'
     throw new Error 'Invalid HEAD base element'
 
-  unless $body?.tagName is 'BODY' and appTree.properties.id is 'zorium-root'
+  unless $body?.tagName is 'BODY' and appTree?.properties.id is 'zorium-root'
     throw new Error 'Invalid BODY base element'
 
   unless appTree.children.length is 1
@@ -91,8 +91,18 @@ class Renderer
       {title, appTree} = parseFullTree tree
 
       unless $root._zoriumId
-        seedTree = removeContentEditable virtualize $root.children[0]
-        @render $root, seedTree
+        seedRoot = $root.children[0]
+
+        # virtualize existing DOM
+        if seedRoot
+          seedTree = removeContentEditable virtualize seedRoot
+          $el = seedRoot
+          id = @nextRootId()
+          $root._zoriumId = id
+          @registeredRoots[id] =
+            $root: $root
+            node: $el
+            tree: seedTree
 
       document.title = title
       tree = appTree
