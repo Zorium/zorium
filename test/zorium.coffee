@@ -7,8 +7,6 @@ Qs = require 'qs'
 
 z = require 'zorium'
 
-# TODO: batch redraws
-
 htmlToNode = (html) ->
   root = document.createElement 'div'
   root.innerHTML = html
