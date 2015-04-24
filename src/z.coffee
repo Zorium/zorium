@@ -1,31 +1,50 @@
 _ = require 'lodash'
 h = require 'virtual-dom/h'
+isVNode = require 'virtual-dom/vnode/is-vnode'
+isVText = require 'virtual-dom/vnode/is-vtext'
+isWidget = require 'virtual-dom/vnode/is-widget'
 
-util = require './util'
+isComponent = (x) ->
+  _.isObject(x) and _.isFunction x.render
 
-module.exports = z = ->
-  {child, tagName, props, children} = util.parseZfuncArgs.apply null, arguments
+isChild = (x) ->
+  isVNode(x) or isVText(x) or isWidget(x) or isComponent(x)
 
-  if child
-    return renderChild child, props
+isChildren = (x) ->
+  _.isArray(x) or _.isString(x) or _.isNumber(x) or isChild(x)
 
-  if _.isNull tagName
-    return z 'div', children
+parseZfuncArgs = (tagName, children...) ->
+  props = {}
 
-  # Default tag to div
-  unless /[a-zA-Z]/.test tagName[0]
-    tagName = 'div' + tagName
+  # children[0] is props
+  if children[0] and not isChildren children[0]
+    props = children[0]
+    children.shift()
 
-  tag = tagName.match(/(^[^.\[]+)/)[1]
+  if children[0] and _.isArray children[0]
+    children = children[0]
 
-  # Extract shortcut attributes
-  attributes = util.getTagAttributes tagName
-  props = _.merge props, {attributes}
+  if _.isArray tagName
+    return {tagName: null, props, children: tagName}
 
-  # Remove attribute declarations from tagName
-  tagName = tagName.replace /\[[^\[]+\]/g, ''
+  if _.isObject tagName
+    return {child: tagName, props}
 
-  return h tagName, props, _.map _.filter(children), renderChild
+  return {tagName, props, children}
+
+getTagAttributes = (tagName) ->
+  re = /\[([^=\]]+)=?([^\]]+)?\]/g
+  match = re.exec tagName
+  props = {}
+
+  while match?
+    if match[2]
+      props[match[1]] = match[2]
+    else
+      props[match[1]] = true
+    match = re.exec tagName
+
+  return props
 
 getOnMountHook = (child, onMount) ->
   class OnMountHook
@@ -50,7 +69,7 @@ getOnBeforeUnmountHook = (child, onUnhook) ->
   return hook
 
 renderChild = (child, props = {}) ->
-  if util.isComponent child
+  if isComponent child
     tree = child.render props
 
     unless tree
@@ -76,3 +95,28 @@ renderChild = (child, props = {}) ->
     return '' + child
 
   return child
+
+
+module.exports = z = ->
+  {child, tagName, props, children} = parseZfuncArgs.apply null, arguments
+
+  if child
+    return renderChild child, props
+
+  if _.isNull tagName
+    return z 'div', children
+
+  # Default tag to div
+  unless /[a-zA-Z]/.test tagName[0]
+    tagName = 'div' + tagName
+
+  tag = tagName.match(/(^[^.\[]+)/)[1]
+
+  # Extract shortcut attributes
+  attributes = getTagAttributes tagName
+  props = _.merge props, {attributes}
+
+  # Remove attribute declarations from tagName
+  tagName = tagName.replace /\[[^\[]+\]/g, ''
+
+  return h tagName, props, _.map _.filter(children), renderChild

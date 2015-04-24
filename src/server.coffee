@@ -3,7 +3,6 @@ Rx = require 'rx-lite'
 _ = require 'lodash'
 
 z = require './z'
-util = require './util'
 renderer = require './renderer'
 state = require './state'
 
