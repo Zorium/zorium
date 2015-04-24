@@ -58,10 +58,12 @@ _.extend z,
 
   factoryToMiddleware: (factory) ->
     (req, res, next) ->
+      cookies = cookie.parse req.headers?.cookie or ''
       initialState = {
         initialPath: req.url
-        cookies: cookie.parse req.headers?.cookie or ''
       }
+
+      server._setCookies cookies
 
       $root = factory(initialState)
 
@@ -77,11 +79,17 @@ _.extend z,
               path: req.url
             }
 
+            _.map server._getCookieConstructors(), (config, key) ->
+              res.cookie key, config.value, config.opts
             res.send '<!DOCTYPE html>' + toHTML tree
           catch err
+            _.map server._getCookieConstructors(), (config, key) ->
+              res.cookie key, config.value, config.opts
             handleRenderError(err, req, res, next)
 
       catch err
+        _.map server._getCookieConstructors(), (config, key) ->
+          res.cookie key, config.value, config.opts
         handleRenderError(err, req, res, next)
 
 module.exports = z

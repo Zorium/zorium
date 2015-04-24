@@ -14,20 +14,6 @@ describe 'router', ->
       done()
     })
 
-  it 'passes in cookies to facrory via express middleware', (done) ->
-    factory = ({cookies}) ->
-      z 'div', cookies.foo
-
-    middleware = z.factoryToMiddleware factory
-    middleware({
-      url: '/'
-      headers:
-        cookie: 'foo=bar;'
-    }, {send: (html) ->
-      html.should.be '<!DOCTYPE html><div>bar</div>'
-      done()
-    })
-
   it 'supports redirects', (done) ->
     factory = ->
       render: ->
@@ -107,3 +93,27 @@ describe 'router', ->
       path.should.be '/login'
       done()
     })
+
+  it 'manages cookies', (done) ->
+    hasSetCookies = false
+
+    factory = ->
+      z.server.getCookie('preset').getValue().should.be 'abc'
+      z.server.setCookie 'clientset', 'xyz', {domain: 'test.com'}
+      z 'div', 'test'
+
+    middleware = z.factoryToMiddleware factory
+    middleware
+      url: '/'
+      headers:
+        cookie: 'preset=abc'
+    ,
+      send: (html) ->
+        hasSetCookies.should.be true
+        html.should.be '<!DOCTYPE html><div>test</div>'
+        done()
+      cookie: (name, value, opts) ->
+        hasSetCookies = true
+        name.should.be 'clientset'
+        value.should.be 'xyz'
+        opts.domain.should.be 'test.com'

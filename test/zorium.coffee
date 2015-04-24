@@ -4,6 +4,7 @@ Promise = window.Promise or require 'promiz'
 Rx = require 'rx-lite'
 Routes = require 'routes'
 Qs = require 'qs'
+cookie = require 'cookie'
 
 z = require 'zorium'
 
@@ -1093,28 +1094,6 @@ describe 'server', ->
 
     root.isEqualNode(htmlToNode(result)).should.be true
 
-  it 'passes cookies', ->
-    class App
-      render: ->
-        z 'div'
-
-    root = document.createElement 'div'
-    document.cookie = 'foo=bar;'
-
-    z.server.setRootNode root
-    factory = ({cookies}) ->
-      cookies.foo.should.be 'bar'
-      router = new Router()
-      router.add '/testCookie', new App()
-      return router
-    z.server.setRootFactory factory
-
-    result = '<div><div></div></div>'
-    z.server.go('/testCookie')
-
-    root.isEqualNode(htmlToNode(result)).should.be true
-
-
   it 'emits route events (hash mode)', (done) ->
     class App
       render: ->
@@ -1364,6 +1343,15 @@ describe 'server', ->
 
     rootNode.isEqualNode(htmlToNode(result)).should.be true
 
+
+  it 'manages cookies', ->
+    z.server.setCookie 'testCookie', 'testValue'
+    cookies = cookie.parse document.cookie
+    cookies.testCookie.should.be 'testValue'
+    z.server.getCookie('testCookie').getValue().should.be 'testValue'
+
+    z.server.setCookie 'something', 'test', {domain: 'test.com'}
+    z.server.getCookie('something').getValue().should.be 'test'
 
 describe 'z.ev', ->
   it 'wraps the this', ->

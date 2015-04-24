@@ -1,4 +1,6 @@
 cookie = require 'cookie'
+Rx = require 'rx-lite'
+_ = require 'lodash'
 
 z = require './z'
 util = require './util'
@@ -33,6 +35,8 @@ class Server
     @isRedrawScheduled = false
     @animationRequestId = null
     @$rootComponent = null
+    @cookieSubjects = {}
+    @cookieConstructors = {}
 
     # coffeelint: disable=missing_fat_arrows
     @Redirect = ({path}) ->
@@ -71,14 +75,42 @@ class Server
         if @currentPath
           setTimeout @go
 
+
+  # Avoid triggering the cookieConstructor
+  # Important because the {opts} for cookies are no longer accessible
+  _setCookies: (cookies) =>
+    _.map cookies, (val, key) =>
+      @cookieSubjects[key] = new Rx.BehaviorSubject(val)
+
+  _getCookieConstructors: => @cookieConstructors
+
+  setCookie: (key, value, opts) =>
+    if @cookieSubjects[key]
+      @cookieSubjects[key].onNext value
+    else
+      @cookieSubjects[key] = new Rx.BehaviorSubject(value)
+
+    @cookieConstructors[key] = {
+      value
+      opts
+    }
+    if window?
+      document.cookie = cookie.serialize key, value, opts
+
+  getCookie: (key) =>
+    if @cookieSubjects[key]
+      return @cookieSubjects[key]
+    else
+      @cookieSubjects[key] = new Rx.BehaviorSubject(null)
+      return @cookieSubjects[key]
+
   setRootNode: (@root) => null
 
   setMode: (mode) =>
     @mode = mode
 
   setRootFactory: (factory) =>
-    @$rootComponent = factory
-      cookies: cookie.parse document.cookie or ''
+    @$rootComponent = factory()
 
   link: (node) =>
     if node.properties.onclick
