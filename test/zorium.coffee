@@ -1344,7 +1344,7 @@ describe 'server', ->
     rootNode.isEqualNode(htmlToNode(result)).should.be true
 
 
-  it 'manages cookies', ->
+  it 'manages cookies', (done) ->
     z.server.setCookie 'testCookie', 'testValue'
     cookies = cookie.parse document.cookie
     cookies.testCookie.should.be 'testValue'
@@ -1352,6 +1352,14 @@ describe 'server', ->
 
     z.server.setCookie 'something', 'test', {domain: 'test.com'}
     z.server.getCookie('something').getValue().should.be 'test'
+
+    z.server.getCookie('testCookie').subscribe (update) ->
+      if update is 'testValue'
+        return
+      update.should.be 'another!'
+      done()
+
+    z.server.setCookie 'testCookie', 'another!'
 
 describe 'z.ev', ->
   it 'wraps the this', ->
