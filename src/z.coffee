@@ -51,6 +51,9 @@ renderChild = (child, props = {}) ->
   if isComponent child
     tree = child.render props
 
+    if _.isArray tree
+      throw new Error 'Render cannot return an array'
+
     unless tree
       tree = z 'noscript'
 
