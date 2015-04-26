@@ -594,6 +594,8 @@ describe 'z.state', ->
       b: Rx.Observable.fromPromise promise
       c: subject
 
+    state._bind_subscriptions()
+
     _.isFunction(state.subscribe).should.be true
 
     state.subscribe (state) ->
@@ -635,6 +637,8 @@ describe 'z.state', ->
     state = z.state
       subject: subject
 
+    state._bind_subscriptions()
+
     (->
       subject.onError new Error 'err'
     ).should.throw()
@@ -646,11 +650,13 @@ describe 'z.state', ->
     pending1 = new Rx.ReplaySubject(1)
     pending2 = new Rx.ReplaySubject(1)
 
-    z.state {
+    state = z.state {
       settled
       pending1
       pending2
     }
+
+    state._bind_subscriptions()
 
     z.state.onNextAllSettlemenmt ->
       pendingSettled.should.be 0
@@ -671,11 +677,13 @@ describe 'z.state', ->
     pending1 = new Rx.ReplaySubject(1)
     pending2 = new Rx.ReplaySubject(1)
 
-    z.state {
+    state = z.state {
       settled
       pending1
       pending2
     }
+
+    state._bind_subscriptions()
 
     z.state.onAnyUpdate ->
       updateCnt += 1
@@ -689,6 +697,35 @@ describe 'z.state', ->
         setTimeout ->
           updateCnt.should.be 2
           done()
+
+  it 'lazy subscribes', ->
+    lazyRuns = 0
+
+    cold = Rx.Observable.defer ->
+      lazyRuns += 1
+      Rx.Observable.return lazyRuns
+
+    state = z.state
+      lazy: cold
+
+    lazyRuns.should.be 0
+
+    state._bind_subscriptions()
+    lazyRuns.should.be 1
+
+    state.set a: 'b'
+    lazyRuns.should.be 1
+
+    state2 = z.state
+      lazy: cold
+
+    lazyRuns.should.be 1
+
+    state2._bind_subscriptions()
+    lazyRuns.should.be 2
+
+    state.getValue().lazy.should.be 1
+    state2.getValue().lazy.should.be 2
 
 describe 'server', ->
   it 'renders updated DOM', ->
@@ -750,6 +787,96 @@ describe 'server', ->
     window.requestAnimationFrame ->
       drawCnt.should.be 2
       done()
+
+  it 'redraws on lazy state observable change', (done) ->
+    drawCnt = 0
+    lazyRuns = 0
+    lazyPromise = deferred()
+
+    cold = Rx.Observable.defer ->
+      lazyRuns += 1
+      Rx.Observable.fromPromise lazyPromise
+
+    class App
+      constructor: ->
+        @state = z.state
+          observable: cold
+
+      render: ->
+        drawCnt += 1
+        z 'div', 'Hello World'
+
+    factory = ->
+      router = new Router()
+      router.add '/testLazyRedraw', new App()
+      return router
+
+    root = document.createElement 'div'
+
+    lazyRuns.should.be 0
+
+    z.server.setRootNode root
+    z.server.setRootFactory factory
+
+    z.server.go '/testLazyRedraw'
+    drawCnt.should.be 1
+    lazyRuns.should.be 1
+
+    lazyPromise.then ->
+      window.requestAnimationFrame ->
+        lazyRuns.should.be 1
+        drawCnt.should.be 2
+        done()
+
+    window.requestAnimationFrame ->
+      drawCnt.should.be 1
+      lazyPromise.resolve 'x'
+
+  it 'unbinds state onBeforeUnmount', (done) ->
+    drawCnt = 0
+    lazyPromise = deferred()
+
+    cold = Rx.Observable.defer ->
+      Rx.Observable.fromPromise lazyPromise
+
+    class App
+      constructor: ->
+        @state = z.state
+          observable: cold
+
+      render: ->
+        drawCnt += 1
+        z 'div', 'Hello World'
+
+    class App2
+      render: ->
+        drawCnt += 1
+        z 'div', 'Hello World'
+
+    factory = ->
+      router = new Router()
+      router.add '/testUnbindLazy', new App()
+      router.add '/testUnbindLazy2', new App2()
+      return router
+
+    root = document.createElement 'div'
+
+    z.server.setRootNode root
+    z.server.setRootFactory factory
+    z.server.go '/testUnbindLazy'
+    drawCnt.should.be 1
+
+    z.server.go '/testUnbindLazy2'
+
+    window.requestAnimationFrame ->
+      drawCnt.should.be 2
+      lazyPromise.resolve 'x'
+
+    lazyPromise.then ->
+      window.requestAnimationFrame ->
+        drawCnt.should.be 2
+        done()
+
 
   it 'updates location hash', ->
     class App

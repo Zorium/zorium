@@ -16,6 +16,7 @@ fireAnyUpdateListeners = ->
 
 State = (initialState) ->
   currentValue = {}
+  disposables = []
 
   state = new Rx.BehaviorSubject(currentValue)
 
@@ -23,25 +24,34 @@ State = (initialState) ->
   _.map initialState, (val, key) ->
     if val?.subscribe
       currentValue[key] = null
-      pendingSettlement += 1
-      val.subscribe (update) ->
-        currentValue[key] = update
-        state.onNext currentValue
     else
       currentValue[key] = val
 
-  # watch for all state values to settle
-  _.map initialState, (val, key) ->
-    if val?.subscribe
-      hasSettled = false
-      val.subscribe (update) ->
-        unless hasSettled
-          pendingSettlement -= 1
-          if pendingSettlement is 0
-            fireSettlement()
-          hasSettled = true
-
   state.onNext currentValue
+
+  state._bind_subscriptions = ->
+    _.map initialState, (val, key) ->
+      if val?.subscribe
+        pendingSettlement += 1
+
+    _.map initialState, (val, key) ->
+      if val?.subscribe
+        hasSettled = false
+        disposables.push \
+        val.subscribe (update) ->
+          currentValue[key] = update
+          state.onNext currentValue
+          unless hasSettled
+            pendingSettlement -= 1
+            if pendingSettlement is 0
+              fireSettlement()
+            hasSettled = true
+        , (err) -> throw err
+
+  state._unbind_subscriptions = ->
+    _.map disposables, (disposable) ->
+      disposable.dispose()
+    disposables = []
 
   state.set = (diff) ->
     _.map diff, (val, key) ->

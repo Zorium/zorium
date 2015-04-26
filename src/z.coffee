@@ -61,7 +61,8 @@ getOnBeforeUnmountHook = (child, onUnhook) ->
     # FIXME: https://github.com/Matt-Esch/virtual-dom/pull/175
     hook: -> null
     unhook: ->
-      child.onBeforeUnmount()
+      if _.isFunction child.onBeforeUnmount
+        child.onBeforeUnmount()
       onUnhook()
 
   hook = child._zorium_OnBeforeUnmountHook or new OnBeforeUnmountHook()
@@ -83,11 +84,18 @@ renderChild = (child, props = {}) ->
       tree.properties['zorium-onmount'] = hook
       tree.hooks['zorium-onmount'] = hook
 
-    if _.isFunction child.onBeforeUnmount
+    if child.state or _.isFunction child.onBeforeUnmount
       hook = getOnBeforeUnmountHook child, ->
         child.zorium_hasBeenMounted = false
+        child.zorium_hasBoundState = false
+        child.state?._unbind_subscriptions()
+
       tree.properties['zorium-onbeforeunmount'] = hook
       tree.hooks['zorium-onbeforeunmount'] = hook
+
+    if not child.zorium_hasBoundState and child.state
+      child.zorium_hasBoundState = true
+      child.state._bind_subscriptions()
 
     return tree
 
