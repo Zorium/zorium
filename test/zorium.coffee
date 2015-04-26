@@ -1495,3 +1495,16 @@ describe 'z.ev', ->
       $$el.a.should.be 'b'
 
     fn.call {a: 'b'}, {ev: 'x'}
+
+describe 'classKebab', ->
+  it 'kebabs objects', ->
+    kebab = z.classKebab
+      a: true
+      b: true
+      c: true
+      d: 0
+      e: false
+      f: null
+      g: undefined
+
+    kebab.should.be 'a b c'
