@@ -111,9 +111,6 @@ module.exports = z = ->
   if child
     return renderChild child, props
 
-  if _.isNull tagName
-    return z 'div', children
-
   # Default tag to div
   unless /[a-zA-Z]/.test tagName[0]
     tagName = 'div' + tagName

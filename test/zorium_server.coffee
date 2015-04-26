@@ -5,69 +5,83 @@ z = require '../src/zorium'
 
 describe 'router', ->
   it 'creates express middleware', (done) ->
+    statusCalled = false
+
     factory = ->
       z 'div', 'test'
 
-    middleware = z.factoryToMiddleware factory
-    middleware({url: '/'}, {send: (html) ->
-      html.should.be '<!DOCTYPE html><div>test</div>'
-      done()
-    })
+    middleware = z.server.factoryToMiddleware factory
+    res = {
+      send: (html) ->
+        html.should.be '<!DOCTYPE html><div>test</div>'
+        statusCalled.should.be true
+        done()
+      status: (status) ->
+        statusCalled = true
+        status.should.be 200
+        return res
+    }
+    middleware({url: '/'}, res)
 
   it 'supports redirects', (done) ->
     factory = ->
       render: ->
         throw new z.server.Redirect path: '/login'
 
-    middleware = z.factoryToMiddleware factory
+    middleware = z.server.factoryToMiddleware factory
     middleware({
       url: '/'
       headers:
         cookie: 'foo=bar;'
-    }, {redirect: (path) ->
-      path.should.be '/login'
-      done()
+    }, {
+      redirect: (path) ->
+        path.should.be '/login'
+        done()
     })
 
   it 'supports 404 errors', (done) ->
-    status = 200
+    statusCalled = false
+
     factory = ->
       render: ->
-        tree = z 'div', '404'
-        throw new z.server.Error({status: 404, tree})
+        z.server.setStatus 404
+        z 'div', '404'
 
-    middleware = z.factoryToMiddleware factory
+    middleware = z.server.factoryToMiddleware factory
+
     res = {
-      status: (_status) ->
-        status = _status
-        return res
       send: (html) ->
         html.should.be '<!DOCTYPE html><div>404</div>'
-        status.should.be 404
+        statusCalled.should.be true
         done()
+      status: (status) ->
+        statusCalled = true
+        status.should.be 404
+        return res
     }
-
-    middleware({url: '/404'}, res, -> done(new Error 'next()'))
+    middleware({url: '/404'}, res, done)
 
   it 'supports 500 errors', (done) ->
-    status = 200
+    statusCalled = false
+
     factory = ->
       render: ->
-        tree = z 'div', '500'
-        throw new z.server.Error({status: 500, tree})
+        z.server.setStatus 500
+        z 'div', '500'
 
-    middleware = z.factoryToMiddleware factory
+    middleware = z.server.factoryToMiddleware factory
     res = {
-      status: (_status) ->
-        status = _status
+      status: (status) ->
+        statusCalled = true
+        status.should.be 500
         return res
       send: (html) ->
         html.should.be '<!DOCTYPE html><div>500</div>'
-        status.should.be 500
+        statusCalled.should.be true
         done()
     }
 
-    middleware({url: '/404'}, res, -> done(new Error 'next()'))
+    middleware({url: '/500'}, res, done)
 
   it 'supports async redirects', (done) ->
     class Root
@@ -88,7 +102,7 @@ describe 'router', ->
     factory = ->
       new Root()
 
-    middleware = z.factoryToMiddleware factory
+    middleware = z.server.factoryToMiddleware factory
     middleware({url: '/'}, {redirect: (path) ->
       path.should.be '/login'
       done()
@@ -98,22 +112,27 @@ describe 'router', ->
     hasSetCookies = false
 
     factory = ->
-      z.server.getCookie('preset').getValue().should.be 'abc'
-      z.server.setCookie 'clientset', 'xyz', {domain: 'test.com'}
+      z.cookies.get('preset').getValue().should.be 'abc'
+      z.cookies.set 'clientset', 'xyz', {domain: 'test.com'}
       z 'div', 'test'
 
-    middleware = z.factoryToMiddleware factory
-    middleware
-      url: '/'
-      headers:
-        cookie: 'preset=abc'
-    ,
+    res =
       send: (html) ->
         hasSetCookies.should.be true
         html.should.be '<!DOCTYPE html><div>test</div>'
         done()
+      status: (status) ->
+        status.should.be 200
+        return res
       cookie: (name, value, opts) ->
         hasSetCookies = true
         name.should.be 'clientset'
         value.should.be 'xyz'
         opts.domain.should.be 'test.com'
+
+    middleware = z.server.factoryToMiddleware factory
+    middleware
+      url: '/'
+      headers:
+        cookie: 'preset=abc'
+    , res

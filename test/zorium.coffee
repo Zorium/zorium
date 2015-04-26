@@ -6,7 +6,8 @@ Routes = require 'routes'
 Qs = require 'qs'
 cookie = require 'cookie'
 
-z = require 'zorium'
+z = require '../src/zorium'
+StateFactory = require '../src/state_factory'
 
 htmlToNode = (html) ->
   root = document.createElement 'div'
@@ -265,12 +266,7 @@ describe 'Virtual DOM', ->
       preventDefaultCalled = 0
       goCalled = 0
 
-      oldGo = z.server.go
-      z.server.go = (path) ->
-        goCalled += 1
-        path.should.be '/pathname/here'
-
-      dom = z.server.link z 'a[href=/pathname/here]'
+      dom = z.server.link z 'a[href=/anchor1]'
       $el = createElement(dom)
 
       (typeof dom.properties.onclick).should.be 'function'
@@ -280,9 +276,22 @@ describe 'Virtual DOM', ->
           preventDefaultCalled += 1
       }
 
-      dom.properties.onclick.call($el, e)
+      listener = (path) ->
+        z.server.off 'route', listener
+        goCalled += 1
+        path.should.be '/anchor1'
 
-      z.server.go = oldGo
+      factory = ->
+        router = new Router()
+        router.add '/anchor1', z 'div'
+        return router
+
+      root = document.createElement 'div'
+
+      z.server.set {$$root: root, factory}
+
+      z.server.on 'route', listener
+      dom.properties.onclick.call($el, e)
 
       preventDefaultCalled.should.be 1
       goCalled.should.be 1
@@ -292,10 +301,6 @@ describe 'Virtual DOM', ->
     it 'doesn\'t default anchor tags with external path', ->
       preventDefaultCalled = 0
       goCalled = 0
-
-      oldGo = z.server.go
-      z.server.go = (path) ->
-        goCalled += 1
 
       dom = z.server.link z 'a[href=http://google.com]'
       $el = createElement(dom)
@@ -308,9 +313,20 @@ describe 'Virtual DOM', ->
           preventDefaultCalled += 1
       }
 
-      dom.properties.onclick.call($el, e)
+      listener = (path) ->
+        z.server.off 'route', listener
+        goCalled += 1
 
-      z.server.go = oldGo
+      factory = ->
+        router = new Router()
+        return router
+
+      root = document.createElement 'div'
+
+      z.server.set {$$root: root, factory}
+
+      z.server.on 'route', listener
+      dom.properties.onclick.call($el, e)
 
       preventDefaultCalled.should.be 0
       goCalled.should.be 0
@@ -321,12 +337,8 @@ describe 'Virtual DOM', ->
       preventDefaultCalled = 0
       goCalled = 0
 
-      oldGo = z.server.go
-      z.server.go = (path) ->
-        goCalled += 1
-        path.should.be '/'
-
-      dom = z.server.link z 'a[href=/][name=test]', {onmousedown: -> null}
+      dom = z.server.link z 'a[href=/anchor2][name=test]',
+        {onmousedown: -> null}
       $el = createElement(dom)
 
       (typeof dom.properties.onclick).should.be 'function'
@@ -337,9 +349,22 @@ describe 'Virtual DOM', ->
           preventDefaultCalled += 1
       }
 
-      dom.properties.onclick.call($el, e)
+      listener = (path) ->
+        z.server.off 'route', listener
+        goCalled += 1
+        path.should.be '/anchor2'
 
-      z.server.go = oldGo
+      factory = ->
+        router = new Router()
+        router.add '/anchor2', z 'div'
+        return router
+
+      root = document.createElement 'div'
+
+      z.server.set {$$root: root, factory}
+
+      z.server.on 'route', listener
+      dom.properties.onclick.call($el, e)
 
       preventDefaultCalled.should.be 1
       goCalled.should.be 1
@@ -658,7 +683,7 @@ describe 'z.state', ->
 
     state._bind_subscriptions()
 
-    z.state.onNextAllSettlemenmt ->
+    StateFactory.onNextAllSettlemenmt ->
       pendingSettled.should.be 0
       done()
 
@@ -685,7 +710,7 @@ describe 'z.state', ->
 
     state._bind_subscriptions()
 
-    z.state.onAnyUpdate ->
+    StateFactory.onAnyUpdate ->
       updateCnt += 1
 
     setTimeout ->
@@ -745,8 +770,7 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.setRootNode root
-    z.server.setRootFactory factory
+    z.server.set {$$root: root, factory}
 
     result1 = '<div><div>Hello World</div></div>'
     result2 = '<div><div>World Hello</div></div>'
@@ -776,8 +800,7 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.setRootNode root
-    z.server.setRootFactory factory
+    z.server.set {$$root: root, factory}
 
     z.server.go '/testaRedraw'
     drawCnt.should.be 1
@@ -815,8 +838,7 @@ describe 'server', ->
 
     lazyRuns.should.be 0
 
-    z.server.setRootNode root
-    z.server.setRootFactory factory
+    z.server.set {$$root: root, factory}
 
     z.server.go '/testLazyRedraw'
     drawCnt.should.be 1
@@ -861,8 +883,7 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.setRootNode root
-    z.server.setRootFactory factory
+    z.server.set {$$root: root, factory}
     z.server.go '/testUnbindLazy'
     drawCnt.should.be 1
 
@@ -889,15 +910,13 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/test', new App()
       router.add '/test2', new App2()
       return router
 
-    z.server.setRootFactory factory
-    z.server.setMode 'hash'
+    z.server.set {$$root: root, factory, mode: 'hash'}
 
     z.server.go '/test'
     window.location.hash.should.be '#/test'
@@ -915,17 +934,14 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/test3', new App()
       router.add '/test4', new App2()
       return router
-    z.server.setRootFactory factory
 
 
-    z.server.setMode 'pathname'
-
+    z.server.set {$$root: root, factory, mode: 'pathname'}
     z.server.go '/test3'
     window.location.pathname.should.be '/test3'
     z.server.go '/test4'
@@ -943,16 +959,13 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/test-qs', new App()
       router.add '/test-qs2', new App2()
       return router
-    z.server.setRootFactory factory
 
-
-    z.server.setMode 'hash'
+    z.server.set {$$root: root, factory, mode: 'hash'}
 
     z.server.go '/test-qs?x=abc'
     window.location.hash.should.be '#/test-qs?x=abc'
@@ -973,16 +986,14 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/test-qs3', new App()
       router.add '/test-qs4', new App2()
       return router
-    z.server.setRootFactory factory
 
-    z.server.setMode 'pathname'
 
+    z.server.set {$$root: root, factory, mode: 'pathname'}
     z.server.go '/test-qs3?x=abc'
     window.location.pathname.should.be '/test-qs3'
     window.location.search.should.be '?x=abc'
@@ -1005,14 +1016,12 @@ describe 'server', ->
 
     window.location.hash = '/test-pre-hash'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/test-pre-hash', new App()
       return router
-    z.server.setRootFactory factory
 
-    z.server.setMode 'hash'
+    z.server.set {$$root: root, factory, mode: 'hash'}
     root.isEqualNode(htmlToNode(result1)).should.be true
     z.server.go()
     root.isEqualNode(htmlToNode(result2)).should.be true
@@ -1031,14 +1040,12 @@ describe 'server', ->
 
     window.location.hash = '/test-pre-hash-search?x=abc'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/test-pre-hash-search', new App()
       return router
-    z.server.setRootFactory factory
 
-    z.server.setMode 'hash'
+    z.server.set {$$root: root, factory, mode: 'hash'}
     root.isEqualNode(htmlToNode(result1)).should.be true
     z.server.go()
     root.isEqualNode(htmlToNode(result2)).should.be true
@@ -1056,14 +1063,12 @@ describe 'server', ->
 
     window.history.pushState null, null, '/test-pre'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/test-pre', new App()
       return router
-    z.server.setRootFactory factory
 
-    z.server.setMode 'pathname'
+    z.server.set {$$root: root, factory, mode: 'pathname'}
     root.isEqualNode(htmlToNode(result1)).should.be true
     z.server.go()
     root.isEqualNode(htmlToNode(result2)).should.be true
@@ -1082,14 +1087,12 @@ describe 'server', ->
 
     window.history.pushState null, null, '/test-pre-search?x=abc'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/test-pre-search', new App()
       return router
-    z.server.setRootFactory factory
 
-    z.server.setMode 'pathname'
+    z.server.set {$$root: root, factory, mode: 'pathname'}
     root.isEqualNode(htmlToNode(result1)).should.be true
     z.server.go()
     root.isEqualNode(htmlToNode(result2)).should.be true
@@ -1108,18 +1111,16 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/test5', new App()
       router.add '/test6', new App2()
       return router
-    z.server.setRootFactory factory
 
+    z.server.set {$$root: root, factory, mode: 'hash'}
     result1 = '<div><div>Hello World</div></div>'
     result2 = '<div><div>World Hello</div></div>'
 
-    z.server.setMode 'hash'
     z.server.go '/test5'
 
     window.location.hash = '/test5'
@@ -1147,18 +1148,16 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/testa', new App()
       router.add '/testb', new App2()
       return router
-    z.server.setRootFactory factory
 
+    z.server.set {$$root: root, factory, mode: 'pathname'}
     result1 = '<div><div>Hello World</div></div>'
     result2 = '<div><div>World Hello</div></div>'
 
-    z.server.setMode 'pathname'
 
     z.server.go '/testa'
     z.server.go '/testb'
@@ -1182,17 +1181,15 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/', new App()
       return router
-    z.server.setRootFactory factory
 
+    z.server.set {$$root: root, factory, mode: 'pathname'}
     result1 = '<div></div>'
     result2 = '<div><div>Hello World</div></div>'
 
-    z.server.setMode 'pathname'
 
     event = new Event 'popstate'
     window.dispatchEvent event
@@ -1209,13 +1206,12 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/test/:key', new App()
       return router
-    z.server.setRootFactory factory
 
+    z.server.set {$$root: root, factory, mode: 'pathname'}
     result = '<div><div>Hello world</div></div>'
     z.server.go('/test/world')
 
@@ -1228,14 +1224,12 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/test7', new App()
       return router
-    z.server.setRootFactory factory
 
-    z.server.setMode 'hash'
+    z.server.set {$$root: root, factory, mode: 'hash'}
 
     callbackCalled = 0
     listener = (path) ->
@@ -1257,14 +1251,12 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/test8', new App()
       return router
-    z.server.setRootFactory factory
 
-    z.server.setMode 'pathname'
+    z.server.set {$$root: root, factory, mode: 'pathname'}
 
     callbackCalled = 0
     listener = (path) ->
@@ -1290,7 +1282,6 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/test9',
@@ -1298,9 +1289,8 @@ describe 'server', ->
           throw new z.server.Redirect path: '/login1'
       router.add '/login1', new Login()
       return router
-    z.server.setRootFactory factory
 
-    z.server.setMode 'pathname'
+    z.server.set {$$root: root, factory, mode: 'pathname'}
 
     z.server.go '/test9'
 
@@ -1311,16 +1301,15 @@ describe 'server', ->
   it 'allows 404 errors', ->
     root = document.createElement 'div'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/test404',
         render: ->
-          tree = z 'div', '404'
-          throw new z.server.Error {tree, status: 404}
+          z.server.setStatus 404
+          z 'div', '404'
       return router
-    z.server.setRootFactory factory
 
+    z.server.set {$$root: root, factory, mode: 'pathname'}
     result = '<div><div>404</div></div>'
     z.server.go('/test404')
 
@@ -1329,16 +1318,15 @@ describe 'server', ->
   it 'allows 500 errors', ->
     root = document.createElement 'div'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/test500',
         render: ->
+          z.server.setStatus 500
           tree = z 'div', '500'
-          throw new z.server.Error {tree, status: 500}
       return router
-    z.server.setRootFactory factory
 
+    z.server.set {$$root: root, factory, mode: 'pathname'}
     result = '<div><div>500</div></div>'
     z.server.go('/test500')
 
@@ -1355,7 +1343,6 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.setRootNode root
     factory = ->
       router = new Router()
       router.add '/test10',
@@ -1364,9 +1351,8 @@ describe 'server', ->
           z 'div'
       router.add '/login2', new Login()
       return router
-    z.server.setRootFactory factory
 
-    z.server.setMode 'pathname'
+    z.server.set {$$root: root, factory, mode: 'pathname'}
 
     z.server.go '/test10'
 
@@ -1388,8 +1374,7 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.setRootNode root
-    z.server.setRootFactory factory
+    z.server.set {$$root: root, factory}
 
     z.server.go '/testBatchRedraw'
     z.server.go '/testBatchRedraw'
@@ -1427,8 +1412,7 @@ describe 'server', ->
 
     root = document
 
-    z.server.setRootNode root
-    z.server.setRootFactory factory
+    z.server.set {$$root: root, factory}
 
     rootNode = document.getElementById 'zorium-root'
     rootNode.innerHTML = ''
@@ -1457,8 +1441,7 @@ describe 'server', ->
 
     root = document
 
-    z.server.setRootNode root
-    z.server.setRootFactory factory
+    z.server.set {$$root: root, factory}
 
     rootNode = document.getElementById 'zorium-root'
     rootNode._zoriumId = null
@@ -1472,21 +1455,21 @@ describe 'server', ->
 
 
   it 'manages cookies', (done) ->
-    z.server.setCookie 'testCookie', 'testValue'
+    z.cookies.set 'testCookie', 'testValue'
     cookies = cookie.parse document.cookie
     cookies.testCookie.should.be 'testValue'
-    z.server.getCookie('testCookie').getValue().should.be 'testValue'
+    z.cookies.get('testCookie').getValue().should.be 'testValue'
 
-    z.server.setCookie 'something', 'test', {domain: 'test.com'}
-    z.server.getCookie('something').getValue().should.be 'test'
+    z.cookies.set 'something', 'test', {domain: 'test.com'}
+    z.cookies.get('something').getValue().should.be 'test'
 
-    z.server.getCookie('testCookie').subscribe (update) ->
+    z.cookies.get('testCookie').subscribe (update) ->
       if update is 'testValue'
         return
       update.should.be 'another!'
       done()
 
-    z.server.setCookie 'testCookie', 'another!'
+    z.cookies.set 'testCookie', 'another!'
 
 describe 'z.ev', ->
   it 'wraps the this', ->

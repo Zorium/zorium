@@ -1,10 +1,52 @@
-cookie = require 'cookie'
-Rx = require 'rx-lite'
 _ = require 'lodash'
+toHTML = require 'vdom-to-html'
 
 z = require './z'
-renderer = require './renderer'
-state = require './state'
+render = require './render'
+StateFactory = require './state_factory'
+cookies = require './cookies'
+
+# requestAnimationFrame polyfill
+# https://gist.github.com/paulirish/1579671
+# MIT license
+if window?
+  do ->
+    lastTime = 0
+    vendors = [
+      'ms'
+      'moz'
+      'webkit'
+      'o'
+    ]
+    x = 0
+    while x < vendors.length and not window.requestAnimationFrame
+      window.requestAnimationFrame =
+        window[vendors[x] + 'RequestAnimationFrame']
+      window.cancelAnimationFrame =
+        window[vendors[x] + 'CancelAnimationFrame'] or
+        window[vendors[x] + 'CancelRequestAnimationFrame']
+      x += 1
+    if not window.requestAnimationFrame
+
+      window.requestAnimationFrame = (callback, element) ->
+        currTime = (new Date()).getTime()
+        timeToCall = Math.max(0, 16 - (currTime - lastTime))
+        id = window.setTimeout((->
+          callback currTime + timeToCall
+          return
+        ), timeToCall)
+        lastTime = currTime + timeToCall
+        id
+
+    if not window.cancelAnimationFrame
+
+      window.cancelAnimationFrame = (id) ->
+        clearTimeout id
+        return
+
+    return
+  # end polyfill
+
 
 getCurrentPath = (mode) ->
   hash = window.location.hash.slice(1)
@@ -28,14 +70,13 @@ setPath = (path, mode, isReplacement) ->
 class Server
   constructor: ->
     @events = {}
-    @root = null
+    @$$root = null
     @mode = if window?.history?.pushState then 'pathname' else 'hash'
     @currentPath = null
     @isRedrawScheduled = false
     @animationRequestId = null
-    @$rootComponent = null
-    @cookieSubjects = {}
-    @cookieConstructors = {}
+    @$root = null
+    @status = null # server only
 
     # coffeelint: disable=missing_fat_arrows
     @Redirect = ({path}) ->
@@ -44,18 +85,10 @@ class Server
       @message = "Redirect to #{path}"
       @stack = (new Error()).stack
     @Redirect.prototype = new Error()
-
-    @Error = ({tree, status}) ->
-      @name = String status
-      @tree = tree
-      @status = status
-      @message = "Error #{status}"
-      @stack = (new Error()).stack
-    @Error.prototype = new Error()
     # coffeelint: enable=missing_fat_arrows
 
-    state.onAnyUpdate =>
-      if window? and @$rootComponent
+    StateFactory.onAnyUpdate =>
+      if window? and @$root
         @go @currentPath
 
     if window?
@@ -74,42 +107,52 @@ class Server
         if @currentPath
           setTimeout @go
 
+  setStatus: (@status) => null
 
-  # Avoid triggering the cookieConstructor
-  # Important because the {opts} for cookies are no longer accessible
-  _setCookies: (cookies) =>
-    _.map cookies, (val, key) =>
-      @cookieSubjects[key] = new Rx.BehaviorSubject(val)
+  factoryToMiddleware: (factory) =>
+    handleRenderError = (err, req, res, next) =>
+      if err instanceof @Redirect
+        return res.redirect err.path
+      else
+        return next err
 
-  _getCookieConstructors: => @cookieConstructors
+    setResCookies = (res, cookies) ->
+      _.map cookies._getConstructors(), (config, key) ->
+        res.cookie key, config.value, config.opts
 
-  setCookie: (key, value, opts) =>
-    if @cookieSubjects[key]
-      @cookieSubjects[key].onNext value
-    else
-      @cookieSubjects[key] = new Rx.BehaviorSubject(value)
+    (req, res, next) =>
+      @setStatus 200
 
-    @cookieConstructors[key] = {
-      value
-      opts
-    }
-    if window?
-      document.cookie = cookie.serialize key, value, opts
+      cookies._set req.headers?.cookie
 
-  getCookie: (key) =>
-    if @cookieSubjects[key]
-      return @cookieSubjects[key]
-    else
-      @cookieSubjects[key] = new Rx.BehaviorSubject(null)
-      return @cookieSubjects[key]
+      $root = factory()
 
-  setRootNode: (@root) => null
+      # Initialize tree, kicking off async fetches
+      try
+        z $root, {
+          path: req.url
+        }
 
-  setMode: (mode) =>
-    @mode = mode
+        StateFactory.onNextAllSettlemenmt =>
+          try
+            tree = z $root, {
+              path: req.url
+            }
 
-  setRootFactory: (factory) =>
-    @$rootComponent = factory()
+            setResCookies(res, cookies)
+            res.status(@status).send '<!DOCTYPE html>' + toHTML tree
+          catch err
+            setResCookies(res, cookies)
+            handleRenderError(err, req, res, next)
+
+      catch err
+        setResCookies(res, cookies)
+        handleRenderError(err, req, res, next)
+
+  set: ({mode, factory, $$root}) =>
+    @mode = mode or @mode
+    @$root = factory?() or @$root
+    @$$root = $$root or @$$root
 
   link: (node) =>
     if node.properties.onclick
@@ -131,22 +174,20 @@ class Server
 
   render: (props) =>
     try
-      tree = z @$rootComponent, props
+      tree = z @$root, props
     catch err
       if err instanceof @Redirect
         return @go err.path
-      else if err instanceof @Error
-        tree = err.tree
       else throw err
 
     # Because the DOM doesn't let us directly manipulate top-level elements
     # We have to standardize a hack around it
 
-    $root = if @root is document \
+    $root = if @$$root is document \
       then @globalRoot \
-      else @root
+      else @$$root
 
-    renderer.render $root, tree
+    render $root, tree
 
   go: (path) =>
     path ?= getCurrentPath(@mode)
@@ -185,5 +226,14 @@ class Server
   off: (name, fn) =>
     @events[name] = _.without(@events[name], fn)
 
-
-module.exports = new Server()
+server = new Server()
+module.exports = {
+  off: server.off
+  on: server.on
+  go: server.go
+  link: server.link
+  set: server.set
+  setStatus: server.setStatus
+  factoryToMiddleware: server.factoryToMiddleware
+  Redirect: server.Redirect
+}

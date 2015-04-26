@@ -1,3 +1,5 @@
+_ = require 'lodash'
+
 # Bind polyfill (phantomjs doesn't support bind)
 # coffeelint: disable=missing_fat_arrows
 unless Function::bind
@@ -23,73 +25,20 @@ unless Function::bind
     fBound
 # coffeelint: enable=missing_fat_arrows
 
-_ = require 'lodash'
-toHTML = require 'vdom-to-html'
-cookie = require 'cookie'
-
 z = require './z'
-renderer = require './renderer'
+render = require './render'
 server = require './server'
-state = require './state'
+StateFactory = require './state_factory'
+ev = require './ev'
+classKebab = require './class_kebab'
+cookies = require './cookies'
 
-handleRenderError = (err, req, res, next) ->
-  if err instanceof server.Redirect
-    return res.redirect err.path
-  else if err instanceof server.Error
-    return res.status(err.status)
-      .send '<!DOCTYPE html>' + toHTML err.tree
-  else
-    return next err
-
-_.extend z,
-  render: renderer.render
+_.assign z,
+  render: render
   server: server
-  state: state
-  ev: (fn) ->
-    # coffeelint: disable=missing_fat_arrows
-    (e) ->
-      $$el = this
-      fn(e, $$el)
-    # coffeelint: enable=missing_fat_arrows
-
-  classKebab: (classes) ->
-    _.map _.keys(_.pick classes, _.identity), _.kebabCase
-    .join ' '
-
-  factoryToMiddleware: (factory) ->
-    (req, res, next) ->
-      cookies = cookie.parse req.headers?.cookie or ''
-      initialState = {
-        initialPath: req.url
-      }
-
-      server._setCookies cookies
-
-      $root = factory(initialState)
-
-      # Initialize tree, kicking off async fetches
-      try
-        z $root, {
-          path: req.url
-        }
-
-        state.onNextAllSettlemenmt ->
-          try
-            tree = z $root, {
-              path: req.url
-            }
-
-            _.map server._getCookieConstructors(), (config, key) ->
-              res.cookie key, config.value, config.opts
-            res.send '<!DOCTYPE html>' + toHTML tree
-          catch err
-            _.map server._getCookieConstructors(), (config, key) ->
-              res.cookie key, config.value, config.opts
-            handleRenderError(err, req, res, next)
-
-      catch err
-        _.map server._getCookieConstructors(), (config, key) ->
-          res.cookie key, config.value, config.opts
-        handleRenderError(err, req, res, next)
+  state: StateFactory.create
+  cookies: cookies
+  ev: ev
+  classKebab: classKebab
 
 module.exports = z
