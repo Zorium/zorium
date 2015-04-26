@@ -66,11 +66,20 @@ class Router
       query: queryParams
     }
 
+beforeEach (done) ->
+  # Allows routes to settle
+  window.requestAnimationFrame ->
+    done()
+
 describe 'Virtual DOM', ->
   it 'creates basic DOM trees', ->
     dom = z 'div',
       z '.cname#cid', 'abc'
-      z 'a.b[href=#][data-non=123][eatme]',
+      z 'a.b',
+        href: '#'
+        attributes:
+          'data-non': 123
+          eatme: 'true'
         z 'img'
 
     $el = createElement(dom)
@@ -105,12 +114,10 @@ describe 'Virtual DOM', ->
     dom = z 'div',
       z '.container'
       z '#layout'
-      z '[contenteditable]'
 
     result = '<div>' +
       '<div class="container"></div>' +
       '<div id="layout"></div>' +
-      '<div contenteditable="true"></div>' +
     '</div>'
 
     $el = createElement(dom)
@@ -157,7 +164,7 @@ describe 'Virtual DOM', ->
     result = '<div><div>' +
       '<div>a</div>' +
       '<div>b</div>' +
-      '<span></span>' +
+      '<noscript></noscript>' +
     '</div></div>'
 
     z.render root, dom
@@ -217,7 +224,7 @@ describe 'Virtual DOM', ->
 
   # https://github.com/claydotio/zorium.js/issues/1
   it 'doesn\'t add extra class names', ->
-    dom = z 'a[href=http://192.168.1.0]', 'test'
+    dom = z 'a', href: 'http://192.168.1.0', 'test'
     $el = createElement(dom)
     result = '<a href="http://192.168.1.0">test</a>'
 
@@ -262,11 +269,11 @@ describe 'Virtual DOM', ->
 
 
   describe 'Anchor Tag', ->
-    it 'defaults anchor tag onclick event to use router', ->
+    it 'defaults anchor tag onclick event to use router', (done) ->
       preventDefaultCalled = 0
       goCalled = 0
 
-      dom = z.server.link z 'a[href=/anchor1]'
+      dom = z.server.link z 'a', href: '/anchor1'
       $el = createElement(dom)
 
       (typeof dom.properties.onclick).should.be 'function'
@@ -280,6 +287,9 @@ describe 'Virtual DOM', ->
         z.server.off 'route', listener
         goCalled += 1
         path.should.be '/anchor1'
+        preventDefaultCalled.should.be 1
+        goCalled.should.be 1
+        done()
 
       factory = ->
         router = new Router()
@@ -293,16 +303,12 @@ describe 'Virtual DOM', ->
       z.server.on 'route', listener
       dom.properties.onclick.call($el, e)
 
-      preventDefaultCalled.should.be 1
-      goCalled.should.be 1
 
-
-
-    it 'doesn\'t default anchor tags with external path', ->
+    it 'doesn\'t default anchor tags with external path', (done) ->
       preventDefaultCalled = 0
       goCalled = 0
 
-      dom = z.server.link z 'a[href=http://google.com]'
+      dom = z.server.link z 'a', href: 'http://google.com'
       $el = createElement(dom)
 
       (typeof dom.properties.onclick).should.be 'function'
@@ -328,17 +334,19 @@ describe 'Virtual DOM', ->
       z.server.on 'route', listener
       dom.properties.onclick.call($el, e)
 
-      preventDefaultCalled.should.be 0
-      goCalled.should.be 0
+      setTimeout ->
+        preventDefaultCalled.should.be 0
+        goCalled.should.be 0
+        done()
 
-
-
-    it 'writes if other properties exist', ->
+    it 'writes if other properties exist', (done) ->
       preventDefaultCalled = 0
       goCalled = 0
 
-      dom = z.server.link z 'a[href=/anchor2][name=test]',
-        {onmousedown: -> null}
+      dom = z.server.link z 'a',
+        href: '/anchor2'
+        name: 'test'
+        onmousedown: -> null
       $el = createElement(dom)
 
       (typeof dom.properties.onclick).should.be 'function'
@@ -353,6 +361,9 @@ describe 'Virtual DOM', ->
         z.server.off 'route', listener
         goCalled += 1
         path.should.be '/anchor2'
+        preventDefaultCalled.should.be 1
+        goCalled.should.be 1
+        done()
 
       factory = ->
         router = new Router()
@@ -366,14 +377,9 @@ describe 'Virtual DOM', ->
       z.server.on 'route', listener
       dom.properties.onclick.call($el, e)
 
-      preventDefaultCalled.should.be 1
-      goCalled.should.be 1
-
-
-
     it 'throws if attempted to override onclick', (done) ->
       try
-        z.server.link z 'a[href=/][name=test]',
+        z.server.link z 'a', href: '/', name: 'test',
           {onclick: -> clickCalled += 1}
         done(new Error 'Error expected')
       catch
@@ -546,6 +552,7 @@ describe 'Lifecycle Callbacks', ->
       setTimeout ->
         mountCalled.should.be 1
         z.render root, z 'div'
+
         unmountCalled.should.be 1
         z.render root, bind
 
@@ -865,7 +872,6 @@ describe 'server', ->
       constructor: ->
         @state = z.state
           observable: cold
-
       render: ->
         drawCnt += 1
         z 'div', 'Hello World'
@@ -887,16 +893,16 @@ describe 'server', ->
     z.server.go '/testUnbindLazy'
     drawCnt.should.be 1
 
-    z.server.go '/testUnbindLazy2'
+    setTimeout ->
+      z.server.go '/testUnbindLazy2'
 
-    window.requestAnimationFrame ->
       drawCnt.should.be 2
       lazyPromise.resolve 'x'
 
-    lazyPromise.then ->
-      window.requestAnimationFrame ->
-        drawCnt.should.be 2
-        done()
+      lazyPromise.then ->
+        setTimeout ->
+          drawCnt.should.be 2
+          done()
 
 
   it 'updates location hash', ->

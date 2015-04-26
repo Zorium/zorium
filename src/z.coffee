@@ -8,10 +8,15 @@ isComponent = (x) ->
   _.isObject(x) and _.isFunction x.render
 
 isChild = (x) ->
-  isVNode(x) or isVText(x) or isWidget(x) or isComponent(x)
+  isVNode(x) or
+  _.isString(x) or
+  isComponent(x) or
+  _.isNumber(x) or
+  isVText(x) or
+  isWidget(x)
 
 isChildren = (x) ->
-  _.isArray(x) or _.isString(x) or _.isNumber(x) or isChild(x)
+  _.isArray(x) or isChild(x)
 
 parseZfuncArgs = (tagName, children...) ->
   props = {}
@@ -32,70 +37,37 @@ parseZfuncArgs = (tagName, children...) ->
 
   return {tagName, props, children}
 
-getTagAttributes = (tagName) ->
-  re = /\[([^=\]]+)=?([^\]]+)?\]/g
-  match = re.exec tagName
-  props = {}
-
-  while match?
-    if match[2]
-      props[match[1]] = match[2]
-    else
-      props[match[1]] = true
-    match = re.exec tagName
-
-  return props
-
-getOnMountHook = (child, onMount) ->
-  class OnMountHook
+createHook = (onMount, onBeforeUnmount) ->
+  class Hook
     hook: ($el, propName) ->
       setTimeout ->
-        onMount $el
-
-  hook = child._zorium_OnMountHook or new OnMountHook()
-  child._zorium_OnMountHook = hook
-  return hook
-
-getOnBeforeUnmountHook = (child, onUnhook) ->
-  class OnBeforeUnmountHook
-    # FIXME: https://github.com/Matt-Esch/virtual-dom/pull/175
-    hook: -> null
+        onMount?($el)
     unhook: ->
-      if _.isFunction child.onBeforeUnmount
-        child.onBeforeUnmount()
-      onUnhook()
+      onBeforeUnmount?()
 
-  hook = child._zorium_OnBeforeUnmountHook or new OnBeforeUnmountHook()
-  child._zorium_OnBeforeUnmountHook = hook
-  return hook
+  new Hook()
 
 renderChild = (child, props = {}) ->
   if isComponent child
     tree = child.render props
 
     unless tree
-      tree = z 'span'
+      tree = z 'noscript'
 
     tree.hooks ?= {}
 
-    if not child.zorium_hasBeenMounted and _.isFunction child.onMount
-      child.zorium_hasBeenMounted = true
-      hook = getOnMountHook child, child.onMount
-      tree.properties['zorium-onmount'] = hook
-      tree.hooks['zorium-onmount'] = hook
-
-    if child.state or _.isFunction child.onBeforeUnmount
-      hook = getOnBeforeUnmountHook child, ->
-        child.zorium_hasBeenMounted = false
-        child.zorium_hasBoundState = false
+    unless child._zorium_hook
+      child._zorium_hook = createHook child.onMount, ->
+        child._zorium_hasBoundState = false
         child.state?._unbind_subscriptions()
+        child.onBeforeUnmount?()
 
-      tree.properties['zorium-onbeforeunmount'] = hook
-      tree.hooks['zorium-onbeforeunmount'] = hook
+    unless child._zorium_hasBoundState
+      child._zorium_hasBoundState = true
+      child.state?._bind_subscriptions()
 
-    if not child.zorium_hasBoundState and child.state
-      child.zorium_hasBoundState = true
-      child.state._bind_subscriptions()
+    tree.properties['zorium-hook'] = child._zorium_hook
+    tree.hooks['zorium-hook'] = child._zorium_hook
 
     return tree
 
@@ -111,17 +83,4 @@ module.exports = z = ->
   if child
     return renderChild child, props
 
-  # Default tag to div
-  unless /[a-zA-Z]/.test tagName[0]
-    tagName = 'div' + tagName
-
-  tag = tagName.match(/(^[^.\[]+)/)[1]
-
-  # Extract shortcut attributes
-  attributes = getTagAttributes tagName
-  props = _.merge props, {attributes}
-
-  # Remove attribute declarations from tagName
-  tagName = tagName.replace /\[[^\[]+\]/g, ''
-
-  return h tagName, props, _.map _.filter(children), renderChild
+  return h tagName, props, _.map children, renderChild
