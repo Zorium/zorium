@@ -37,13 +37,12 @@ parseZfuncArgs = (tagName, children...) ->
 
   return {tagName, props, children}
 
-createHook = (onMount, onBeforeUnmount) ->
+createHook = (onBeforeMount, onBeforeUnmount) ->
   class Hook
     hook: ($el, propName) ->
-      setTimeout ->
-        onMount?($el)
+      onBeforeMount($el)
     unhook: ->
-      onBeforeUnmount?()
+      onBeforeUnmount()
 
   new Hook()
 
@@ -60,14 +59,16 @@ renderChild = (child, props = {}) ->
     tree.hooks ?= {}
 
     unless child._zorium_hook
-      child._zorium_hook = createHook child.onMount, ->
-        child._zorium_hasBoundState = false
+      child._zorium_hook = createHook ($el) ->
+        # Wait for insertion into the DOM
+        setTimeout ->
+          child.state?._bind_subscriptions()
+          child.onMount?($el)
+      , ->
         child.state?._unbind_subscriptions()
         child.onBeforeUnmount?()
 
-    unless child._zorium_hasBoundState
-      child._zorium_hasBoundState = true
-      child.state?._bind_subscriptions()
+    child.state?._bind_subscriptions()
 
     tree.properties['zorium-hook'] = child._zorium_hook
     tree.hooks['zorium-hook'] = child._zorium_hook
