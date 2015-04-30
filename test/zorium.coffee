@@ -1461,6 +1461,8 @@ describe 'server', ->
 
 
   it 'manages cookies', (done) ->
+    document.cookie = 'preset=pre'
+    z.cookies.get('preset').getValue().should.be 'pre'
     z.cookies.set 'testCookie', 'testValue'
     cookies = cookie.parse document.cookie
     cookies.testCookie.should.be 'testValue'

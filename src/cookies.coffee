@@ -37,7 +37,12 @@ class Cookies
     if @cookieSubjects[key]
       return @cookieSubjects[key]
     else
-      @cookieSubjects[key] = new Rx.BehaviorSubject(null)
+      value = if window?
+        cookie.parse(document.cookie or '')?[key] or null
+      else
+        null
+
+      @cookieSubjects[key] = new Rx.BehaviorSubject(value)
       return @cookieSubjects[key]
 
 cookies = new Cookies()
