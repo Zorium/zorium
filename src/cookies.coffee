@@ -11,10 +11,14 @@ class Cookies
   # Important because the {opts} for cookies are no longer accessible
   _set: (cookies) =>
     cookies = cookie.parse cookies or ''
-    _.map cookies, (val, key) =>
+    _.forEach cookies, (val, key) =>
       @cookieSubjects[key] = new Rx.BehaviorSubject(val)
 
   _getConstructors: => @cookieConstructors
+
+  _clear: =>
+    @cookieSubjects = {}
+    @cookieConstructors = {}
 
   set: (key, value, opts) =>
     if @cookieSubjects[key]
@@ -40,6 +44,7 @@ cookies = new Cookies()
 module.exports = {
   _set: cookies._set
   _getConstructors: cookies._getConstructors
+  _clear: cookies._clear
   set: cookies.set
   get: cookies.get
 }

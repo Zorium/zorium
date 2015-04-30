@@ -81,6 +81,7 @@ class Server
     (req, res, next) =>
       @setStatus 200
 
+      cookies._clear()
       cookies._set req.headers?.cookie
 
       $root = factory()

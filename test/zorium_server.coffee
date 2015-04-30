@@ -21,7 +21,7 @@ describe 'router', ->
         status.should.be 200
         return res
     }
-    middleware({url: '/'}, res)
+    middleware({url: '/'}, res, done)
 
   it 'supports redirects', (done) ->
     factory = ->
@@ -37,7 +37,7 @@ describe 'router', ->
       redirect: (path) ->
         path.should.be '/login'
         done()
-    })
+    }, done)
 
   it 'supports 404 errors', (done) ->
     statusCalled = false
@@ -106,7 +106,7 @@ describe 'router', ->
     middleware({url: '/'}, {redirect: (path) ->
       path.should.be '/login'
       done()
-    })
+    }, done)
 
   it 'manages cookies', (done) ->
     hasSetCookies = false
@@ -135,4 +135,37 @@ describe 'router', ->
       url: '/'
       headers:
         cookie: 'preset=abc'
-    , res
+    , res, done
+
+  it 'clears cookies from previous requests', (done) ->
+    factory = ->
+      should.not.exist z.cookies.get('secret').getValue()
+      z.cookies.set 'secret', 'abc'
+      z 'div', 'test'
+
+    middleware = z.server.factoryToMiddleware factory
+
+    res1 =
+      send: (html) ->
+        html.should.be '<!DOCTYPE html><div>test</div>'
+
+        res2 =
+          send: (html) ->
+            html.should.be '<!DOCTYPE html><div>test</div>'
+            done()
+          status: (status) ->
+            status.should.be 200
+            return res2
+          cookie: -> null
+
+        middleware
+          url: '/'
+        , res2, done
+      status: (status) ->
+        status.should.be 200
+        return res1
+      cookie: -> null
+
+    middleware
+      url: '/'
+    , res1, done
