@@ -16,7 +16,7 @@ class Cookies
 
   _getConstructors: => @cookieConstructors
 
-  _clear: =>
+  _reset: =>
     @cookieSubjects = {}
     @cookieConstructors = {}
 
@@ -49,7 +49,7 @@ cookies = new Cookies()
 module.exports = {
   _set: cookies._set
   _getConstructors: cookies._getConstructors
-  _clear: cookies._clear
+  _reset: cookies._reset
   set: cookies.set
   get: cookies.get
 }

@@ -45,11 +45,11 @@ class Server
     @Redirect.prototype = new Error()
     # coffeelint: enable=missing_fat_arrows
 
-    StateFactory.onAnyUpdate =>
-      if window? and @$root
-        @go @currentPath
-
     if window?
+      StateFactory.onAnyUpdate =>
+        if @$root
+          @go @currentPath
+
       # used for full-page rendering
       @globalRoot = document.getElementById 'zorium-root'
 
@@ -79,9 +79,16 @@ class Server
         res.cookie key, config.value, config.opts
 
     (req, res, next) =>
+      # Reset state between requests
       @setStatus 200
+      cookies._reset()
+      StateFactory.reset()
 
-      cookies._clear()
+      StateFactory.onError (err) ->
+        if _.isPlainObject err
+          err = new Error JSON.stringify err
+        next err
+
       cookies._set req.headers?.cookie
 
       $root = factory()
@@ -149,6 +156,9 @@ class Server
     render $root, tree
 
   go: (path) =>
+    unless window?
+      throw new Error 'z.server.go() called from node'
+
     path ?= getCurrentPath(@mode)
     hasRouted = not Boolean @currentPath
     isRedraw = path is @currentPath
@@ -175,6 +185,9 @@ class Server
         @render(props)
 
   on: (name, fn) =>
+    unless window?
+      throw new Error 'z.server.on() called from node'
+
     (@events[name] = @events[name] or []).push(fn)
 
   emit: (name) =>
@@ -183,6 +196,9 @@ class Server
       fn.apply null, args
 
   off: (name, fn) =>
+    unless window?
+      throw new Error 'z.server.off() called from node'
+
     @events[name] = _.without(@events[name], fn)
 
 server = new Server()

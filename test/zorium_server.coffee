@@ -169,3 +169,41 @@ describe 'router', ->
     middleware
       url: '/'
     , res1, done
+
+  it 'handles state errors', (done) ->
+    pending = new Rx.BehaviorSubject(null)
+    pending.onError new Error 'test'
+
+    class Root
+      constructor: ->
+        @state = z.state
+          pending: pending
+
+      render: ->
+        z 'div', 'test'
+
+    factory = ->
+      new Root()
+
+    middleware = z.server.factoryToMiddleware factory
+    res = {
+      status: (status) ->
+        return res
+    }
+    middleware {url: '/'}, res, (err) ->
+      err.message.should.be 'test'
+      done()
+
+  it 'handles runtime errors', (done) ->
+    factory = ->
+      render: ->
+        throw new Error 'test'
+
+    middleware = z.server.factoryToMiddleware factory
+    res = {
+      status: (status) ->
+        return res
+    }
+    middleware {url: '/'}, res, (err) ->
+      err.message.should.be 'test'
+      done()

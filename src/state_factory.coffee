@@ -5,6 +5,13 @@ class StateFactory
   constructor: ->
     @settlementListeners = []
     @anyUpdateListeners = []
+    @errorListeners = []
+    @pendingSettlement = 0
+
+  reset: =>
+    @settlementListeners = []
+    @anyUpdateListeners = []
+    @errorListeners = []
     @pendingSettlement = 0
 
   fireSettlement: =>
@@ -16,6 +23,13 @@ class StateFactory
     _.map @anyUpdateListeners, (fn) ->
       fn()
 
+  fireError: (err) =>
+    if _.isEmpty @errorListeners
+      throw err
+
+    _.map @errorListeners, (fn) ->
+      fn(err)
+
   onAnyUpdate: (fn) =>
     @anyUpdateListeners.push fn
 
@@ -24,6 +38,9 @@ class StateFactory
       fn()
     else
       @settlementListeners.push fn
+
+  onError: (fn) ->
+    @errorListeners.push fn
 
   create: (initialState) =>
     unless _.isPlainObject initialState
@@ -72,7 +89,8 @@ class StateFactory
             if @pendingSettlement is 0
               @fireSettlement()
             hasSettled = true
-        , (err) -> throw err
+        , (err) ->
+          state.onError err
 
     state._unbind_subscriptions = ->
       unless isSubscribing
@@ -97,7 +115,7 @@ class StateFactory
       state.onNext currentValue
       return state
 
-    state.subscribe @fireAnyUpdateListeners, (err) -> throw err
+    state.subscribe @fireAnyUpdateListeners, @fireError
 
     return state
 
