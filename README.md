@@ -4,7 +4,7 @@
 #### [zorium.org](https://zorium.org/)
 
 (╯°□°)╯︵ ┻━┻  
-v1.0.0-rc1
+v1.0.0-rc12
 
 ## Examples
 
@@ -14,18 +14,14 @@ z = require 'zorium'
 class AppComponent
   constructor: (params) ->
     @state = z.state
-      zoo: 'Zorium'
-
-  clicker: (e) =>
-    console.log 'Click!'
-    @state.set
-      zoo: 'AllOfTheThings'
+      name: 'Zorium'
 
   render: =>
-    {zoo} = @state.getValue()
+    {name} = @state.getValue()
 
-    z 'a.zorium-link[href=/]',
-      z "img[src=#{zoo}.png]", onclick: @clicker
+    z '.zorium',
+      z 'p.text',
+        "The Future -#{name}"
 
 z.render document.body, new AppComponent()
 ```
@@ -39,11 +35,7 @@ z '.container' # <div class='container'></div>
 
 z '#layout' # <div id='layout'></div>
 
-z 'a[name=top]' # <a name='top'></a>
-
-z '[contenteditable]' # <div contenteditable='true'></div>
-
-z 'a#google.external[href=http://google.com]', 'Google' # <a id='google' class='external' href='http://google.com'>Google</a>
+z 'button' # <button></button>
 
 z 'div', {style: {border: '1px solid red'}}  # <div style='border:1px solid red;'></div>
 ```
@@ -63,9 +55,9 @@ z 'ul',
 
 ### Zorium Components
 
-Zorium components can be used in place of a dom tag.  
-Zorium components must have a `render()` method  
-Zorium components must be `pure` - `render()` must only rely on `@state` and props
+  - Can be used in place of a dom tag.  
+  - Must have a `render()` method  
+  - Must be `pure` - `render()` updates must only rely on `@state` and props
 
 ```coffee
 class HelloWorldComponent
@@ -125,69 +117,50 @@ class BindComponent
 
 ```coffee
 class App
-  constructor: ({params}) ->
+  constructor: ->
     @state = z.state
-      key: params.key or 'none'
+      key: 'Zorium'
 
-  render: =>
+  render: ({path}) =>
     {key} = @state.getValue()
-    z 'div', 'Hello ' + key
+
+    if path is '/'
+      z 'div', 'Hello ' + key
+    else
+      z 'div', '404'
 
 root = document.createElement 'div'
-router = new z.Router()
 
-z.server.setMode 'pathname' # 'pathname' or 'hash' (default is 'hash')
-z.server.setRoot root
+factory = ->
+  new App()
 
-router.add '/test', ({params, query}) -> new App({params, query})
-router.add '/test/:key', ({params, query}) -> new App({params, query})
+z.server.set
+  mode: 'pathname'
+  $$root: root
+  factory: factory
 
-z.server.setRouter router
 
 z.router.go '/test'
 ```
 
 
-#### z.server.setMode()
+#### z.server.set()
 
 ```coffee
+
+###
+@param {Object} config
+@param {'pathname'|'hash'} config.mode  - defaults to 'pathname' if possible
+@param {Function} factory - method when called returns a new app root component
+###
+z.server.set {
+  mode
+  $$root
+  factory
+}
+
 z.server.setMode 'hash' # (default) clay.io/#/path
 z.server.setMode 'pathname' # clay.io/pathname
-```
-
-
-#### z.server.setRoot()
-
-Accepts a DOM node to append to
-
-```coffee
-###
-@param {HtmlElement}
-###
-z.server.setRoot(document.body)
-```
-
-#### Router.add()
-
-```coffee
-router = new z.Router()
-###
-@param {String} path
-@param {Function<ZoriumComponent>} ({params, query})
-###
-router.add '/test/:key', ({params, query}) -> new App({params, query})
-
-class App
-  constructor: (params) -> null
-
-pathTransform = (path) ->
-  isLoggedIn = new Promise (resolve) -> resolve false
-
-  return isLoggedIn.then (isLoggedIn) ->
-    unless isLoggedIn
-      return '/login'
-
-    return path
 ```
 
 #### z.server.go()
@@ -232,33 +205,24 @@ z.router.on 'route', (path) -> null
 z.render document.body, App
 ```
 
-#### z.redraw()
-
-Redraw all previously rendered elements, batched by requestAnimationFrame  
-This is called whenever a component's `state` is changed  
-Call this whenever something changes the DOM state
-
-```coffee
-z.render document.body, z 'div'
-z.redraw()
-```
-
 ### State
 
 #### z.state({initialValue})
 
-returns an `Rx.BehaviorSubject`, with a `set()` method for partial updates  
-When set as a property of a Zorium Component, `z.redraw()` will automatically be called  
-If passed an `Rx.Observable`, an update is triggered on child updates
+returns an [`Rx.BehaviorSubject`](https://github.com/Reactive-Extensions/RxJS/blob/master/doc/api/subjects/behaviorsubject.md),
+with a `set()` method for partial updates  
+Your component will be updated whenever state changes  
+If passed an `Rx.Observable`, updates propagate automatically
 
 ```coffee
+Rx = require 'rx-lite'
 promise = new Promise()
 
 state = z.state
   a: 'abc'
   b: 123
   c: [1, 2, 3]
-  d: new Rx.Observable.fromPromise promise
+  d: Rx.Observable.fromPromise promise
 
 state.getValue() is {
   a: 'abc'
@@ -271,10 +235,6 @@ promise.resolve(123)
 
 # promise resolved
 state.getValue().d is 123
-
-# watch for changes
-state.subscribe (state) ->
-  state.b is 321
 
 # partial update
 state.set
@@ -311,6 +271,7 @@ z 'div',
   /models
   /pages
   /services
+  root_factory.coffee
   root.coffee
 /test
   /components
@@ -321,7 +282,6 @@ z 'div',
 ### root.coffee
 
 This file serves as the initialization point for the application.  
-Currently, routing goes here, along with other miscellaneous things.
 
 ### Components
 
@@ -357,10 +317,10 @@ Nav = require('../components/nav')
 Body = require('../components/body')
 
 module.exports = class HomePage
-  constructor: (params) ->
+  constructor: ->
     @state = z.state
       $nav: new Nav()
-      $body: new Body(params.key)
+      $body: new Body()
 
   render: =>
     {$nav, $body} = @state.getValue()
@@ -368,36 +328,6 @@ module.exports = class HomePage
       z $nav
       z $body
 ```
-
-##### Page Extension
-
-If extending a root page with sub-pages is desired, subclass.
-
-```coffee
-Nav = require('../components/nav')
-Footer = require('../components/footer')
-OtherFooter = require('../components/otherFooter')
-
-class RootPage
-  constructor: ->
-    @state = z.state
-        $nav: new Nav()
-        $footer: new Footer()
-
-  render: =>
-    {$nav, $footer} = @state.getValue()
-    z 'div',
-      z $nav
-      z $footer
-
-class APage extends RootPage
-  constructor: ->
-    super
-
-    @state.set
-      $footer: new OtherFooter()
-```
-
 
 ### Services
 
@@ -412,6 +342,12 @@ module.exports = new AbcService()
 
 
 ### Changelog
+
+1.0.0-rc1 -> 1.0.0-rc12
+  - almost all of `z.server`
+  - removed z.Router
+  - server-side rendering!
+  - lazy state subscriptions
 
 0.8.x -> 1.0.0-rc1
   - removed z.oldState()
