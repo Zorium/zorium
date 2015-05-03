@@ -86,8 +86,9 @@ class StateFactory
           state.onNext currentValue
           unless hasSettled
             @pendingSettlement -= 1
-            if @pendingSettlement is 0
-              @fireSettlement()
+            setTimeout =>
+              if @pendingSettlement is 0
+                @fireSettlement()
             hasSettled = true
         , (err) ->
           state.onError err

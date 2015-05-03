@@ -759,6 +759,34 @@ describe 'z.state', ->
     state.getValue().lazy.should.be 1
     state2.getValue().lazy.should.be 2
 
+  it 'waits one turn before firing AllSettlement', (done) ->
+    pendingSettled = 2
+
+    pending1 = new Rx.ReplaySubject(1)
+    pending2 = new Rx.ReplaySubject(1)
+
+    state1 = z.state {
+      pending1
+    }
+    state2 = z.state {
+      pending2
+    }
+
+    state1._bind_subscriptions()
+
+    StateFactory.onNextAllSettlemenmt ->
+      pendingSettled.should.be 0
+      done()
+
+    setTimeout ->
+      pendingSettled -= 1
+      pending1.onNext(null)
+      pending1.subscribe ->
+        state2._bind_subscriptions()
+        pending2.onNext(null)
+        pendingSettled -= 1
+
+
 describe 'server', ->
   it 'renders updated DOM', ->
     class App
