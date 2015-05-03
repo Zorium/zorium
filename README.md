@@ -1,4 +1,4 @@
-[![Zorium](./zorium.png)]((https://zorium.org/))
+[![Zorium](./zorium_logo.png)](https://zorium.org/)
 
 ## [Zorium](https://zorium.org/) - The Functional Reactive CoffeeScript Web
 
