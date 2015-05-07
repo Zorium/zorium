@@ -207,3 +207,22 @@ describe 'router', ->
     middleware {url: '/'}, res, (err) ->
       err.message.should.be 'test'
       done()
+
+  it 'gets request objects', (done) ->
+    factoryCalled = false
+    factory = ->
+      factoryCalled = true
+      req = z.server.getReq()
+      req.url.should.be '/'
+      z 'div', 'test'
+
+    middleware = z.server.factoryToMiddleware factory
+    res = {
+      send: (html) ->
+        factoryCalled.should.be true
+        done()
+      status: (status) ->
+        status.should.be 200
+        return res
+    }
+    middleware({url: '/'}, res, done)

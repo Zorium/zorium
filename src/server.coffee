@@ -216,6 +216,7 @@ module.exports = {
   link: server.link
   set: server.set
   setStatus: server.setStatus
+  getReq: server.getReq
   factoryToMiddleware: server.factoryToMiddleware
   Redirect: server.Redirect
 }
