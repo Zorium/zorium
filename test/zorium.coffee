@@ -1339,7 +1339,8 @@ describe 'server', ->
       router = new Router()
       router.add '/test404',
         render: ->
-          z.server.setStatus 404
+          unless window?
+            z.server.setStatus 404
           z 'div', '404'
       return router
 
@@ -1356,7 +1357,8 @@ describe 'server', ->
       router = new Router()
       router.add '/test500',
         render: ->
-          z.server.setStatus 500
+          unless window?
+            z.server.setStatus 500
           tree = z 'div', '500'
       return router
 
@@ -1527,3 +1529,14 @@ describe 'classKebab', ->
       g: undefined
 
     kebab.should.be 'a b c'
+
+describe 'isSimpleClick', ->
+  it 'checks for non-left clicks', ->
+    z.isSimpleClick {which: 2}
+    .should.be false
+
+    z.isSimpleClick {which: 1}
+    .should.be true
+
+    z.isSimpleClick {which: 1, shiftKey: true}
+    .should.be false

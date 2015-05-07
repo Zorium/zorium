@@ -5,6 +5,8 @@ z = require './z'
 render = require './render'
 StateFactory = require './state_factory'
 cookies = require './cookies'
+isSimpleClick = require './is_simple_click'
+ev = require './ev'
 
 getCurrentPath = (mode) ->
   hash = window.location.hash.slice(1)
@@ -134,17 +136,12 @@ class Server
     if node.properties.onclick
       throw new Error 'onclick already bound, invalid usage'
 
-    go = @go
+    node.properties.onclick = ev (e, $$el) =>
+      isLocal = $$el.hostname is window.location.hostname
 
-    # coffeelint: disable=missing_fat_arrows
-    node.properties.onclick = (e) ->
-      $el = this
-      isLocal = $el.hostname is window.location.hostname
-
-      if isLocal
+      if isLocal and isSimpleClick e
         e.preventDefault()
-        go $el.pathname + $el.search
-      # coffeelint: enable=missing_fat_arrows
+        @go $$el.pathname + $$el.search
 
     return node
 

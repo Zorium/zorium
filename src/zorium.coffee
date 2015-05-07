@@ -73,6 +73,7 @@ StateFactory = require './state_factory'
 ev = require './ev'
 classKebab = require './class_kebab'
 cookies = require './cookies'
+isSimpleClick = require './is_simple_click'
 
 _.assign z,
   render: render
@@ -81,5 +82,6 @@ _.assign z,
   cookies: cookies
   ev: ev
   classKebab: classKebab
+  isSimpleClick: isSimpleClick
 
 module.exports = z
