@@ -35,6 +35,7 @@ class Server
     @animationRequestId = null
     @$root = null
     @status = null # server only
+    @req = null # server only
 
     # coffeelint: disable=missing_fat_arrows
     @Redirect = ({path}) ->
@@ -65,7 +66,15 @@ class Server
         if @currentPath
           setTimeout @go
 
-  setStatus: (@status) => null
+  setStatus: (@status) =>
+    if window?
+      throw new Error 'z.server.setStatus() called client-side'
+    null
+
+  getReq: =>
+    if window?
+      throw new Error 'z.server.getReq() called client-side'
+    @req
 
   factoryToMiddleware: (factory) =>
     handleRenderError = (err, req, res, next) =>
@@ -81,6 +90,7 @@ class Server
     (req, res, next) =>
       # Reset state between requests
       @setStatus 200
+      @req = req
       cookies._reset()
       StateFactory.reset()
 
@@ -157,7 +167,7 @@ class Server
 
   go: (path) =>
     unless window?
-      throw new Error 'z.server.go() called from node'
+      throw new Error 'z.server.go() called server-side'
 
     path ?= getCurrentPath(@mode)
     hasRouted = not Boolean @currentPath
@@ -186,7 +196,7 @@ class Server
 
   on: (name, fn) =>
     unless window?
-      throw new Error 'z.server.on() called from node'
+      throw new Error 'z.server.on() called server-side'
 
     (@events[name] = @events[name] or []).push(fn)
 
@@ -197,7 +207,7 @@ class Server
 
   off: (name, fn) =>
     unless window?
-      throw new Error 'z.server.off() called from node'
+      throw new Error 'z.server.off() called server-side'
 
     @events[name] = _.without(@events[name], fn)
 
