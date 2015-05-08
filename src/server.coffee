@@ -73,6 +73,9 @@ class Server
       throw new Error 'z.server.setStatus() called client-side'
     null
 
+  setCookie: cookies.set
+  getCookie: cookies.get
+
   getReq: =>
     if window?
       throw new Error 'z.server.getReq() called client-side'
@@ -86,14 +89,14 @@ class Server
         return next err
 
     setResCookies = (res, cookies) ->
-      _.map cookies._getConstructors(), (config, key) ->
+      _.map cookies.getConstructors(), (config, key) ->
         res.cookie key, config.value, config.opts
 
     (req, res, next) =>
       # Reset state between requests
       @setStatus 200
       @req = req
-      cookies._reset()
+      cookies.reset()
       StateFactory.reset()
 
       StateFactory.onError (err) ->
@@ -101,7 +104,7 @@ class Server
           err = new Error JSON.stringify err
         next err
 
-      cookies._set req.headers?.cookie
+      cookies.populate req.headers?.cookie
 
       $root = factory()
 
@@ -127,7 +130,7 @@ class Server
         setResCookies(res, cookies)
         handleRenderError(err, req, res, next)
 
-  set: ({mode, factory, $$root}) =>
+  config: ({mode, factory, $$root}) =>
     @mode = mode or @mode
     @$root = factory?() or @$root
     @$$root = $$root or @$$root
@@ -214,8 +217,10 @@ module.exports = {
   on: server.on
   go: server.go
   link: server.link
-  set: server.set
+  config: server.config
   setStatus: server.setStatus
+  setCookie: server.setCookie
+  getCookie: server.getCookie
   getReq: server.getReq
   factoryToMiddleware: server.factoryToMiddleware
   Redirect: server.Redirect

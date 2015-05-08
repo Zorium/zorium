@@ -9,14 +9,14 @@ class Cookies
 
   # Avoid triggering the cookieConstructor
   # Important because the {opts} for cookies are no longer accessible
-  _set: (cookies) =>
+  populate: (cookies) =>
     cookies = cookie.parse cookies or ''
     _.forEach cookies, (val, key) =>
       @cookieSubjects[key] = new Rx.BehaviorSubject(val)
 
-  _getConstructors: => @cookieConstructors
+  getConstructors: => @cookieConstructors
 
-  _reset: =>
+  reset: =>
     @cookieSubjects = {}
     @cookieConstructors = {}
 
@@ -45,11 +45,4 @@ class Cookies
       @cookieSubjects[key] = new Rx.BehaviorSubject(value)
       return @cookieSubjects[key]
 
-cookies = new Cookies()
-module.exports = {
-  _set: cookies._set
-  _getConstructors: cookies._getConstructors
-  _reset: cookies._reset
-  set: cookies.set
-  get: cookies.get
-}
+module.exports = new Cookies()

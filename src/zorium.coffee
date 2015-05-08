@@ -79,7 +79,6 @@ _.assign z,
   render: render
   server: server
   state: StateFactory.create
-  cookies: cookies
   ev: ev
   classKebab: classKebab
   isSimpleClick: isSimpleClick

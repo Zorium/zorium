@@ -112,8 +112,8 @@ describe 'router', ->
     hasSetCookies = false
 
     factory = ->
-      z.cookies.get('preset').getValue().should.be 'abc'
-      z.cookies.set 'clientset', 'xyz', {domain: 'test.com'}
+      z.server.getCookie('preset').getValue().should.be 'abc'
+      z.server.setCookie 'clientset', 'xyz', {domain: 'test.com'}
       z 'div', 'test'
 
     res =
@@ -139,8 +139,8 @@ describe 'router', ->
 
   it 'clears cookies from previous requests', (done) ->
     factory = ->
-      should.not.exist z.cookies.get('secret').getValue()
-      z.cookies.set 'secret', 'abc'
+      should.not.exist z.server.getCookie('secret').getValue()
+      z.server.setCookie 'secret', 'abc'
       z 'div', 'test'
 
     middleware = z.server.factoryToMiddleware factory
