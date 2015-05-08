@@ -37,6 +37,7 @@
     "merge-stream": "^0.1.7",
     "mocha": "^2.2.4",
     "promiz": "^1.0.3",
+    "qs": "^2.4.1",
     "rewire": "^2.3.1",
     "rewire-webpack": "^1.0.0",
     "transform-loader": "^0.2.1",
@@ -44,9 +45,7 @@
   },
   "dependencies": {
     "coffee-script": "^1.9.2",
-    "cookie": "^0.1.2",
     "lodash": "^3.6.0",
-    "qs": "^2.4.1",
     "routes": "^2.0.0",
     "rx-lite": "^2.5.2",
     "vdom-to-html": "^2.0.0",

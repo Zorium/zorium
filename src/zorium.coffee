@@ -68,15 +68,16 @@ if window?
 
 z = require './z'
 render = require './render'
+renderToString = require './render_to_string'
 server = require './server'
 StateFactory = require './state_factory'
 ev = require './ev'
 classKebab = require './class_kebab'
-cookies = require './cookies'
 isSimpleClick = require './is_simple_click'
 
 _.assign z,
   render: render
+  renderToString: renderToString
   server: server
   state: StateFactory.create
   ev: ev

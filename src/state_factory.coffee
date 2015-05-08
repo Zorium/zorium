@@ -3,21 +3,12 @@ Rx = require 'rx-lite'
 
 class StateFactory
   constructor: ->
-    @settlementListeners = []
     @anyUpdateListeners = []
     @errorListeners = []
-    @pendingSettlement = 0
 
   reset: =>
-    @settlementListeners = []
     @anyUpdateListeners = []
     @errorListeners = []
-    @pendingSettlement = 0
-
-  fireSettlement: =>
-    _.map @settlementListeners, (fn) ->
-      fn()
-    @settlementListeners = []
 
   fireAnyUpdateListeners: =>
     _.map @anyUpdateListeners, (fn) ->
@@ -33,12 +24,6 @@ class StateFactory
   onAnyUpdate: (fn) =>
     @anyUpdateListeners.push fn
 
-  onNextAllSettlemenmt: (fn) =>
-    if @pendingSettlement is 0
-      fn()
-    else
-      @settlementListeners.push fn
-
   onError: (fn) ->
     @errorListeners.push fn
 
@@ -47,8 +32,10 @@ class StateFactory
       throw new Error 'initialState must be a plain object'
 
     isSubscribing = false
+    pendingSettlement = 0
     currentValue = {}
     disposables = []
+    selfDisposable = null
 
     state = new Rx.BehaviorSubject(currentValue)
 
@@ -69,36 +56,40 @@ class StateFactory
 
     state.onNext currentValue
 
+    state._isFulfilled = ->
+      pendingSettlement is 0
+
+    state._isSubscribing = ->
+      isSubscribing
+
     state._bind_subscriptions = =>
       if isSubscribing
         return
-
       isSubscribing = true
+      pendingSettlement = 0
 
-      mapObservables initialState, (val ,key) =>
-        @pendingSettlement += 1
+      selfDisposable = state.subscribe @fireAnyUpdateListeners, @fireError
 
-      mapObservables initialState, (val ,key) =>
+      mapObservables initialState, (val ,key) ->
+        pendingSettlement += 1
+
+      mapObservables initialState, (val ,key) ->
         hasSettled = false
-        disposables.push \
-        val.subscribe (update) =>
+        disposables.push val.subscribe (update) ->
           currentValue[key] = update
-          state.onNext currentValue
           unless hasSettled
-            @pendingSettlement -= 1
-            setTimeout =>
-              if @pendingSettlement is 0
-                @fireSettlement()
             hasSettled = true
+            pendingSettlement -= 1
+          state.onNext currentValue
         , (err) ->
           state.onError err
 
     state._unbind_subscriptions = ->
       unless isSubscribing
         return
-
       isSubscribing = false
 
+      selfDisposable.dispose()
       _.map disposables, (disposable) ->
         disposable.dispose()
       disposables = []
@@ -115,8 +106,6 @@ class StateFactory
 
       state.onNext currentValue
       return state
-
-    state.subscribe @fireAnyUpdateListeners, @fireError
 
     return state
 

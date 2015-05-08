@@ -4,229 +4,155 @@ Promise = require 'promiz'
 
 z = require '../src/zorium'
 
-describe 'router', ->
-  it 'creates express middleware', (done) ->
-    statusCalled = false
+describe 'server side rendering', ->
+  it 'supports basic render to string', ->
+    z.renderToString z 'div', 'test'
+    .then (html) ->
+      html.should.be '<div>test</div>'
 
-    factory = ->
-      z 'div', 'test'
-
-    middleware = z.server.factoryToMiddleware factory
-    res = {
-      send: (html) ->
-        html.should.be '<!DOCTYPE html><div>test</div>'
-        statusCalled.should.be true
-        done()
-      status: (status) ->
-        statusCalled = true
-        status.should.be 200
-        return res
-    }
-    middleware({url: '/'}, res, done)
-
-  it 'supports redirects', (done) ->
-    factory = ->
+  it 'propogates errors', ->
+    class MoveAlong
       render: ->
-        throw new z.server.Redirect path: '/login'
+        throw new z.server.Redirect path: '/'
 
-    middleware = z.server.factoryToMiddleware factory
-    middleware({
-      url: '/'
-      headers:
-        cookie: 'foo=bar;'
-    }, {
-      redirect: (path) ->
-        path.should.be '/login'
-        done()
-    }, done)
+    $move = new MoveAlong()
+    z.renderToString $move
+    .then ->
+      throw new Error 'Expected error'
+    , (err) ->
+      (err instanceof z.server.Redirect).should.be true
 
-  it 'supports 404 errors', (done) ->
-    statusCalled = false
-
-    factory = ->
-      render: ->
-        z.server.setStatus 404
-        z 'div', '404'
-
-    middleware = z.server.factoryToMiddleware factory
-
-    res = {
-      send: (html) ->
-        html.should.be '<!DOCTYPE html><div>404</div>'
-        statusCalled.should.be true
-        done()
-      status: (status) ->
-        statusCalled = true
-        status.should.be 404
-        return res
-    }
-    middleware({url: '/404'}, res, done)
-
-  it 'supports 500 errors', (done) ->
-    statusCalled = false
-
-    factory = ->
-      render: ->
-        z.server.setStatus 500
-        z 'div', '500'
-
-    middleware = z.server.factoryToMiddleware factory
-    res = {
-      status: (status) ->
-        statusCalled = true
-        status.should.be 500
-        return res
-      send: (html) ->
-        html.should.be '<!DOCTYPE html><div>500</div>'
-        statusCalled.should.be true
-        done()
-    }
-
-    middleware({url: '/500'}, res, done)
-
-  it 'supports async redirects', (done) ->
-    class Root
+  it 'supports async rendering to string', ->
+    class Async
       constructor: ->
         @pending = new Rx.ReplaySubject(1)
         @state = z.state
-          pending: @pending
-      render: ->
-        {pending} = @state.getValue()
+          abc: @pending
+      render: =>
+        {abc} = @state.getValue()
 
-        if pending
-          throw new z.server.Redirect path: '/login'
-        else
-          @pending.onNext true
+        unless abc?
+          @pending.onNext 'abc'
 
-        z 'div', 'x'
+        z 'div', abc
 
-    factory = ->
-      new Root()
+    $async = new Async()
+    z.renderToString $async
+    .then (html) ->
+      html.should.be '<div>abc</div>'
 
-    middleware = z.server.factoryToMiddleware factory
-    middleware({url: '/'}, {redirect: (path) ->
-      path.should.be '/login'
-      done()
-    }, done)
-
-  it 'manages cookies', (done) ->
-    hasSetCookies = false
-
-    factory = ->
-      z.server.getCookie('preset').getValue().should.be 'abc'
-      z.server.setCookie 'clientset', 'xyz', {domain: 'test.com'}
-      z 'div', 'test'
-
-    res =
-      send: (html) ->
-        hasSetCookies.should.be true
-        html.should.be '<!DOCTYPE html><div>test</div>'
-        done()
-      status: (status) ->
-        status.should.be 200
-        return res
-      cookie: (name, value, opts) ->
-        hasSetCookies = true
-        name.should.be 'clientset'
-        value.should.be 'xyz'
-        opts.domain.should.be 'test.com'
-
-    middleware = z.server.factoryToMiddleware factory
-    middleware
-      url: '/'
-      headers:
-        cookie: 'preset=abc'
-    , res, done
-
-  it 'clears cookies from previous requests', (done) ->
-    factory = ->
-      should.not.exist z.server.getCookie('secret').getValue()
-      z.server.setCookie 'secret', 'abc'
-      z 'div', 'test'
-
-    middleware = z.server.factoryToMiddleware factory
-
-    res1 =
-      send: (html) ->
-        html.should.be '<!DOCTYPE html><div>test</div>'
-
-        res2 =
-          send: (html) ->
-            html.should.be '<!DOCTYPE html><div>test</div>'
-            done()
-          status: (status) ->
-            status.should.be 200
-            return res2
-          cookie: -> null
-
-        middleware
-          url: '/'
-        , res2, done
-      status: (status) ->
-        status.should.be 200
-        return res1
-      cookie: -> null
-
-    middleware
-      url: '/'
-    , res1, done
-
-  it 'handles state errors', (done) ->
-    pending = new Rx.BehaviorSubject(null)
-    pending.onError new Error 'test'
-
-    class Root
-      constructor: ->
-        @state = z.state
-          pending: pending
-
-      render: ->
-        z 'div', 'test'
-
-    factory = ->
-      new Root()
-
-    middleware = z.server.factoryToMiddleware factory
-    res = {
-      status: (status) ->
-        return res
-    }
-    middleware {url: '/'}, res, (err) ->
-      err.message.should.be 'test'
-      done()
-
-  it 'handles runtime errors', (done) ->
-    factory = ->
-      render: ->
-        throw new Error 'test'
-
-    middleware = z.server.factoryToMiddleware factory
-    res = {
-      status: (status) ->
-        return res
-    }
-    middleware {url: '/'}, res, (err) ->
-      err.message.should.be 'test'
-      done()
-
-  it 'gets request objects', (done) ->
-    factoryCalled = false
-    factory = ->
-      factoryCalled = true
-      req = z.server.getReq()
-      req.url.should.be '/'
-      z 'div', 'test'
-
-    middleware = z.server.factoryToMiddleware factory
-    res = {
-      send: (html) ->
-        factoryCalled.should.be true
-        done()
-      status: (status) ->
-        status.should.be 200
-        return res
-    }
-    middleware({url: '/'}, res, done)
+  # it 'handles state errors', (done) ->
+  #   pending = new Rx.BehaviorSubject(null)
+  #   pending.onError new Error 'test'
+  #
+  #   class Root
+  #     constructor: ->
+  #       @state = z.state
+  #         pending: pending
+  #
+  #     render: ->
+  #       z 'div', 'test'
+  #
+  #   factory = ->
+  #     new Root()
+  #
+  #   middleware = z.server.factoryToMiddleware factory
+  #   res = {
+  #     status: (status) ->
+  #       return res
+  #   }
+  #   middleware {url: '/'}, res, (err) ->
+  #     err.message.should.be 'test'
+  #     done()
+  #
+  # it 'handles runtime errors', (done) ->
+  #   factory = ->
+  #     render: ->
+  #       throw new Error 'test'
+  #
+  #   middleware = z.server.factoryToMiddleware factory
+  #   res = {
+  #     status: (status) ->
+  #       return res
+  #   }
+  #   middleware {url: '/'}, res, (err) ->
+  #     err.message.should.be 'test'
+  #     done()
+  #
+  # it 'gets request objects', (done) ->
+  #   factoryCalled = false
+  #   factory = ->
+  #     factoryCalled = true
+  #     req = z.server.getReq()
+  #     req.url.should.be '/'
+  #     z 'div', 'test'
+  #
+  #   middleware = z.server.factoryToMiddleware factory
+  #   res = {
+  #     send: (html) ->
+  #       factoryCalled.should.be true
+  #       done()
+  #     status: (status) ->
+  #       status.should.be 200
+  #       return res
+  #   }
+  #   middleware({url: '/'}, res, done)
+  #
+  # it 'supports concurrent requests', (done) ->
+  #   fastResCalled = false
+  #
+  #   class Slow
+  #     constructor: ->
+  #       @state = z.state
+  #         slow: Rx.Observable.fromPromise(
+  #           new Promise (resolve) ->
+  #             setTimeout ->
+  #               resolve 'slow'
+  #             , 20
+  #         )
+  #     render: ->
+  #       z 'div', 'slow'
+  #
+  #   class Fast
+  #     render: ->
+  #       z 'div', 'fast'
+  #
+  #   class Root
+  #     constructor: ->
+  #       @state = z.state
+  #         $slow: new Slow()
+  #         $fast: new Fast()
+  #     render: ({path}) =>
+  #       {$slow, $fast} = @state.getValue()
+  #
+  #       if path is '/slow'
+  #         return $slow
+  #       else
+  #         return $fast
+  #
+  #   factory = ->
+  #     new Root()
+  #
+  #   middleware = z.server.factoryToMiddleware factory
+  #
+  #   slowRes = {
+  #     send: (html) ->
+  #       html.should.be '<!DOCTYPE html><div>slow</div>'
+  #       fastResCalled.should.be true
+  #       done()
+  #     status: (status) ->
+  #       return slowRes
+  #   }
+  #   fastRes = {
+  #     send: (html) ->
+  #       html.should.be '<!DOCTYPE html><div>fast</div>'
+  #       fastResCalled = true
+  #     status: (status) ->
+  #       return fastRes
+  #   }
+  #   # TODO: check that status doesnt persist from slow
+  #   middleware({url: '/slow'}, slowRes, done)
+  #   middleware({url: '/'}, fastRes, done)
 
   # FIXME
   # it 'times out requests after 250ms, using latest snapshot', (done) ->

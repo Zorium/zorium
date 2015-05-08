@@ -1,14 +1,10 @@
 _ = require 'lodash'
-toHTML = require 'vdom-to-html'
 
 z = require './z'
 render = require './render'
 StateFactory = require './state_factory'
-cookies = require './cookies'
 isSimpleClick = require './is_simple_click'
 ev = require './ev'
-
-SERVER_TIMEOUT_MS = 250
 
 getCurrentPath = (mode) ->
   hash = window.location.hash.slice(1)
@@ -31,16 +27,6 @@ setPath = (path, mode, isReplacement) ->
 
 class Server
   constructor: ->
-    @events = {}
-    @$$root = null
-    @mode = if window?.history?.pushState then 'pathname' else 'hash'
-    @currentPath = null
-    @isRedrawScheduled = false
-    @animationRequestId = null
-    @$root = null
-    @status = null # server only
-    @req = null # server only
-
     # coffeelint: disable=missing_fat_arrows
     @Redirect = ({path}) ->
       @name = 'redirect'
@@ -50,106 +36,42 @@ class Server
     @Redirect.prototype = new Error()
     # coffeelint: enable=missing_fat_arrows
 
-    if window?
-      StateFactory.onAnyUpdate =>
-        if @$root
-          @go @currentPath
+    unless window?
+      return
 
-      # used for full-page rendering
-      @globalRoot = document.getElementById 'zorium-root'
+    @events = {}
+    @$$root = null
+    @mode = if window?.history?.pushState then 'pathname' else 'hash'
+    @currentPath = null
+    @isRedrawScheduled = false
+    @animationRequestId = null
+    @$root = null
 
-      unless @globalRoot
-        @globalRoot = document.createElement 'div'
-        @globalRoot.id = 'zorium-root'
-        document.body.appendChild @globalRoot
+    StateFactory.onAnyUpdate =>
+      if @$root
+        @go @currentPath
 
-      # some browsers erroneously call popstate on intial page load (iOS Safari)
-      # We need to ignore that first event.
-      # https://code.google.com/p/chromium/issues/detail?id=63040
-      window.addEventListener 'popstate', (e) =>
-        if @currentPath
-          setTimeout @go
+    # used for full-page rendering
+    @globalRoot = document.getElementById 'zorium-root'
 
-  setStatus: (@status) =>
-    if window?
-      throw new Error 'z.server.setStatus() called client-side'
-    null
+    unless @globalRoot
+      @globalRoot = document.createElement 'div'
+      @globalRoot.id = 'zorium-root'
+      document.body.appendChild @globalRoot
 
-  setCookie: cookies.set
-  getCookie: cookies.get
+    # some browsers erroneously call popstate on intial page load (iOS Safari)
+    # We need to ignore that first event.
+    # https://code.google.com/p/chromium/issues/detail?id=63040
+    window.addEventListener 'popstate', (e) =>
+      if @currentPath
+        setTimeout @go
 
-  getReq: =>
-    if window?
-      throw new Error 'z.server.getReq() called client-side'
-    @req
+  config: ({mode, $root, $$root}) =>
+    unless window?
+      throw new Error 'config called server-side'
 
-  factoryToMiddleware: (factory) =>
-    handleRenderError = (err, req, res, next) =>
-      if err instanceof @Redirect
-        return res.redirect err.path
-      else
-        return next err
-
-    setResCookies = (res, cookies) ->
-      _.map cookies.getConstructors(), (config, key) ->
-        res.cookie key, config.value, config.opts
-
-    (req, res, next) =>
-      # Reset state between requests
-      @setStatus 200
-      @req = req
-      cookies.reset()
-      StateFactory.reset()
-      hasResolved = false
-
-      StateFactory.onError (err) ->
-        if _.isPlainObject err
-          err = new Error JSON.stringify err
-        next err
-
-      cookies.populate req.headers?.cookie
-
-      $root = factory()
-
-      # FIXME
-      # timeout = setTimeout =>
-      #   @emit 'timeout', {req}
-      #   resolve()
-      # , SERVER_TIMEOUT_MSgd
-
-      resolve = =>
-        if hasResolved
-          return
-        hasResolved = true
-        # FIXME
-        # clearTimeout timeout
-        try
-          tree = z $root, {
-            path: req.url
-          }
-
-          setResCookies(res, cookies)
-          res.status(@status).send '<!DOCTYPE html>' + toHTML tree
-        catch err
-          setResCookies(res, cookies)
-          handleRenderError(err, req, res, next)
-
-      # Initialize tree, kicking off async fetches
-      try
-        z $root, {
-          path: req.url
-        }
-
-        StateFactory.onNextAllSettlemenmt resolve
-
-      catch err
-        hasResolved = true
-        setResCookies(res, cookies)
-        handleRenderError(err, req, res, next)
-
-  config: ({mode, factory, $$root}) =>
     @mode = mode or @mode
-    @$root = factory?() or @$root
+    @$root = $root or @$root
     @$$root = $$root or @$$root
 
   link: (node) =>
@@ -164,23 +86,6 @@ class Server
         @go $$el.pathname + $$el.search
 
     return node
-
-  render: (props) =>
-    try
-      tree = z @$root, props
-    catch err
-      if err instanceof @Redirect
-        return @go err.path
-      else throw err
-
-    # Because the DOM doesn't let us directly manipulate top-level elements
-    # We have to standardize a hack around it
-
-    $root = if @$$root is document \
-      then @globalRoot \
-      else @$$root
-
-    render $root, tree
 
   go: (path) =>
     unless window?
@@ -200,18 +105,36 @@ class Server
       path: path
     }
 
+    renderOrRedirect = (props) =>
+      try
+        tree = z @$root, props
+      catch err
+        if err instanceof @Redirect
+          return @go err.path
+        else throw err
+
+      # Because the DOM doesn't let us directly manipulate top-level elements
+      # We have to standardize a hack around it
+      $root = if @$$root is document \
+        then @globalRoot \
+        else @$$root
+      render $root, tree
+
     if not isRedraw
       @currentPath = path
       setPath path, @mode, hasRouted
       @emit 'go', {path}
-      @render(props)
+      renderOrRedirect(props)
     else
       @isRedrawScheduled = true
       @animationRequestId = window.requestAnimationFrame =>
         @isRedrawScheduled = false
-        @render(props)
+        renderOrRedirect(props)
 
   on: (name, fn) =>
+    unless window?
+      throw new Error 'z.server.on() called server-side'
+
     (@events[name] = @events[name] or []).push(fn)
 
   emit: (name) =>
@@ -220,6 +143,9 @@ class Server
       fn.apply null, args
 
   off: (name, fn) =>
+    unless window?
+      throw new Error 'z.server.off() called server-side'
+
     @events[name] = _.without(@events[name], fn)
 
 server = new Server()
@@ -229,10 +155,5 @@ module.exports = {
   go: server.go
   link: server.link
   config: server.config
-  setStatus: server.setStatus
-  setCookie: server.setCookie
-  getCookie: server.getCookie
-  getReq: server.getReq
-  factoryToMiddleware: server.factoryToMiddleware
   Redirect: server.Redirect
 }

@@ -4,6 +4,9 @@ isVNode = require 'virtual-dom/vnode/is-vnode'
 isVText = require 'virtual-dom/vnode/is-vtext'
 isWidget = require 'virtual-dom/vnode/is-widget'
 
+isRecordingStates = false
+recordedStates = []
+
 isComponent = (x) ->
   _.isObject(x) and _.isFunction x.render
 
@@ -49,6 +52,8 @@ createHook = (onBeforeMount, onBeforeUnmount) ->
 renderChild = (child, props = {}) ->
   if isComponent child
     tree = child.render props
+    if isComponent tree
+      return renderChild tree, props
 
     if _.isArray tree
       throw new Error 'Render cannot return an array'
@@ -68,10 +73,11 @@ renderChild = (child, props = {}) ->
         child.state?._unbind_subscriptions()
         child.onBeforeUnmount?()
 
-    child.state?._bind_subscriptions()
-
     tree.properties['zorium-hook'] = child._zorium_hook
     tree.hooks['zorium-hook'] = child._zorium_hook
+
+    if isRecordingStates and child.state
+      recordedStates.push child.state
 
     return tree
 
@@ -88,3 +94,14 @@ module.exports = z = ->
     return renderChild child, props
 
   return h tagName, props, _.map children, renderChild
+
+# FIXME: This is a hack to get at the states
+z._getRecordedStates = ->
+  recordedStates
+
+z._startRecordingStates = ->
+  isRecordingStates = true
+
+z._stopRecordingStates = ->
+  recordedStates = []
+  isRecordingStates = false

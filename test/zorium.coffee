@@ -4,7 +4,6 @@ Promise = window.Promise or require 'promiz'
 Rx = require 'rx-lite'
 Routes = require 'routes'
 Qs = require 'qs'
-cookie = require 'cookie'
 
 z = require '../src/zorium'
 StateFactory = require '../src/state_factory'
@@ -61,10 +60,11 @@ class Router
     route = @router.match(url.pathname)
     queryParams = Qs.parse(url.search?.slice(1))
 
-    route.fn {
-      params: route.params
-      query: queryParams
-    }
+    z 'div',
+      route.fn {
+        params: route.params
+        query: queryParams
+      }
 
 beforeEach (done) ->
   # Allows routes to settle
@@ -291,14 +291,12 @@ describe 'Virtual DOM', ->
         goCalled.should.be 1
         done()
 
-      factory = ->
-        router = new Router()
-        router.add '/anchor1', z 'div'
-        return router
+      router = new Router()
+      router.add '/anchor1', z 'div'
 
       root = document.createElement 'div'
 
-      z.server.config {$$root: root, factory}
+      z.server.config {$$root: root, $root: router}
 
       z.server.on 'go', listener
       dom.properties.onclick.call($el, e)
@@ -323,13 +321,9 @@ describe 'Virtual DOM', ->
         z.server.off 'go', listener
         goCalled += 1
 
-      factory = ->
-        router = new Router()
-        return router
-
       root = document.createElement 'div'
 
-      z.server.config {$$root: root, factory}
+      z.server.config {$$root: root, $root: new Router()}
 
       z.server.on 'go', listener
       dom.properties.onclick.call($el, e)
@@ -365,14 +359,12 @@ describe 'Virtual DOM', ->
         goCalled.should.be 1
         done()
 
-      factory = ->
-        router = new Router()
-        router.add '/anchor2', z 'div'
-        return router
+      router = new Router()
+      router.add '/anchor2', z 'div'
 
       root = document.createElement 'div'
 
-      z.server.config {$$root: root, factory}
+      z.server.config {$$root: root, $root: router}
 
       z.server.on 'go', listener
       dom.properties.onclick.call($el, e)
@@ -675,33 +667,6 @@ describe 'z.state', ->
       subject.onError new Error 'err'
     ).should.throw()
 
-  it 'listens for global settlements', (done) ->
-    pendingSettled = 2
-
-    settled = new Rx.BehaviorSubject(null)
-    pending1 = new Rx.ReplaySubject(1)
-    pending2 = new Rx.ReplaySubject(1)
-
-    state = z.state {
-      settled
-      pending1
-      pending2
-    }
-
-    state._bind_subscriptions()
-
-    StateFactory.onNextAllSettlemenmt ->
-      pendingSettled.should.be 0
-      done()
-
-    setTimeout ->
-      pendingSettled -= 1
-      pending1.onNext(null)
-
-      setTimeout ->
-        pendingSettled -= 1
-        pending2.onNext(null)
-
   it 'listens for global updates', (done) ->
     updateCnt = 0
 
@@ -759,34 +724,6 @@ describe 'z.state', ->
     state.getValue().lazy.should.be 1
     state2.getValue().lazy.should.be 2
 
-  it 'waits one turn before firing AllSettlement', (done) ->
-    pendingSettled = 2
-
-    pending1 = new Rx.ReplaySubject(1)
-    pending2 = new Rx.ReplaySubject(1)
-
-    state1 = z.state {
-      pending1
-    }
-    state2 = z.state {
-      pending2
-    }
-
-    state1._bind_subscriptions()
-
-    StateFactory.onNextAllSettlemenmt ->
-      pendingSettled.should.be 0
-      done()
-
-    setTimeout ->
-      pendingSettled -= 1
-      pending1.onNext(null)
-      pending1.subscribe ->
-        state2._bind_subscriptions()
-        pending2.onNext(null)
-        pendingSettled -= 1
-
-
 describe 'server', ->
   it 'renders updated DOM', ->
     class App
@@ -797,18 +734,16 @@ describe 'server', ->
       render: ->
         z 'div', 'World Hello'
 
-    factory = ->
-      router = new Router()
-      router.add '/testa1', new App()
-      router.add '/testa2', new App2()
-      return router
+    router = new Router()
+    router.add '/testa1', new App()
+    router.add '/testa2', new App2()
 
     root = document.createElement 'div'
 
-    z.server.config {$$root: root, factory}
+    z.server.config {$$root: root, $root: router}
 
-    result1 = '<div><div>Hello World</div></div>'
-    result2 = '<div><div>World Hello</div></div>'
+    result1 = '<div><div><div>Hello World</div></div></div>'
+    result2 = '<div><div><div>World Hello</div></div></div>'
 
     z.server.go '/testa1'
     root.isEqualNode(htmlToNode(result1)).should.be true
@@ -828,23 +763,22 @@ describe 'server', ->
         drawCnt += 1
         z 'div', 'Hello World'
 
-    factory = ->
-      router = new Router()
-      router.add '/testaRedraw', new App()
-      return router
+    router = new Router()
+    router.add '/testaRedraw', new App()
 
     root = document.createElement 'div'
 
-    z.server.config {$$root: root, factory}
+    z.server.config {$$root: root, $root: router}
 
     z.server.go '/testaRedraw'
     drawCnt.should.be 1
 
     subject.onNext 'abc'
 
-    window.requestAnimationFrame ->
-      drawCnt.should.be 2
-      done()
+    setTimeout ->
+      window.requestAnimationFrame ->
+        drawCnt.should.be 2
+        done()
 
   it 'redraws on lazy state observable change', (done) ->
     drawCnt = 0
@@ -864,30 +798,29 @@ describe 'server', ->
         drawCnt += 1
         z 'div', 'Hello World'
 
-    factory = ->
-      router = new Router()
-      router.add '/testLazyRedraw', new App()
-      return router
+    router = new Router()
+    router.add '/testLazyRedraw', new App()
 
     root = document.createElement 'div'
 
     lazyRuns.should.be 0
 
-    z.server.config {$$root: root, factory}
+    z.server.config {$$root: root, $root: router}
 
     z.server.go '/testLazyRedraw'
-    drawCnt.should.be 1
-    lazyRuns.should.be 1
-
-    lazyPromise.then ->
-      window.requestAnimationFrame ->
-        lazyRuns.should.be 1
-        drawCnt.should.be 2
-        done()
-
     window.requestAnimationFrame ->
       drawCnt.should.be 1
-      lazyPromise.resolve 'x'
+      lazyRuns.should.be 1
+
+      lazyPromise.then ->
+        window.requestAnimationFrame ->
+          lazyRuns.should.be 1
+          drawCnt.should.be 3
+          done()
+
+      window.requestAnimationFrame ->
+        drawCnt.should.be 2
+        lazyPromise.resolve 'x'
 
   it 'unbinds state onBeforeUnmount', (done) ->
     drawCnt = 0
@@ -909,15 +842,13 @@ describe 'server', ->
         drawCnt += 1
         z 'div', 'Hello World'
 
-    factory = ->
-      router = new Router()
-      router.add '/testUnbindLazy', new App()
-      router.add '/testUnbindLazy2', new App2()
-      return router
+    router = new Router()
+    router.add '/testUnbindLazy', new App()
+    router.add '/testUnbindLazy2', new App2()
 
     root = document.createElement 'div'
 
-    z.server.config {$$root: root, factory}
+    z.server.config {$$root: root, $root: router}
     z.server.go '/testUnbindLazy'
     drawCnt.should.be 1
 
@@ -944,13 +875,11 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    factory = ->
-      router = new Router()
-      router.add '/test', new App()
-      router.add '/test2', new App2()
-      return router
+    router = new Router()
+    router.add '/test', new App()
+    router.add '/test2', new App2()
 
-    z.server.config {$$root: root, factory, mode: 'hash'}
+    z.server.config {$$root: root, $root: router, mode: 'hash'}
 
     z.server.go '/test'
     window.location.hash.should.be '#/test'
@@ -968,14 +897,12 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    factory = ->
-      router = new Router()
-      router.add '/test3', new App()
-      router.add '/test4', new App2()
-      return router
+    router = new Router()
+    router.add '/test3', new App()
+    router.add '/test4', new App2()
 
 
-    z.server.config {$$root: root, factory, mode: 'pathname'}
+    z.server.config {$$root: root, $root: router, mode: 'pathname'}
     z.server.go '/test3'
     window.location.pathname.should.be '/test3'
     z.server.go '/test4'
@@ -993,13 +920,11 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    factory = ->
-      router = new Router()
-      router.add '/test-qs', new App()
-      router.add '/test-qs2', new App2()
-      return router
+    router = new Router()
+    router.add '/test-qs', new App()
+    router.add '/test-qs2', new App2()
 
-    z.server.config {$$root: root, factory, mode: 'hash'}
+    z.server.config {$$root: root, $root: router, mode: 'hash'}
 
     z.server.go '/test-qs?x=abc'
     window.location.hash.should.be '#/test-qs?x=abc'
@@ -1020,14 +945,12 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    factory = ->
-      router = new Router()
-      router.add '/test-qs3', new App()
-      router.add '/test-qs4', new App2()
-      return router
+    router = new Router()
+    router.add '/test-qs3', new App()
+    router.add '/test-qs4', new App2()
 
 
-    z.server.config {$$root: root, factory, mode: 'pathname'}
+    z.server.config {$$root: root, $root: router, mode: 'pathname'}
     z.server.go '/test-qs3?x=abc'
     window.location.pathname.should.be '/test-qs3'
     window.location.search.should.be '?x=abc'
@@ -1046,16 +969,14 @@ describe 'server', ->
     root = document.createElement 'div'
 
     result1 = '<div></div>'
-    result2 = '<div><div>Hello World</div></div>'
+    result2 = '<div><div><div>Hello World</div></div></div>'
 
     window.location.hash = '/test-pre-hash'
 
-    factory = ->
-      router = new Router()
-      router.add '/test-pre-hash', new App()
-      return router
+    router = new Router()
+    router.add '/test-pre-hash', new App()
 
-    z.server.config {$$root: root, factory, mode: 'hash'}
+    z.server.config {$$root: root, $root: router, mode: 'hash'}
     root.isEqualNode(htmlToNode(result1)).should.be true
     z.server.go()
     root.isEqualNode(htmlToNode(result2)).should.be true
@@ -1070,16 +991,14 @@ describe 'server', ->
     root = document.createElement 'div'
 
     result1 = '<div></div>'
-    result2 = '<div><div>Hello World</div></div>'
+    result2 = '<div><div><div>Hello World</div></div></div>'
 
     window.location.hash = '/test-pre-hash-search?x=abc'
 
-    factory = ->
-      router = new Router()
-      router.add '/test-pre-hash-search', new App()
-      return router
+    router = new Router()
+    router.add '/test-pre-hash-search', new App()
 
-    z.server.config {$$root: root, factory, mode: 'hash'}
+    z.server.config {$$root: root, $root: router, mode: 'hash'}
     root.isEqualNode(htmlToNode(result1)).should.be true
     z.server.go()
     root.isEqualNode(htmlToNode(result2)).should.be true
@@ -1093,16 +1012,14 @@ describe 'server', ->
     root = document.createElement 'div'
 
     result1 = '<div></div>'
-    result2 = '<div><div>Hello World</div></div>'
+    result2 = '<div><div><div>Hello World</div></div></div>'
 
     window.history.pushState null, null, '/test-pre'
 
-    factory = ->
-      router = new Router()
-      router.add '/test-pre', new App()
-      return router
+    router = new Router()
+    router.add '/test-pre', new App()
 
-    z.server.config {$$root: root, factory, mode: 'pathname'}
+    z.server.config {$$root: root, $root: router, mode: 'pathname'}
     root.isEqualNode(htmlToNode(result1)).should.be true
     z.server.go()
     root.isEqualNode(htmlToNode(result2)).should.be true
@@ -1117,16 +1034,14 @@ describe 'server', ->
     root = document.createElement 'div'
 
     result1 = '<div></div>'
-    result2 = '<div><div>Hello World</div></div>'
+    result2 = '<div><div><div>Hello World</div></div></div>'
 
     window.history.pushState null, null, '/test-pre-search?x=abc'
 
-    factory = ->
-      router = new Router()
-      router.add '/test-pre-search', new App()
-      return router
+    router = new Router()
+    router.add '/test-pre-search', new App()
 
-    z.server.config {$$root: root, factory, mode: 'pathname'}
+    z.server.config {$$root: root, $root: router, mode: 'pathname'}
     root.isEqualNode(htmlToNode(result1)).should.be true
     z.server.go()
     root.isEqualNode(htmlToNode(result2)).should.be true
@@ -1145,15 +1060,13 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    factory = ->
-      router = new Router()
-      router.add '/test5', new App()
-      router.add '/test6', new App2()
-      return router
+    router = new Router()
+    router.add '/test5', new App()
+    router.add '/test6', new App2()
 
-    z.server.config {$$root: root, factory, mode: 'hash'}
-    result1 = '<div><div>Hello World</div></div>'
-    result2 = '<div><div>World Hello</div></div>'
+    z.server.config {$$root: root, $root: router, mode: 'hash'}
+    result1 = '<div><div><div>Hello World</div></div></div>'
+    result2 = '<div><div><div>World Hello</div></div></div>'
 
     z.server.go '/test5'
 
@@ -1182,15 +1095,13 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    factory = ->
-      router = new Router()
-      router.add '/testa', new App()
-      router.add '/testb', new App2()
-      return router
+    router = new Router()
+    router.add '/testa', new App()
+    router.add '/testb', new App2()
 
-    z.server.config {$$root: root, factory, mode: 'pathname'}
-    result1 = '<div><div>Hello World</div></div>'
-    result2 = '<div><div>World Hello</div></div>'
+    z.server.config {$$root: root, $root: router, mode: 'pathname'}
+    result1 = '<div><div><div>Hello World</div></div></div>'
+    result2 = '<div><div><div>World Hello</div></div></div>'
 
 
     z.server.go '/testa'
@@ -1215,14 +1126,12 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    factory = ->
-      router = new Router()
-      router.add '/', new App()
-      return router
+    router = new Router()
+    router.add '/', new App()
 
-    z.server.config {$$root: root, factory, mode: 'pathname'}
+    z.server.config {$$root: root, $root: router, mode: 'pathname'}
     result1 = '<div></div>'
-    result2 = '<div><div>Hello World</div></div>'
+    result2 = '<div><div><div>Hello World</div></div></div>'
 
 
     event = new Event 'popstate'
@@ -1240,13 +1149,11 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    factory = ->
-      router = new Router()
-      router.add '/test/:key', new App()
-      return router
+    router = new Router()
+    router.add '/test/:key', new App()
 
-    z.server.config {$$root: root, factory, mode: 'pathname'}
-    result = '<div><div>Hello world</div></div>'
+    z.server.config {$$root: root, $root: router, mode: 'pathname'}
+    result = '<div><div><div>Hello world</div></div></div>'
     z.server.go('/test/world')
 
     root.isEqualNode(htmlToNode(result)).should.be true
@@ -1258,12 +1165,10 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    factory = ->
-      router = new Router()
-      router.add '/test7', new App()
-      return router
+    router = new Router()
+    router.add '/test7', new App()
 
-    z.server.config {$$root: root, factory, mode: 'hash'}
+    z.server.config {$$root: root, $root: router, mode: 'hash'}
 
     callbackCalled = 0
     listener = ({path}) ->
@@ -1285,12 +1190,10 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    factory = ->
-      router = new Router()
-      router.add '/test8', new App()
-      return router
+    router = new Router()
+    router.add '/test8', new App()
 
-    z.server.config {$$root: root, factory, mode: 'pathname'}
+    z.server.config {$$root: root, $root: router, mode: 'pathname'}
 
     callbackCalled = 0
     listener = ({path}) ->
@@ -1316,57 +1219,19 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    factory = ->
-      router = new Router()
-      router.add '/test9',
-        render: ->
-          throw new z.server.Redirect path: '/login1'
-      router.add '/login1', new Login()
-      return router
+    router = new Router()
+    router.add '/test9',
+      render: ->
+        throw new z.server.Redirect path: '/login1'
+    router.add '/login1', new Login()
 
-    z.server.config {$$root: root, factory, mode: 'pathname'}
+    z.server.config {$$root: root, $root: router, mode: 'pathname'}
 
     z.server.go '/test9'
 
     setTimeout ->
       window.location.pathname.should.be '/login1'
       done()
-
-  it 'allows 404 errors', ->
-    root = document.createElement 'div'
-
-    factory = ->
-      router = new Router()
-      router.add '/test404',
-        render: ->
-          unless window?
-            z.server.setStatus 404
-          z 'div', '404'
-      return router
-
-    z.server.config {$$root: root, factory, mode: 'pathname'}
-    result = '<div><div>404</div></div>'
-    z.server.go('/test404')
-
-    root.isEqualNode(htmlToNode(result)).should.be true
-
-  it 'allows 500 errors', ->
-    root = document.createElement 'div'
-
-    factory = ->
-      router = new Router()
-      router.add '/test500',
-        render: ->
-          unless window?
-            z.server.setStatus 500
-          tree = z 'div', '500'
-      return router
-
-    z.server.config {$$root: root, factory, mode: 'pathname'}
-    result = '<div><div>500</div></div>'
-    z.server.go('/test500')
-
-    root.isEqualNode(htmlToNode(result)).should.be true
 
   it 'allows async redirect', (done) ->
     class App
@@ -1379,16 +1244,14 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    factory = ->
-      router = new Router()
-      router.add '/test10',
-        render: ->
-          setTimeout -> z.server.go '/login2'
-          z 'div'
-      router.add '/login2', new Login()
-      return router
+    router = new Router()
+    router.add '/test10',
+      render: ->
+        setTimeout -> z.server.go '/login2'
+        z 'div'
+    router.add '/login2', new Login()
 
-    z.server.config {$$root: root, factory, mode: 'pathname'}
+    z.server.config {$$root: root, $root: router, mode: 'pathname'}
 
     z.server.go '/test10'
 
@@ -1403,14 +1266,12 @@ describe 'server', ->
         drawCnt += 1
         z 'div', 'Hello World'
 
-    factory = ->
-      router = new Router()
-      router.add '/testBatchRedraw', new App()
-      return router
+    router = new Router()
+    router.add '/testBatchRedraw', new App()
 
     root = document.createElement 'div'
 
-    z.server.config {$$root: root, factory}
+    z.server.config {$$root: root, $root: router}
 
     z.server.go '/testBatchRedraw'
     z.server.go '/testBatchRedraw'
@@ -1442,13 +1303,9 @@ describe 'server', ->
             z '#zorium-root',
               z 'div', 'test-content'
 
-
-    factory = ->
-      new Root()
-
     root = document
 
-    z.server.config {$$root: root, factory}
+    z.server.config {$$root: root, $root: new Root()}
 
     rootNode = document.getElementById 'zorium-root'
     rootNode.innerHTML = ''
@@ -1471,13 +1328,9 @@ describe 'server', ->
             z '#zorium-root',
               z '.t', 'test-content'
 
-
-    factory = ->
-      new Root()
-
     root = document
 
-    z.server.config {$$root: root, factory}
+    z.server.config {$$root: root, $root: new Root()}
 
     rootNode = document.getElementById 'zorium-root'
     rootNode._zoriumId = null
@@ -1488,26 +1341,6 @@ describe 'server', ->
     result = '<div id="zorium-root"><div class="t">test-content</div></div>'
 
     rootNode.isEqualNode(htmlToNode(result)).should.be true
-
-
-  it 'manages cookies', (done) ->
-    document.cookie = 'preset=pre'
-    z.server.getCookie('preset').getValue().should.be 'pre'
-    z.server.setCookie 'testCookie', 'testValue'
-    cookies = cookie.parse document.cookie
-    cookies.testCookie.should.be 'testValue'
-    z.server.getCookie('testCookie').getValue().should.be 'testValue'
-
-    z.server.setCookie 'something', 'test', {domain: 'test.com'}
-    z.server.getCookie('something').getValue().should.be 'test'
-
-    z.server.getCookie('testCookie').subscribe (update) ->
-      if update is 'testValue'
-        return
-      update.should.be 'another!'
-      done()
-
-    z.server.setCookie 'testCookie', 'another!'
 
 describe 'z.ev', ->
   it 'wraps the this', ->
