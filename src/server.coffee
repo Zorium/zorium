@@ -8,6 +8,8 @@ cookies = require './cookies'
 isSimpleClick = require './is_simple_click'
 ev = require './ev'
 
+SERVER_TIMEOUT_MS = 250
+
 getCurrentPath = (mode) ->
   hash = window.location.hash.slice(1)
   pathname = window.location.pathname
@@ -98,6 +100,7 @@ class Server
       @req = req
       cookies.reset()
       StateFactory.reset()
+      hasResolved = false
 
       StateFactory.onError (err) ->
         if _.isPlainObject err
@@ -108,25 +111,39 @@ class Server
 
       $root = factory()
 
+      # FIXME
+      # timeout = setTimeout =>
+      #   @emit 'timeout', {req}
+      #   resolve()
+      # , SERVER_TIMEOUT_MSgd
+
+      resolve = =>
+        if hasResolved
+          return
+        hasResolved = true
+        # FIXME
+        # clearTimeout timeout
+        try
+          tree = z $root, {
+            path: req.url
+          }
+
+          setResCookies(res, cookies)
+          res.status(@status).send '<!DOCTYPE html>' + toHTML tree
+        catch err
+          setResCookies(res, cookies)
+          handleRenderError(err, req, res, next)
+
       # Initialize tree, kicking off async fetches
       try
         z $root, {
           path: req.url
         }
 
-        StateFactory.onNextAllSettlemenmt =>
-          try
-            tree = z $root, {
-              path: req.url
-            }
-
-            setResCookies(res, cookies)
-            res.status(@status).send '<!DOCTYPE html>' + toHTML tree
-          catch err
-            setResCookies(res, cookies)
-            handleRenderError(err, req, res, next)
+        StateFactory.onNextAllSettlemenmt resolve
 
       catch err
+        hasResolved = true
         setResCookies(res, cookies)
         handleRenderError(err, req, res, next)
 
@@ -186,7 +203,7 @@ class Server
     if not isRedraw
       @currentPath = path
       setPath path, @mode, hasRouted
-      @emit 'route', path
+      @emit 'go', {path}
       @render(props)
     else
       @isRedrawScheduled = true
@@ -195,9 +212,6 @@ class Server
         @render(props)
 
   on: (name, fn) =>
-    unless window?
-      throw new Error 'z.server.on() called server-side'
-
     (@events[name] = @events[name] or []).push(fn)
 
   emit: (name) =>
@@ -206,9 +220,6 @@ class Server
       fn.apply null, args
 
   off: (name, fn) =>
-    unless window?
-      throw new Error 'z.server.off() called server-side'
-
     @events[name] = _.without(@events[name], fn)
 
 server = new Server()

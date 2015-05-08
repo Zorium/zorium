@@ -1,5 +1,6 @@
 should = require('clay-chai').should()
 Rx = require 'rx-lite'
+Promise = require 'promiz'
 
 z = require '../src/zorium'
 
@@ -226,3 +227,49 @@ describe 'router', ->
         return res
     }
     middleware({url: '/'}, res, done)
+
+  # FIXME
+  # it 'times out requests after 250ms, using latest snapshot', (done) ->
+  #   statusCalled = false
+  #   timeoutCalled = false
+  #   startTime = Date.now()
+  #
+  #   class Timeout
+  #     constructor: ->
+  #       @state = z.state
+  #         oneHundredMs: Rx.Observable.fromPromise(
+  #           new Promise (resolve) ->
+  #             setTimeout ->
+  #               resolve '100'
+  #             , 100
+  #         )
+  #         never: Rx.Observable.empty()
+  #     render: =>
+  #       {oneHundredMs} = @state.getValue()
+  #       oneHundredMs ?= ''
+  #       z 'div', 'test ' + oneHundredMs
+  #
+  #   factory = ->
+  #     new Timeout()
+  #
+  #   listener = ({req}) ->
+  #     z.server.off 'timeout', listener
+  #     req.url.should.be '/'
+  #     timeoutCalled = true
+  #   z.server.on 'timeout', listener
+  #
+  #   middleware = z.server.factoryToMiddleware factory
+  #   res = {
+  #     send: (html) ->
+  #       (Date.now() - startTime).should.be.less.than 260
+  #       (Date.now() - startTime).should.be.greater.than 249
+  #       html.should.be '<!DOCTYPE html><div>test 100</div>'
+  #       statusCalled.should.be true
+  #       timeoutCalled.should.be true
+  #       done()
+  #     status: (status) ->
+  #       statusCalled = true
+  #       status.should.be 200
+  #       return res
+  #   }
+  #   middleware({url: '/'}, res, done)

@@ -283,8 +283,8 @@ describe 'Virtual DOM', ->
           preventDefaultCalled += 1
       }
 
-      listener = (path) ->
-        z.server.off 'route', listener
+      listener = ({path}) ->
+        z.server.off 'go', listener
         goCalled += 1
         path.should.be '/anchor1'
         preventDefaultCalled.should.be 1
@@ -300,7 +300,7 @@ describe 'Virtual DOM', ->
 
       z.server.config {$$root: root, factory}
 
-      z.server.on 'route', listener
+      z.server.on 'go', listener
       dom.properties.onclick.call($el, e)
 
 
@@ -319,8 +319,8 @@ describe 'Virtual DOM', ->
           preventDefaultCalled += 1
       }
 
-      listener = (path) ->
-        z.server.off 'route', listener
+      listener = ({path}) ->
+        z.server.off 'go', listener
         goCalled += 1
 
       factory = ->
@@ -331,7 +331,7 @@ describe 'Virtual DOM', ->
 
       z.server.config {$$root: root, factory}
 
-      z.server.on 'route', listener
+      z.server.on 'go', listener
       dom.properties.onclick.call($el, e)
 
       setTimeout ->
@@ -357,8 +357,8 @@ describe 'Virtual DOM', ->
           preventDefaultCalled += 1
       }
 
-      listener = (path) ->
-        z.server.off 'route', listener
+      listener = ({path}) ->
+        z.server.off 'go', listener
         goCalled += 1
         path.should.be '/anchor2'
         preventDefaultCalled.should.be 1
@@ -374,7 +374,7 @@ describe 'Virtual DOM', ->
 
       z.server.config {$$root: root, factory}
 
-      z.server.on 'route', listener
+      z.server.on 'go', listener
       dom.properties.onclick.call($el, e)
 
     it 'throws if attempted to override onclick', (done) ->
@@ -1266,13 +1266,13 @@ describe 'server', ->
     z.server.config {$$root: root, factory, mode: 'hash'}
 
     callbackCalled = 0
-    listener = (path) ->
+    listener = ({path}) ->
       callbackCalled += 1
       path.should.be '/test7'
 
-    z.server.on('route', listener)
+    z.server.on('go', listener)
     z.server.go '/test7'
-    z.server.off('route', listener)
+    z.server.off('go', listener)
 
     setTimeout ->
       callbackCalled.should.be 1
@@ -1293,13 +1293,13 @@ describe 'server', ->
     z.server.config {$$root: root, factory, mode: 'pathname'}
 
     callbackCalled = 0
-    listener = (path) ->
+    listener = ({path}) ->
       callbackCalled += 1
       path.should.be '/test8'
 
-    z.server.on('route', listener)
+    z.server.on('go', listener)
     z.server.go '/test8'
-    z.server.off('route', listener)
+    z.server.off('go', listener)
 
     setTimeout ->
       callbackCalled.should.be 1
