@@ -28,15 +28,6 @@ setPath = (path, mode, isReplacement) ->
 
 class Router
   constructor: ->
-    # coffeelint: disable=missing_fat_arrows
-    @Redirect = ({path}) ->
-      @name = 'redirect'
-      @path = path
-      @message = "Redirect to #{path}"
-      @stack = (new Error()).stack
-    @Redirect.prototype = new Error()
-    # coffeelint: enable=missing_fat_arrows
-
     unless window?
       return
 
@@ -104,13 +95,8 @@ class Router
       path: path
     }
 
-    renderOrRedirect = (props) =>
-      try
-        tree = z @$root, props
-      catch err
-        if err instanceof @Redirect
-          return @go err.path
-        else throw err
+    renderToRoot = (props) =>
+      tree = z @$root, props
 
       # Because the DOM doesn't let us directly manipulate top-level elements
       # We have to standardize a hack around it
@@ -124,12 +110,12 @@ class Router
       @currentPath = path
       setPath path, @mode, hasRouted
       @emit 'go', {path}
-      renderOrRedirect(props)
+      renderToRoot(props)
     else
       @isRedrawScheduled = true
       @animationRequestId = window.requestAnimationFrame =>
         @isRedrawScheduled = false
-        renderOrRedirect(props)
+        renderToRoot(props)
 
   on: (name, fn) =>
     assert window?, 'z.router.on() called server-side'

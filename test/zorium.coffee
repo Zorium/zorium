@@ -772,13 +772,13 @@ describe 'server', ->
     z.router.config {$$root: root, $root: router}
 
     z.router.go '/testaRedraw'
-    drawCnt.should.be 2 # first render runs twice
+    drawCnt.should.be 1
 
     subject.onNext 'abc'
 
     setTimeout ->
       window.requestAnimationFrame ->
-        drawCnt.should.be 3
+        drawCnt.should.be 2
         done()
 
   it 'redraws on lazy state observable change', (done) ->
@@ -810,13 +810,13 @@ describe 'server', ->
 
     z.router.go '/testLazyRedraw'
     window.requestAnimationFrame ->
-      drawCnt.should.be 2 # first render runs twice
+      drawCnt.should.be 1
       lazyRuns.should.be 1
 
       lazyPromise.then ->
         window.requestAnimationFrame ->
           lazyRuns.should.be 1
-          drawCnt.should.be 3
+          drawCnt.should.be 2
           done()
 
       lazyPromise.resolve 'x'
@@ -850,26 +850,26 @@ describe 'server', ->
 
     z.router.config {$$root: root, $root: router}
     z.router.go '/testUnbindLazy'
-    appDrawCnt.should.be 2 # first render runs twice
+    appDrawCnt.should.be 1
     app2DrawCnt.should.be 0
 
     window.requestAnimationFrame ->
       z.router.go '/testUnbindLazy2'
 
-      appDrawCnt.should.be 2
-      app2DrawCnt.should.be 2 # first render runs twice
+      appDrawCnt.should.be 1
+      app2DrawCnt.should.be 1
 
       window.requestAnimationFrame ->
-        appDrawCnt.should.be 2
-        app2DrawCnt.should.be 2
+        appDrawCnt.should.be 1
+        app2DrawCnt.should.be 1
 
         # should not cause re-draw
         lazyPromise.resolve 'x'
 
         lazyPromise.then ->
           window.requestAnimationFrame ->
-            appDrawCnt.should.be 2
-            app2DrawCnt.should.be 2
+            appDrawCnt.should.be 1
+            app2DrawCnt.should.be 1
             done()
 
 
@@ -1217,31 +1217,6 @@ describe 'server', ->
       callbackCalled.should.be 1
       done()
 
-  it 'allows redirects', (done) ->
-    class App
-      render: ->
-        done(new Error 'Should not be called')
-        z 'div'
-
-    class Login
-      render: -> z 'div'
-
-    root = document.createElement 'div'
-
-    router = new Router()
-    router.add '/test9',
-      render: ->
-        throw new z.router.Redirect path: '/login1'
-    router.add '/login1', new Login()
-
-    z.router.config {$$root: root, $root: router, mode: 'pathname'}
-
-    z.router.go '/test9'
-
-    setTimeout ->
-      window.location.pathname.should.be '/login1'
-      done()
-
   it 'allows async redirect', (done) ->
     class App
       render: ->
@@ -1292,10 +1267,10 @@ describe 'server', ->
     z.router.go '/testBatchRedraw'
     z.router.go '/testBatchRedraw'
 
-    drawCnt.should.be 2 # first render runs twice
+    drawCnt.should.be 1
 
     window.requestAnimationFrame ->
-      drawCnt.should.be 2
+      drawCnt.should.be 1
 
       changeSubject.onNext 1
       changeSubject.onNext 2
@@ -1305,7 +1280,7 @@ describe 'server', ->
       changeSubject.onNext 6
 
       window.requestAnimationFrame ->
-        drawCnt.should.be 3
+        drawCnt.should.be 2
 
         changeSubject.onNext 7
         changeSubject.onNext 8
@@ -1315,7 +1290,7 @@ describe 'server', ->
         changeSubject.onNext 12
 
         window.requestAnimationFrame ->
-          drawCnt.should.be 4
+          drawCnt.should.be 3
 
           changeSubject.onNext 7
           changeSubject.onNext 8
@@ -1325,7 +1300,7 @@ describe 'server', ->
           changeSubject.onNext 12
 
           window.requestAnimationFrame ->
-            drawCnt.should.be 5
+            drawCnt.should.be 4
             done()
 
   it 'renders full page, setting title and #zorium-root content', ->
@@ -1460,8 +1435,57 @@ describe 'server', ->
         root.isEqualNode(htmlToNode(result3)).should.be true
         done()
 
-  # FIXME
-  #it 'what happens when a child is added?', ->
+  it 'binds updates when adding a new child', (done) ->
+    subject = new Rx.BehaviorSubject 'abc'
+    class Child
+      constructor: ->
+        @state = z.state
+          abc: subject
+
+      render: =>
+        {abc} = @state.getValue()
+
+        z 'div', abc
+
+    class A
+      constructor: ->
+        @state = z.state
+          children: []
+
+      addChild: ($el) =>
+        {children} = @state.getValue()
+        @state.set children: children.concat $el
+
+      render: =>
+        {children} = @state.getValue()
+
+        z 'div',
+          children
+
+    router = new Router()
+    $a = new A()
+    $child = new Child()
+    router.add '/test-new-child', $a
+
+    root = document.createElement 'div'
+
+    z.router.config {$$root: root, $root: router}
+
+    result1 = '<div><div><div></div></div></div>'
+    result2 = '<div><div><div><div>abc</div></div></div></div>'
+    result3 = '<div><div><div><div>xyz</div></div></div></div>'
+
+    z.router.go '/test-new-child'
+    root.isEqualNode(htmlToNode(result1)).should.be true
+
+    $a.addChild $child
+    window.requestAnimationFrame ->
+      root.isEqualNode(htmlToNode(result2)).should.be true
+
+      subject.onNext 'xyz'
+      window.requestAnimationFrame ->
+        root.isEqualNode(htmlToNode(result3)).should.be true
+        done()
 
 describe 'z.ev', ->
   it 'wraps the this', ->

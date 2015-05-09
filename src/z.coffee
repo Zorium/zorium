@@ -95,11 +95,13 @@ safeRender = (child, props) ->
   catch err
     return {error: err}
 
-stateStack = []
+parentComponent = null
 renderChild = (child, props = {}) ->
   if isComponent child
     if child._zorium_is_initialized
       return child._zorium_create_thunk props
+
+    parent = parentComponent
 
     # initialize zorium component
     child._zorium_is_initialized = true
@@ -118,31 +120,33 @@ renderChild = (child, props = {}) ->
     child._zorium_thunks = []
     child._zorium_create_thunk = (props) ->
       thunk = new Thunk {
-        renderFn: -> renderComponent child, props
+        renderFn: ->
+          try
+            parentComponent = child
+            res = renderComponent child, props
+            parentComponent = parent
+            return res
+          catch err
+            parentComponent = parent
+            throw err
         props: props
         child: child
       }
       child._zorium_thunks.push thunk
       return thunk
 
-    # Parent dirty methods
-    stateStack.push ->
+    child._makeDirty = ->
+      parent?._makeDirty()
       _.map child._zorium_thunks, (thunk) ->
         thunk.dirty()
       child._zorium_thunks = []
-    dirtyFns = _.clone stateStack
-    {error} = safeRender child, props
-    stateStack.pop()
-    if error
-      stateStack = []
-      throw error
 
     # On state change, make parents dirty
     lastVal = child.state?.getValue()
     child.state?.subscribe (state) ->
       unless lastVal is state
         lastVal = state
-        _.map dirtyFns, (fn) -> fn()
+        child._makeDirty()
 
     return child._zorium_create_thunk props
 
