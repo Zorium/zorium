@@ -7,6 +7,7 @@ assert = require './assert'
 StateFactory = require './state_factory'
 flattenTree = require './flatten_tree'
 
+# FIXME: use native promises, upgrade node
 if not Promise? and not window?
   # Avoid webpack include
   _bluebird = 'bluebird'

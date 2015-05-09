@@ -3,6 +3,12 @@ Rx = require 'rx-lite'
 
 assert = require './assert'
 
+tryCatch = (fn, catcher) ->
+  try
+    fn()
+  catch err
+    catcher err
+
 class StateFactory
   constructor: ->
     @anyUpdateListeners = []
@@ -25,8 +31,6 @@ class StateFactory
     selfDisposable = null
     isDirty = false
 
-    state = new Rx.BehaviorSubject(currentValue)
-
     mapObservables = (collection, iteratee = _.identity, thisArg) ->
       # coffeelint: disable=missing_fat_arrows
       _.map collection, (val) ->
@@ -38,7 +42,14 @@ class StateFactory
     # set currentState to all values of initialState
     _.map initialState, (val, key) ->
       if val?.subscribe
-        currentValue[key] = null
+        # BehaviorObservable
+        if _.isFunction val?.getValue
+          tryCatch ->
+            currentValue[key] = val.getValue()
+          , ->
+            currentValue[key] = null
+        else
+          currentValue[key] = null
       else
         currentValue[key] = val
 

@@ -114,15 +114,22 @@ renderChild = (child, props = {}) ->
       child.state?._unbind_subscriptions()
       child.onBeforeUnmount?()
 
+    # Handle multiple rendered instances
+    child._zorium_thunks = []
     child._zorium_create_thunk = (props) ->
-      child._zorium_thunk = new Thunk {
+      thunk = new Thunk {
         renderFn: -> renderComponent child, props
         props: props
         child: child
       }
+      child._zorium_thunks.push thunk
+      return thunk
 
+    # Parent dirty methods
     stateStack.push ->
-      child._zorium_thunk.dirty()
+      _.map child._zorium_thunks, (thunk) ->
+        thunk.dirty()
+      child._zorium_thunks = []
     dirtyFns = _.clone stateStack
     {error} = safeRender child, props
     stateStack.pop()
@@ -130,6 +137,7 @@ renderChild = (child, props = {}) ->
       stateStack = []
       throw error
 
+    # On state change, make parents dirty
     lastVal = child.state?.getValue()
     child.state?.subscribe (state) ->
       unless lastVal is state

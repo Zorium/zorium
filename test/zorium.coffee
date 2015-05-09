@@ -1377,6 +1377,92 @@ describe 'server', ->
 
     rootNode.isEqualNode(htmlToNode(result)).should.be true
 
+  it 'when re-using components, all instances are updated', (done) ->
+    subject = new Rx.BehaviorSubject 'abc'
+    prefix = '1-'
+
+    class A
+      constructor: ->
+        @state = z.state
+          abc: subject
+      render: ({name}) =>
+        {abc} = @state.getValue()
+
+        z '.z-a',
+          z 'div', name
+          z 'div', abc
+
+    class B
+      constructor: ->
+        @state = z.state
+          $a: new A()
+      render: ->
+        {$a} = @state.getValue()
+
+        z 'div',
+          z '.a1',
+            z $a, {name: prefix + 'a1'}
+          z '.a2',
+            z $a, {name: prefix + 'a2'}
+
+    router = new Router()
+    router.add '/test-reuse', new B()
+
+    root = document.createElement 'div'
+
+    z.router.config {$$root: root, $root: router}
+
+    result1 = '<div><div><div>' +
+                '<div class="a1"><div class="z-a">' +
+                  '<div>1-a1</div>' +
+                  '<div>abc</div>' +
+                '</div></div>' +
+                '<div class="a2"><div class="z-a">' +
+                  '<div>1-a2</div>' +
+                  '<div>abc</div>' +
+                '</div></div>' +
+              '</div></div></div>'
+
+    result2 = '<div><div><div>' +
+                '<div class="a1"><div class="z-a">' +
+                  '<div>2-a1</div>' +
+                  '<div>xyz</div>' +
+                '</div></div>' +
+                '<div class="a2"><div class="z-a">' +
+                  '<div>2-a2</div>' +
+                  '<div>xyz</div>' +
+                '</div></div>' +
+              '</div></div></div>'
+
+    result3 = '<div><div><div>' +
+                '<div class="a1"><div class="z-a">' +
+                  '<div>2-a1</div>' +
+                  '<div>xxx</div>' +
+                '</div></div>' +
+                '<div class="a2"><div class="z-a">' +
+                  '<div>2-a2</div>' +
+                  '<div>xxx</div>' +
+                '</div></div>' +
+              '</div></div></div>'
+
+    z.router.go '/test-reuse'
+    root.isEqualNode(htmlToNode(result1)).should.be true
+
+    # change in props leads to both updating
+    prefix = '2-'
+    subject.onNext 'xyz'
+    window.requestAnimationFrame ->
+      root.isEqualNode(htmlToNode(result2)).should.be true
+
+      # change in state leads to both updating
+      subject.onNext 'xxx'
+      window.requestAnimationFrame ->
+        root.isEqualNode(htmlToNode(result3)).should.be true
+        done()
+
+  # FIXME
+  #it 'what happens when a child is added?', ->
+
 describe 'z.ev', ->
   it 'wraps the this', ->
     fn = z.ev (e, $$el) ->
