@@ -6,7 +6,9 @@ z = require '../src/zorium'
 
 beforeEach (done) ->
   # Deal with weird timer issues
-  setTimeout done, 100
+  setTimeout ->
+    done()
+  , 100
 
 describe 'server side rendering', ->
   it 'supports basic render to string', ->
