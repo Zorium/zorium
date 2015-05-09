@@ -1,11 +1,11 @@
 _ = require 'lodash'
 Rx = require 'rx-lite'
 toHTML = require 'vdom-to-html'
-isThunk = require 'virtual-dom/vnode/is-thunk'
 
 z = require './z'
 assert = require './assert'
 StateFactory = require './state_factory'
+flattenTree = require './flatten_tree'
 
 if not Promise? and not window?
   # Avoid webpack include
@@ -31,16 +31,10 @@ module.exports = (tree, {timeout} = {}) ->
     disposables = []
     lastTree = null
 
-    renderTree = (tree) ->
-      if isThunk(tree)
-        z tree.render tree.vnode
-      else
-        z tree
-
     listener = ->
       z._startRecordingStates()
       tryCatch ->
-        lastTree = renderTree tree
+        lastTree = flattenTree tree
       , finish
       states = z._getRecordedStates()
       allStates = allStates.concat states
@@ -59,13 +53,13 @@ module.exports = (tree, {timeout} = {}) ->
           state._isFulfilled()
         if isDone
           tryCatch ->
-            lastTree = renderTree tree
+            lastTree = flattenTree tree
             finish(null)
           , finish
 
     onError = (err) ->
       tryCatch ->
-        lastTree = renderTree tree
+        lastTree = flattenTree tree
         finish err
       , finish
 

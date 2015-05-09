@@ -120,7 +120,7 @@ describe 'server side rendering', ->
       err.message.should.be 'test'
       should.not.exist err.html
 
-  it 'handles async runtime errors', ->
+  it 'handles async runtime errors, returning last render (not guaranteed)', ->
     pending = new Rx.ReplaySubject(1)
 
     class Root
@@ -144,7 +144,7 @@ describe 'server side rendering', ->
       throw new Error 'expected error'
     , (err) ->
       err.message.should.be 'test'
-      should.not.exist err.html
+      err.html.should.be '<div>abc</div>'
 
   it 'supports concurrent requests', (done) ->
     fastCallCnt = 0

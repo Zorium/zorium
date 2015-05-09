@@ -2,9 +2,8 @@ diff = require 'virtual-dom/diff'
 patch = require 'virtual-dom/patch'
 createElement = require 'virtual-dom/create-element'
 virtualize = require 'vdom-virtualize'
-isThunk = require 'virtual-dom/vnode/is-thunk'
 
-z = require './z'
+flattenTree = require './flatten_tree'
 
 parseFullTree = (tree) ->
   unless tree?.tagName is 'HTML'
@@ -43,9 +42,7 @@ class Renderer
       id += 1
 
   render: ($root, tree) =>
-    tree = z tree
-    if isThunk(tree)
-      tree = tree.render tree.vnode
+    tree = flattenTree tree
 
     # Because the DOM doesn't let us directly manipulate top-level elements
     # We have to standardize a hack around it
