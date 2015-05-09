@@ -3,12 +3,13 @@ h = require 'virtual-dom/h'
 isVNode = require 'virtual-dom/vnode/is-vnode'
 isVText = require 'virtual-dom/vnode/is-vtext'
 isWidget = require 'virtual-dom/vnode/is-widget'
+isThunk = require 'virtual-dom/vnode/is-thunk'
 
 isRecordingStates = false
 recordedStates = []
 
 isComponent = (x) ->
-  _.isObject(x) and _.isFunction x.render
+  _.isObject(x) and _.isFunction(x.render) and not isThunk x
 
 isChild = (x) ->
   isVNode(x) or
@@ -16,7 +17,8 @@ isChild = (x) ->
   isComponent(x) or
   _.isNumber(x) or
   isVText(x) or
-  isWidget(x)
+  isWidget(x) or
+  isThunk(x)
 
 isChildren = (x) ->
   _.isArray(x) or isChild(x)
@@ -49,37 +51,92 @@ createHook = (onBeforeMount, onBeforeUnmount) ->
 
   new Hook()
 
+renderComponent = (child, props) ->
+  tree = child.render props
+
+  if isComponent(tree) or isThunk(tree)
+    throw new Error 'Cannot return another component from render'
+
+  if _.isArray tree
+    throw new Error 'Render cannot return an array'
+
+  unless tree
+    tree = z 'noscript'
+
+  tree.hooks ?= {}
+  tree.properties['zorium-hook'] = child._zorium_hook
+  tree.hooks['zorium-hook'] = child._zorium_hook
+
+  if isRecordingStates and child.state
+    recordedStates.push child.state
+
+  return tree
+
+class Thunk
+  constructor: ({@renderFn, @props, @child}) ->
+    @isDirty = false
+  type: 'Thunk'
+  dirty: =>
+    @isDirty = true
+  isEqual: (previous) =>
+    not previous.isDirty and
+    previous.child is @child and
+    _.isEqual(@props, previous.props)
+  render: (previous) =>
+    if previous and @isEqual previous
+      return previous.vnode
+    else
+      return @renderFn()
+
+safeRender = (child, props) ->
+  try
+    renderComponent(child, props)
+    return {error: null}
+  catch err
+    return {error: err}
+
+stateStack = []
 renderChild = (child, props = {}) ->
   if isComponent child
-    tree = child.render props
-    if isComponent tree
-      return renderChild tree, props
+    if child._zorium_is_initialized
+      return child._zorium_create_thunk props
 
-    if _.isArray tree
-      throw new Error 'Render cannot return an array'
+    # initialize zorium component
+    child._zorium_is_initialized = true
 
-    unless tree
-      tree = z 'noscript'
+    child._zorium_hook = createHook ($el) ->
+      child.state?._bind_subscriptions()
 
-    tree.hooks ?= {}
+      # Wait for insertion into the DOM
+      setTimeout ->
+        child.onMount?($el)
+    , ->
+      child.state?._unbind_subscriptions()
+      child.onBeforeUnmount?()
 
-    unless child._zorium_hook
-      child._zorium_hook = createHook ($el) ->
-        # Wait for insertion into the DOM
-        setTimeout ->
-          child.state?._bind_subscriptions()
-          child.onMount?($el)
-      , ->
-        child.state?._unbind_subscriptions()
-        child.onBeforeUnmount?()
+    child._zorium_create_thunk = (props) ->
+      child._zorium_thunk = new Thunk {
+        renderFn: -> renderComponent child, props
+        props: props
+        child: child
+      }
 
-    tree.properties['zorium-hook'] = child._zorium_hook
-    tree.hooks['zorium-hook'] = child._zorium_hook
+    stateStack.push ->
+      child._zorium_thunk.dirty()
+    dirtyFns = _.clone stateStack
+    {error} = safeRender child, props
+    stateStack.pop()
+    if error
+      stateStack = []
+      throw error
 
-    if isRecordingStates and child.state
-      recordedStates.push child.state
+    lastVal = child.state?.getValue()
+    child.state?.subscribe (state) ->
+      unless lastVal is state
+        lastVal = state
+        _.map dirtyFns, (fn) -> fn()
 
-    return tree
+    return child._zorium_create_thunk props
 
   if _.isNumber(child)
     return '' + child

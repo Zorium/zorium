@@ -256,7 +256,8 @@ describe 'Virtual DOM', ->
       constructor: ->
         @$a = new A()
       render: =>
-        z @$a, {world: 'world'}
+        z 'div',
+          z @$a, {world: 'world'}
 
     $b = new B()
 
@@ -264,7 +265,7 @@ describe 'Virtual DOM', ->
 
     z.render root, $b
 
-    result = '<div><div>hello world</div></div>'
+    result = '<div><div><div>hello world</div></div></div>'
     root.isEqualNode(htmlToNode(result)).should.be true
 
 
@@ -732,7 +733,7 @@ describe 'server', ->
 
     class App2
       render: ->
-        z 'div', 'World Hello'
+        z 'div', 'XXXXXXXXXXX'
 
     router = new Router()
     router.add '/testa1', new App()
@@ -743,7 +744,7 @@ describe 'server', ->
     z.router.config {$$root: root, $root: router}
 
     result1 = '<div><div><div>Hello World</div></div></div>'
-    result2 = '<div><div><div>World Hello</div></div></div>'
+    result2 = '<div><div><div>XXXXXXXXXXX</div></div></div>'
 
     z.router.go '/testa1'
     root.isEqualNode(htmlToNode(result1)).should.be true
@@ -771,13 +772,13 @@ describe 'server', ->
     z.router.config {$$root: root, $root: router}
 
     z.router.go '/testaRedraw'
-    drawCnt.should.be 1
+    drawCnt.should.be 2 # first render runs twice
 
     subject.onNext 'abc'
 
     setTimeout ->
       window.requestAnimationFrame ->
-        drawCnt.should.be 2
+        drawCnt.should.be 3
         done()
 
   it 'redraws on lazy state observable change', (done) ->
@@ -809,7 +810,7 @@ describe 'server', ->
 
     z.router.go '/testLazyRedraw'
     window.requestAnimationFrame ->
-      drawCnt.should.be 1
+      drawCnt.should.be 2 # first render runs twice
       lazyRuns.should.be 1
 
       lazyPromise.then ->
@@ -818,12 +819,11 @@ describe 'server', ->
           drawCnt.should.be 3
           done()
 
-      window.requestAnimationFrame ->
-        drawCnt.should.be 2
-        lazyPromise.resolve 'x'
+      lazyPromise.resolve 'x'
 
   it 'unbinds state onBeforeUnmount', (done) ->
-    drawCnt = 0
+    appDrawCnt = 0
+    app2DrawCnt = 0
     lazyPromise = deferred()
 
     cold = Rx.Observable.defer ->
@@ -834,12 +834,12 @@ describe 'server', ->
         @state = z.state
           observable: cold
       render: ->
-        drawCnt += 1
+        appDrawCnt += 1
         z 'div', 'Hello World'
 
     class App2
       render: ->
-        drawCnt += 1
+        app2DrawCnt += 1
         z 'div', 'Hello World'
 
     router = new Router()
@@ -850,18 +850,27 @@ describe 'server', ->
 
     z.router.config {$$root: root, $root: router}
     z.router.go '/testUnbindLazy'
-    drawCnt.should.be 1
+    appDrawCnt.should.be 2 # first render runs twice
+    app2DrawCnt.should.be 0
 
-    setTimeout ->
+    window.requestAnimationFrame ->
       z.router.go '/testUnbindLazy2'
 
-      drawCnt.should.be 2
-      lazyPromise.resolve 'x'
+      appDrawCnt.should.be 2
+      app2DrawCnt.should.be 2 # first render runs twice
 
-      lazyPromise.then ->
-        setTimeout ->
-          drawCnt.should.be 2
-          done()
+      window.requestAnimationFrame ->
+        appDrawCnt.should.be 2
+        app2DrawCnt.should.be 2
+
+        # should not cause re-draw
+        lazyPromise.resolve 'x'
+
+        lazyPromise.then ->
+          window.requestAnimationFrame ->
+            appDrawCnt.should.be 2
+            app2DrawCnt.should.be 2
+            done()
 
 
   it 'updates location hash', ->
@@ -1261,7 +1270,11 @@ describe 'server', ->
 
   it 'batches redraws', (done) ->
     drawCnt = 0
+    changeSubject = new Rx.BehaviorSubject null
     class App
+      constructor: ->
+        @state = z.state
+          change: changeSubject
       render: ->
         drawCnt += 1
         z 'div', 'Hello World'
@@ -1279,19 +1292,41 @@ describe 'server', ->
     z.router.go '/testBatchRedraw'
     z.router.go '/testBatchRedraw'
 
-    drawCnt.should.be 1
+    drawCnt.should.be 2 # first render runs twice
+
     window.requestAnimationFrame ->
       drawCnt.should.be 2
 
-      z.router.go '/testBatchRedraw'
-      z.router.go '/testBatchRedraw'
-      z.router.go '/testBatchRedraw'
-      z.router.go '/testBatchRedraw'
-      z.router.go '/testBatchRedraw'
+      changeSubject.onNext 1
+      changeSubject.onNext 2
+      changeSubject.onNext 3
+      changeSubject.onNext 4
+      changeSubject.onNext 5
+      changeSubject.onNext 6
 
       window.requestAnimationFrame ->
         drawCnt.should.be 3
-        done()
+
+        changeSubject.onNext 7
+        changeSubject.onNext 8
+        changeSubject.onNext 9
+        changeSubject.onNext 10
+        changeSubject.onNext 11
+        changeSubject.onNext 12
+
+        window.requestAnimationFrame ->
+          drawCnt.should.be 4
+
+          changeSubject.onNext 7
+          changeSubject.onNext 8
+          changeSubject.onNext 9
+          changeSubject.onNext 10
+          changeSubject.onNext 11
+          changeSubject.onNext 12
+
+          window.requestAnimationFrame ->
+            drawCnt.should.be 5
+            done()
 
   it 'renders full page, setting title and #zorium-root content', ->
     class Root

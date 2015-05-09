@@ -14,6 +14,24 @@ describe 'server side rendering', ->
     .then (html) ->
       html.should.be '<div>test</div>'
 
+  it 'supports basic render of component to string', ->
+    class Root
+      render: ->
+        z 'div', 'test'
+
+    z.renderToString new Root()
+    .then (html) ->
+      html.should.be '<div>test</div>'
+
+  it 'supports render of component with props to string', ->
+    class Root
+      render: ({name}) ->
+        z 'div', 'test ' + name
+
+    z.renderToString z new Root(), {name: 'abc'}
+    .then (html) ->
+      html.should.be '<div>test abc</div>'
+
   it 'propogates errors', ->
     class MoveAlong
       render: ->
@@ -45,6 +63,25 @@ describe 'server side rendering', ->
     .then (html) ->
       html.should.be '<div>abc</div>'
 
+  it 'supports async rendering with props to string', ->
+    class Async
+      constructor: ->
+        @pending = new Rx.ReplaySubject(1)
+        @state = z.state
+          abc: @pending
+      render: ({name}) =>
+        {abc} = @state.getValue()
+
+        unless abc?
+          @pending.onNext 'abc'
+
+        z 'div', abc + ' ' + name
+
+    $async = new Async()
+    z.renderToString z $async, {name: 'xxx'}
+    .then (html) ->
+      html.should.be '<div>abc xxx</div>'
+
   it 'handles state errors, returning the latest tree', ->
     pending = new Rx.BehaviorSubject(null)
     pending.onError new Error 'test'
@@ -64,6 +101,7 @@ describe 'server side rendering', ->
       throw new Error 'expected error'
     , (err) ->
       err.message.should.be 'test'
+      should.exist err.html
       err.html.should.be '<div>abc</div>'
 
 
@@ -82,7 +120,7 @@ describe 'server side rendering', ->
       err.message.should.be 'test'
       should.not.exist err.html
 
-  it 'handles async runtime errors, returning last tree', ->
+  it 'handles async runtime errors', ->
     pending = new Rx.ReplaySubject(1)
 
     class Root
@@ -106,7 +144,7 @@ describe 'server side rendering', ->
       throw new Error 'expected error'
     , (err) ->
       err.message.should.be 'test'
-      err.html.should.be '<div>abc</div>'
+      should.not.exist err.html
 
   it 'supports concurrent requests', (done) ->
     fastCallCnt = 0

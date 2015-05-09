@@ -1,4 +1,5 @@
 _ = require 'lodash'
+assert = require 'assert'
 
 z = require './z'
 render = require './render'
@@ -67,8 +68,7 @@ class Router
         setTimeout @go
 
   config: ({mode, $root, $$root}) =>
-    unless window?
-      throw new Error 'config called server-side'
+    assert window?, 'config called server-side'
 
     @mode = mode or @mode
     @$root = $root or @$root
@@ -88,8 +88,7 @@ class Router
     return node
 
   go: (path) =>
-    unless window?
-      throw new Error 'z.router.go() called server-side'
+    assert window?, 'z.router.go() called server-side'
 
     path ?= getCurrentPath(@mode)
     hasRouted = not Boolean @currentPath
@@ -118,6 +117,7 @@ class Router
       $root = if @$$root is document \
         then @globalRoot \
         else @$$root
+
       render $root, tree
 
     if not isRedraw
@@ -132,8 +132,7 @@ class Router
         renderOrRedirect(props)
 
   on: (name, fn) =>
-    unless window?
-      throw new Error 'z.router.on() called server-side'
+    assert window?, 'z.router.on() called server-side'
 
     (@events[name] = @events[name] or []).push(fn)
 
@@ -143,8 +142,7 @@ class Router
       fn.apply null, args
 
   off: (name, fn) =>
-    unless window?
-      throw new Error 'z.router.off() called server-side'
+    assert window?, 'z.router.off() called server-side'
 
     @events[name] = _.without(@events[name], fn)
 

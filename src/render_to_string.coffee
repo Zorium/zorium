@@ -1,6 +1,7 @@
 _ = require 'lodash'
 Rx = require 'rx-lite'
 toHTML = require 'vdom-to-html'
+isThunk = require 'virtual-dom/vnode/is-thunk'
 
 z = require './z'
 StateFactory = require './state_factory'
@@ -12,8 +13,16 @@ if not Promise? and not window?
 
 DEFAULT_TIMEOUT_MS = 250
 
+tryCatch = (fn, catcher) ->
+  try
+    fn()
+  catch err
+    catcher(err)
+
 module.exports = (tree, {timeout} = {}) ->
   timeout ?= DEFAULT_TIMEOUT_MS
+
+  assert not window?, 'z.renderToString() called client-side'
 
   new Promise (resolve, reject) ->
     allStates = [] # for unbinding
@@ -21,54 +30,61 @@ module.exports = (tree, {timeout} = {}) ->
     disposables = []
     lastTree = null
 
+    renderTree = (tree) ->
+      if isThunk(tree)
+        z tree.render tree.vnode
+      else
+        z tree
+
     listener = ->
-      runtimeError = null
       z._startRecordingStates()
-      try
-        lastTree = z tree
-      catch err
-        runtimeError = err
+      tryCatch ->
+        lastTree = renderTree tree
+      , finish
       states = z._getRecordedStates()
       allStates = allStates.concat states
       z._stopRecordingStates()
 
-      if runtimeError
-        return finish runtimeError
-
       _.map states, (state) ->
         unless state._isSubscribing()
-          state._bind_subscriptions()
+          tryCatch ->
+            state._bind_subscriptions()
+          , (err) ->
+            onError err
           disposables.push state.subscribe listener, onError
 
-      immediate = if setImmediate? then setImmediate else setTimeout
-      immediate ->
-        isDone = _.every states, (state) ->
+      setImmediate ->
+        isDone = _.every allStates, (state) ->
           state._isFulfilled()
         if isDone
-          try
-            lastTree = z tree
+          tryCatch ->
+            lastTree = renderTree tree
             finish(null)
-          catch runtimeError
-            finish runtimeError
+          , finish
 
     onError = (err) ->
-      try
-        lastTree = z tree
+      tryCatch ->
+        lastTree = renderTree tree
         finish err
-      catch runtimeError
-        finish runtimeError
+      , finish
 
     finish = _.once (err) ->
       _.map disposables, (disposable) -> disposable.dispose()
       _.map allStates, (state) -> state._unbind_subscriptions()
 
+      # Thunks make it difficult to render lastTree
       if err
         if lastTree
-          err.html = toHTML lastTree
+          tryCatch ->
+            err.html = toHTML lastTree
+          , (err) ->
+            reject err
         reject err
       else
-        html = toHTML lastTree
-        resolve html
+        tryCatch ->
+          resolve toHTML lastTree
+        , (err) ->
+          reject err
 
     setTimeout ->
       finish new Error "Timeout, request took longer than #{timeout}ms"

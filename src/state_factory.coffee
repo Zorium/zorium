@@ -1,5 +1,6 @@
 _ = require 'lodash'
 Rx = require 'rx-lite'
+assert = require 'assert'
 
 class StateFactory
   constructor: ->
@@ -14,14 +15,14 @@ class StateFactory
     @anyUpdateListeners.push fn
 
   create: (initialState) =>
-    unless _.isPlainObject initialState
-      throw new Error 'initialState must be a plain object'
+    assert _.isPlainObject(initialState), 'initialState must be a plain object'
 
     isSubscribing = false
     pendingSettlement = 0
     currentValue = {}
     disposables = []
     selfDisposable = null
+    isDirty = false
 
     state = new Rx.BehaviorSubject(currentValue)
 
@@ -62,12 +63,15 @@ class StateFactory
         pendingSettlement += 1
 
       mapObservables initialState, (val ,key) ->
-        hasSettled = false
+        settle = _.once ->
+          pendingSettlement -= 1
+
         disposables.push val.subscribe (update) ->
-          currentValue[key] = update
-          unless hasSettled
-            hasSettled = true
-            pendingSettlement -= 1
+          settle()
+          if currentValue[key] isnt update
+            nextVal = {}
+            nextVal[key] = update
+            currentValue = _.defaults nextVal, currentValue
           state.onNext currentValue
         , (err) ->
           state.onError err
@@ -83,14 +87,16 @@ class StateFactory
       disposables = []
 
     state.set = (diff) ->
-      unless _.isPlainObject diff
-        throw new Error 'diff must be a plain object'
+      assert _.isPlainObject(diff), 'diff must be a plain object'
 
       _.map diff, (val, key) ->
         if initialState[key]?.subscribe
           throw new Error 'Attempted to set observable value'
         else
-          currentValue[key] = val
+          if currentValue[key] isnt val
+            nextVal = {}
+            nextVal[key] = val
+            currentValue = _.defaults nextVal, currentValue
 
       state.onNext currentValue
       return state
