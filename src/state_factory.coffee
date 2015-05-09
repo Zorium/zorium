@@ -6,26 +6,12 @@ class StateFactory
     @anyUpdateListeners = []
     @errorListeners = []
 
-  reset: =>
-    @anyUpdateListeners = []
-    @errorListeners = []
-
   fireAnyUpdateListeners: =>
     _.map @anyUpdateListeners, (fn) ->
       fn()
 
-  fireError: (err) =>
-    if _.isEmpty @errorListeners
-      throw err
-
-    _.map @errorListeners, (fn) ->
-      fn(err)
-
   onAnyUpdate: (fn) =>
     @anyUpdateListeners.push fn
-
-  onError: (fn) ->
-    @errorListeners.push fn
 
   create: (initialState) =>
     unless _.isPlainObject initialState
@@ -54,7 +40,7 @@ class StateFactory
       else
         currentValue[key] = val
 
-    state.onNext currentValue
+    state = new Rx.BehaviorSubject(currentValue)
 
     state._isFulfilled = ->
       pendingSettlement is 0
@@ -68,7 +54,9 @@ class StateFactory
       isSubscribing = true
       pendingSettlement = 0
 
-      selfDisposable = state.subscribe @fireAnyUpdateListeners, @fireError
+      if window?
+        selfDisposable = state.subscribe @fireAnyUpdateListeners,
+                                         (err) -> throw err
 
       mapObservables initialState, (val ,key) ->
         pendingSettlement += 1
@@ -89,7 +77,7 @@ class StateFactory
         return
       isSubscribing = false
 
-      selfDisposable.dispose()
+      selfDisposable?.dispose()
       _.map disposables, (disposable) ->
         disposable.dispose()
       disposables = []
