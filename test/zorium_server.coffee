@@ -17,14 +17,14 @@ describe 'server side rendering', ->
   it 'propogates errors', ->
     class MoveAlong
       render: ->
-        throw new z.server.Redirect path: '/'
+        throw new z.router.Redirect path: '/'
 
     $move = new MoveAlong()
     z.renderToString $move
     .then ->
       throw new Error 'Expected error'
     , (err) ->
-      (err instanceof z.server.Redirect).should.be true
+      (err instanceof z.router.Redirect).should.be true
 
   it 'supports async rendering to string', ->
     class Async

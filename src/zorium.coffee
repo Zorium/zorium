@@ -69,7 +69,7 @@ if window?
 z = require './z'
 render = require './render'
 renderToString = require './render_to_string'
-server = require './server'
+router = require './router'
 StateFactory = require './state_factory'
 ev = require './ev'
 classKebab = require './class_kebab'
@@ -78,7 +78,7 @@ isSimpleClick = require './is_simple_click'
 _.assign z,
   render: render
   renderToString: renderToString
-  server: server
+  router: router
   state: StateFactory.create
   ev: ev
   classKebab: classKebab

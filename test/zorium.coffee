@@ -273,7 +273,7 @@ describe 'Virtual DOM', ->
       preventDefaultCalled = 0
       goCalled = 0
 
-      dom = z.server.link z 'a', href: '/anchor1'
+      dom = z.router.link z 'a', href: '/anchor1'
       $el = createElement(dom)
 
       (typeof dom.properties.onclick).should.be 'function'
@@ -284,7 +284,7 @@ describe 'Virtual DOM', ->
       }
 
       listener = ({path}) ->
-        z.server.off 'go', listener
+        z.router.off 'go', listener
         goCalled += 1
         path.should.be '/anchor1'
         preventDefaultCalled.should.be 1
@@ -296,9 +296,9 @@ describe 'Virtual DOM', ->
 
       root = document.createElement 'div'
 
-      z.server.config {$$root: root, $root: router}
+      z.router.config {$$root: root, $root: router}
 
-      z.server.on 'go', listener
+      z.router.on 'go', listener
       dom.properties.onclick.call($el, e)
 
 
@@ -306,7 +306,7 @@ describe 'Virtual DOM', ->
       preventDefaultCalled = 0
       goCalled = 0
 
-      dom = z.server.link z 'a', href: 'http://google.com'
+      dom = z.router.link z 'a', href: 'http://google.com'
       $el = createElement(dom)
 
       (typeof dom.properties.onclick).should.be 'function'
@@ -318,14 +318,14 @@ describe 'Virtual DOM', ->
       }
 
       listener = ({path}) ->
-        z.server.off 'go', listener
+        z.router.off 'go', listener
         goCalled += 1
 
       root = document.createElement 'div'
 
-      z.server.config {$$root: root, $root: new Router()}
+      z.router.config {$$root: root, $root: new Router()}
 
-      z.server.on 'go', listener
+      z.router.on 'go', listener
       dom.properties.onclick.call($el, e)
 
       setTimeout ->
@@ -337,7 +337,7 @@ describe 'Virtual DOM', ->
       preventDefaultCalled = 0
       goCalled = 0
 
-      dom = z.server.link z 'a',
+      dom = z.router.link z 'a',
         href: '/anchor2'
         name: 'test'
         onmousedown: -> null
@@ -352,7 +352,7 @@ describe 'Virtual DOM', ->
       }
 
       listener = ({path}) ->
-        z.server.off 'go', listener
+        z.router.off 'go', listener
         goCalled += 1
         path.should.be '/anchor2'
         preventDefaultCalled.should.be 1
@@ -364,14 +364,14 @@ describe 'Virtual DOM', ->
 
       root = document.createElement 'div'
 
-      z.server.config {$$root: root, $root: router}
+      z.router.config {$$root: root, $root: router}
 
-      z.server.on 'go', listener
+      z.router.on 'go', listener
       dom.properties.onclick.call($el, e)
 
     it 'throws if attempted to override onclick', (done) ->
       try
-        z.server.link z 'a', href: '/', name: 'test',
+        z.router.link z 'a', href: '/', name: 'test',
           {onclick: -> clickCalled += 1}
         done(new Error 'Error expected')
       catch
@@ -740,14 +740,14 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.config {$$root: root, $root: router}
+    z.router.config {$$root: root, $root: router}
 
     result1 = '<div><div><div>Hello World</div></div></div>'
     result2 = '<div><div><div>World Hello</div></div></div>'
 
-    z.server.go '/testa1'
+    z.router.go '/testa1'
     root.isEqualNode(htmlToNode(result1)).should.be true
-    z.server.go '/testa2'
+    z.router.go '/testa2'
     root.isEqualNode(htmlToNode(result2)).should.be true
 
   it 'redraws on state observable change', (done) ->
@@ -768,9 +768,9 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.config {$$root: root, $root: router}
+    z.router.config {$$root: root, $root: router}
 
-    z.server.go '/testaRedraw'
+    z.router.go '/testaRedraw'
     drawCnt.should.be 1
 
     subject.onNext 'abc'
@@ -805,9 +805,9 @@ describe 'server', ->
 
     lazyRuns.should.be 0
 
-    z.server.config {$$root: root, $root: router}
+    z.router.config {$$root: root, $root: router}
 
-    z.server.go '/testLazyRedraw'
+    z.router.go '/testLazyRedraw'
     window.requestAnimationFrame ->
       drawCnt.should.be 1
       lazyRuns.should.be 1
@@ -848,12 +848,12 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.config {$$root: root, $root: router}
-    z.server.go '/testUnbindLazy'
+    z.router.config {$$root: root, $root: router}
+    z.router.go '/testUnbindLazy'
     drawCnt.should.be 1
 
     setTimeout ->
-      z.server.go '/testUnbindLazy2'
+      z.router.go '/testUnbindLazy2'
 
       drawCnt.should.be 2
       lazyPromise.resolve 'x'
@@ -879,11 +879,11 @@ describe 'server', ->
     router.add '/test', new App()
     router.add '/test2', new App2()
 
-    z.server.config {$$root: root, $root: router, mode: 'hash'}
+    z.router.config {$$root: root, $root: router, mode: 'hash'}
 
-    z.server.go '/test'
+    z.router.go '/test'
     window.location.hash.should.be '#/test'
-    z.server.go '/test2'
+    z.router.go '/test2'
     window.location.hash.should.be '#/test2'
 
   it 'updated pathname', ->
@@ -902,10 +902,10 @@ describe 'server', ->
     router.add '/test4', new App2()
 
 
-    z.server.config {$$root: root, $root: router, mode: 'pathname'}
-    z.server.go '/test3'
+    z.router.config {$$root: root, $root: router, mode: 'pathname'}
+    z.router.go '/test3'
     window.location.pathname.should.be '/test3'
-    z.server.go '/test4'
+    z.router.go '/test4'
     window.location.pathname.should.be '/test4'
 
   it 'updates query param in hash mode', ->
@@ -924,13 +924,13 @@ describe 'server', ->
     router.add '/test-qs', new App()
     router.add '/test-qs2', new App2()
 
-    z.server.config {$$root: root, $root: router, mode: 'hash'}
+    z.router.config {$$root: root, $root: router, mode: 'hash'}
 
-    z.server.go '/test-qs?x=abc'
+    z.router.go '/test-qs?x=abc'
     window.location.hash.should.be '#/test-qs?x=abc'
-    z.server.go '/test-qs?x=xxx'
+    z.router.go '/test-qs?x=xxx'
     window.location.hash.should.be '#/test-qs?x=xxx'
-    z.server.go '/test-qs2?y=abc'
+    z.router.go '/test-qs2?y=abc'
     window.location.hash.should.be '#/test-qs2?y=abc'
 
   it 'updates query string in path mode', ->
@@ -950,14 +950,14 @@ describe 'server', ->
     router.add '/test-qs4', new App2()
 
 
-    z.server.config {$$root: root, $root: router, mode: 'pathname'}
-    z.server.go '/test-qs3?x=abc'
+    z.router.config {$$root: root, $root: router, mode: 'pathname'}
+    z.router.go '/test-qs3?x=abc'
     window.location.pathname.should.be '/test-qs3'
     window.location.search.should.be '?x=abc'
-    z.server.go '/test-qs3?x=xxx'
+    z.router.go '/test-qs3?x=xxx'
     window.location.pathname.should.be '/test-qs3'
     window.location.search.should.be '?x=xxx'
-    z.server.go '/test-qs4?y=abc'
+    z.router.go '/test-qs4?y=abc'
     window.location.pathname.should.be '/test-qs4'
     window.location.search.should.be '?y=abc'
 
@@ -976,9 +976,9 @@ describe 'server', ->
     router = new Router()
     router.add '/test-pre-hash', new App()
 
-    z.server.config {$$root: root, $root: router, mode: 'hash'}
+    z.router.config {$$root: root, $root: router, mode: 'hash'}
     root.isEqualNode(htmlToNode(result1)).should.be true
-    z.server.go()
+    z.router.go()
     root.isEqualNode(htmlToNode(result2)).should.be true
     window.location.hash.should.be '#/test-pre-hash'
 
@@ -998,9 +998,9 @@ describe 'server', ->
     router = new Router()
     router.add '/test-pre-hash-search', new App()
 
-    z.server.config {$$root: root, $root: router, mode: 'hash'}
+    z.router.config {$$root: root, $root: router, mode: 'hash'}
     root.isEqualNode(htmlToNode(result1)).should.be true
-    z.server.go()
+    z.router.go()
     root.isEqualNode(htmlToNode(result2)).should.be true
     window.location.hash.should.be '#/test-pre-hash-search?x=abc'
 
@@ -1019,9 +1019,9 @@ describe 'server', ->
     router = new Router()
     router.add '/test-pre', new App()
 
-    z.server.config {$$root: root, $root: router, mode: 'pathname'}
+    z.router.config {$$root: root, $root: router, mode: 'pathname'}
     root.isEqualNode(htmlToNode(result1)).should.be true
-    z.server.go()
+    z.router.go()
     root.isEqualNode(htmlToNode(result2)).should.be true
     window.location.pathname.should.be '/test-pre'
 
@@ -1041,9 +1041,9 @@ describe 'server', ->
     router = new Router()
     router.add '/test-pre-search', new App()
 
-    z.server.config {$$root: root, $root: router, mode: 'pathname'}
+    z.router.config {$$root: root, $root: router, mode: 'pathname'}
     root.isEqualNode(htmlToNode(result1)).should.be true
-    z.server.go()
+    z.router.go()
     root.isEqualNode(htmlToNode(result2)).should.be true
     window.location.pathname.should.be '/test-pre-search'
     window.location.search.should.be '?x=abc'
@@ -1064,11 +1064,11 @@ describe 'server', ->
     router.add '/test5', new App()
     router.add '/test6', new App2()
 
-    z.server.config {$$root: root, $root: router, mode: 'hash'}
+    z.router.config {$$root: root, $root: router, mode: 'hash'}
     result1 = '<div><div><div>Hello World</div></div></div>'
     result2 = '<div><div><div>World Hello</div></div></div>'
 
-    z.server.go '/test5'
+    z.router.go '/test5'
 
     window.location.hash = '/test5'
     setTimeout ->
@@ -1099,18 +1099,18 @@ describe 'server', ->
     router.add '/testa', new App()
     router.add '/testb', new App2()
 
-    z.server.config {$$root: root, $root: router, mode: 'pathname'}
+    z.router.config {$$root: root, $root: router, mode: 'pathname'}
     result1 = '<div><div><div>Hello World</div></div></div>'
     result2 = '<div><div><div>World Hello</div></div></div>'
 
 
-    z.server.go '/testa'
-    z.server.go '/testb'
+    z.router.go '/testa'
+    z.router.go '/testb'
     window.history.back()
     setTimeout ->
       root.isEqualNode(htmlToNode(result1)).should.be true
-      z.server.go '/testb'
-      z.server.go '/testa'
+      z.router.go '/testb'
+      z.router.go '/testa'
       window.history.back()
       setTimeout ->
         root.isEqualNode(htmlToNode(result2)).should.be true
@@ -1129,7 +1129,7 @@ describe 'server', ->
     router = new Router()
     router.add '/', new App()
 
-    z.server.config {$$root: root, $root: router, mode: 'pathname'}
+    z.router.config {$$root: root, $root: router, mode: 'pathname'}
     result1 = '<div></div>'
     result2 = '<div><div><div>Hello World</div></div></div>'
 
@@ -1139,7 +1139,7 @@ describe 'server', ->
 
     root.isEqualNode(htmlToNode(result1)).should.be true
 
-    z.server.go '/'
+    z.router.go '/'
     root.isEqualNode(htmlToNode(result2)).should.be true
 
   it 'passes params', ->
@@ -1152,9 +1152,9 @@ describe 'server', ->
     router = new Router()
     router.add '/test/:key', new App()
 
-    z.server.config {$$root: root, $root: router, mode: 'pathname'}
+    z.router.config {$$root: root, $root: router, mode: 'pathname'}
     result = '<div><div><div>Hello world</div></div></div>'
-    z.server.go('/test/world')
+    z.router.go('/test/world')
 
     root.isEqualNode(htmlToNode(result)).should.be true
 
@@ -1168,16 +1168,16 @@ describe 'server', ->
     router = new Router()
     router.add '/test7', new App()
 
-    z.server.config {$$root: root, $root: router, mode: 'hash'}
+    z.router.config {$$root: root, $root: router, mode: 'hash'}
 
     callbackCalled = 0
     listener = ({path}) ->
       callbackCalled += 1
       path.should.be '/test7'
 
-    z.server.on('go', listener)
-    z.server.go '/test7'
-    z.server.off('go', listener)
+    z.router.on('go', listener)
+    z.router.go '/test7'
+    z.router.off('go', listener)
 
     setTimeout ->
       callbackCalled.should.be 1
@@ -1193,16 +1193,16 @@ describe 'server', ->
     router = new Router()
     router.add '/test8', new App()
 
-    z.server.config {$$root: root, $root: router, mode: 'pathname'}
+    z.router.config {$$root: root, $root: router, mode: 'pathname'}
 
     callbackCalled = 0
     listener = ({path}) ->
       callbackCalled += 1
       path.should.be '/test8'
 
-    z.server.on('go', listener)
-    z.server.go '/test8'
-    z.server.off('go', listener)
+    z.router.on('go', listener)
+    z.router.go '/test8'
+    z.router.off('go', listener)
 
     setTimeout ->
       callbackCalled.should.be 1
@@ -1222,12 +1222,12 @@ describe 'server', ->
     router = new Router()
     router.add '/test9',
       render: ->
-        throw new z.server.Redirect path: '/login1'
+        throw new z.router.Redirect path: '/login1'
     router.add '/login1', new Login()
 
-    z.server.config {$$root: root, $root: router, mode: 'pathname'}
+    z.router.config {$$root: root, $root: router, mode: 'pathname'}
 
-    z.server.go '/test9'
+    z.router.go '/test9'
 
     setTimeout ->
       window.location.pathname.should.be '/login1'
@@ -1247,13 +1247,13 @@ describe 'server', ->
     router = new Router()
     router.add '/test10',
       render: ->
-        setTimeout -> z.server.go '/login2'
+        setTimeout -> z.router.go '/login2'
         z 'div'
     router.add '/login2', new Login()
 
-    z.server.config {$$root: root, $root: router, mode: 'pathname'}
+    z.router.config {$$root: root, $root: router, mode: 'pathname'}
 
-    z.server.go '/test10'
+    z.router.go '/test10'
 
     setTimeout ->
       window.location.pathname.should.be '/login2'
@@ -1271,23 +1271,23 @@ describe 'server', ->
 
     root = document.createElement 'div'
 
-    z.server.config {$$root: root, $root: router}
+    z.router.config {$$root: root, $root: router}
 
-    z.server.go '/testBatchRedraw'
-    z.server.go '/testBatchRedraw'
-    z.server.go '/testBatchRedraw'
-    z.server.go '/testBatchRedraw'
-    z.server.go '/testBatchRedraw'
+    z.router.go '/testBatchRedraw'
+    z.router.go '/testBatchRedraw'
+    z.router.go '/testBatchRedraw'
+    z.router.go '/testBatchRedraw'
+    z.router.go '/testBatchRedraw'
 
     drawCnt.should.be 1
     window.requestAnimationFrame ->
       drawCnt.should.be 2
 
-      z.server.go '/testBatchRedraw'
-      z.server.go '/testBatchRedraw'
-      z.server.go '/testBatchRedraw'
-      z.server.go '/testBatchRedraw'
-      z.server.go '/testBatchRedraw'
+      z.router.go '/testBatchRedraw'
+      z.router.go '/testBatchRedraw'
+      z.router.go '/testBatchRedraw'
+      z.router.go '/testBatchRedraw'
+      z.router.go '/testBatchRedraw'
 
       window.requestAnimationFrame ->
         drawCnt.should.be 3
@@ -1305,13 +1305,13 @@ describe 'server', ->
 
     root = document
 
-    z.server.config {$$root: root, $root: new Root()}
+    z.router.config {$$root: root, $root: new Root()}
 
     rootNode = document.getElementById 'zorium-root'
     rootNode.innerHTML = ''
     document.title.should.not.be 'test_title'
 
-    z.server.go '/renderFullPage'
+    z.router.go '/renderFullPage'
 
     result = '<div id="zorium-root"><div>test-content</div></div>'
 
@@ -1330,13 +1330,13 @@ describe 'server', ->
 
     root = document
 
-    z.server.config {$$root: root, $root: new Root()}
+    z.router.config {$$root: root, $root: new Root()}
 
     rootNode = document.getElementById 'zorium-root'
     rootNode._zoriumId = null
     rootNode.innerHTML = '<div class="t"></div>'
 
-    z.server.go '/diffFullPage'
+    z.router.go '/diffFullPage'
 
     result = '<div id="zorium-root"><div class="t">test-content</div></div>'
 

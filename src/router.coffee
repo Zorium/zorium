@@ -25,7 +25,7 @@ setPath = (path, mode, isReplacement) ->
   else
     window.location.hash = path
 
-class Server
+class Router
   constructor: ->
     # coffeelint: disable=missing_fat_arrows
     @Redirect = ({path}) ->
@@ -89,7 +89,7 @@ class Server
 
   go: (path) =>
     unless window?
-      throw new Error 'z.server.go() called server-side'
+      throw new Error 'z.router.go() called server-side'
 
     path ?= getCurrentPath(@mode)
     hasRouted = not Boolean @currentPath
@@ -133,7 +133,7 @@ class Server
 
   on: (name, fn) =>
     unless window?
-      throw new Error 'z.server.on() called server-side'
+      throw new Error 'z.router.on() called server-side'
 
     (@events[name] = @events[name] or []).push(fn)
 
@@ -144,16 +144,16 @@ class Server
 
   off: (name, fn) =>
     unless window?
-      throw new Error 'z.server.off() called server-side'
+      throw new Error 'z.router.off() called server-side'
 
     @events[name] = _.without(@events[name], fn)
 
-server = new Server()
+router = new Router()
 module.exports = {
-  off: server.off
-  on: server.on
-  go: server.go
-  link: server.link
-  config: server.config
-  Redirect: server.Redirect
+  off: router.off
+  on: router.on
+  go: router.go
+  link: router.link
+  config: router.config
+  Redirect: router.Redirect
 }
