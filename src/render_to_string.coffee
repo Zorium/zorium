@@ -4,6 +4,7 @@ toHTML = require 'vdom-to-html'
 isThunk = require 'virtual-dom/vnode/is-thunk'
 
 z = require './z'
+assert = require './assert'
 StateFactory = require './state_factory'
 
 if not Promise? and not window?

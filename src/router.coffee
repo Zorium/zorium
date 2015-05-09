@@ -1,7 +1,7 @@
 _ = require 'lodash'
-assert = require 'assert'
 
 z = require './z'
+assert = require './assert'
 render = require './render'
 StateFactory = require './state_factory'
 isSimpleClick = require './is_simple_click'

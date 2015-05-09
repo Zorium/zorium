@@ -1,6 +1,7 @@
 _ = require 'lodash'
 Rx = require 'rx-lite'
-assert = require 'assert'
+
+assert = require './assert'
 
 class StateFactory
   constructor: ->
