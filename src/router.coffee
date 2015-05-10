@@ -1,4 +1,5 @@
 _ = require 'lodash'
+Qs = require 'qs'
 
 z = require './z'
 assert = require './assert'
@@ -7,7 +8,7 @@ StateFactory = require './state_factory'
 isSimpleClick = require './is_simple_click'
 ev = require './ev'
 
-getCurrentPath = (mode) ->
+getCurrentUrl = (mode) ->
   hash = window.location.hash.slice(1)
   pathname = window.location.pathname
   search = window.location.search
@@ -17,53 +18,59 @@ getCurrentPath = (mode) ->
   return if mode is 'pathname' then pathname or hash \
          else hash or pathname
 
-setPath = (path, mode, isReplacement) ->
-  if mode is 'pathname'
-    if isReplacement
-      window.history.replaceState null, null, path
-    else
-      window.history.pushState null, null, path
+parseUrl = (url) ->
+  if window?
+    a = document.createElement 'a'
+    a.href = url
+
+    {
+      pathname: a.pathname
+      hash: a.hash
+      search: a.search
+      path: a.pathname + a.search
+    }
   else
-    window.location.hash = path
+    # Avoid webpack include
+    _url = 'url'
+    URL = require(_url)
+    parsed = URL.parse url
+
+    {
+      pathname: parsed.pathname
+      hash: parsed.hash
+      search: parsed.search
+      path: parsed.path
+    }
 
 class Router
   constructor: ->
     unless window?
       return
 
-    @events = {}
-    @$$root = null
-    @mode = if window?.history?.pushState then 'pathname' else 'hash'
-    @currentPath = null
-    @isRedrawScheduled = false
+    @config = {
+      $$root: null
+      mode: if window.history?.pushState then 'pathname' else 'hash'
+    }
+
+    @currentUrl = null
     @animationRequestId = null
-    @$root = null
+    @middleware = null
+    @$lastRoot = null
 
     StateFactory.onAnyUpdate =>
-      if @$root
-        @go @currentPath
-
-    # used for full-page rendering
-    @globalRoot = document.getElementById 'zorium-root'
-
-    unless @globalRoot
-      @globalRoot = document.createElement 'div'
-      @globalRoot.id = 'zorium-root'
-      document.body.appendChild @globalRoot
+      if @middleware
+        @go @currentUrl
 
     # some browsers erroneously call popstate on intial page load (iOS Safari)
     # We need to ignore that first event.
     # https://code.google.com/p/chromium/issues/detail?id=63040
     window.addEventListener 'popstate', (e) =>
-      if @currentPath
+      if @currentUrl
         setTimeout @go
 
-  config: ({mode, $root, $$root}) =>
+  init: (config) =>
     assert window?, 'config called server-side'
-
-    @mode = mode or @mode
-    @$root = $root or @$root
-    @$$root = $$root or @$$root
+    @config = _.defaults config, @config
 
   link: (node) =>
     if node.properties.onclick
@@ -78,66 +85,50 @@ class Router
 
     return node
 
-  go: (path) =>
+  use: (@middleware) => null
+
+  go: (url) =>
     assert window?, 'z.router.go() called server-side'
+    assert @config.$$root, 'z.router.go() called without $$root'
+    assert @middleware, 'z.router.go() called without middleware'
 
-    path ?= getCurrentPath(@mode)
-    hasRouted = not Boolean @currentPath
-    isRedraw = path is @currentPath
+    url ?= getCurrentUrl(@mode)
+    isRedraw = url is @currentUrl
+    {pathname, search} = parseUrl url
+    query = Qs.parse(search?.slice(1))
 
-    if @isRedrawScheduled and isRedraw
+    # Batching on requestAnimationFrame
+    if @animationRequestId and isRedraw
       return
-    else if @isRedrawScheduled
-      @isRedrawScheduled = false
+    else if @animationRequestId
       window.cancelAnimationFrame @animationRequestId
-
-    props = {
-      path: path
-    }
-
-    renderToRoot = (props) =>
-      tree = z @$root, props
-
-      # Because the DOM doesn't let us directly manipulate top-level elements
-      # We have to standardize a hack around it
-      $root = if @$$root is document \
-        then @globalRoot \
-        else @$$root
-
-      render $root, tree
+      @animationRequestId = null
 
     if not isRedraw
-      @currentPath = path
-      setPath path, @mode, hasRouted
-      @emit 'go', {path}
-      renderToRoot(props)
+      hasRouted = Boolean @currentUrl
+      @currentUrl = url
+
+      if @config.mode is 'pathname'
+        if hasRouted
+          window.history.pushState null, null, url
+        else
+          window.history.replaceState null, null, url
+      else
+        window.location.hash = url
+
+      @middleware({path: pathname, query: query}, {send: _.once ($component) =>
+        @$lastRoot = $component
+        render @config.$$root, @$lastRoot
+      })
     else
-      @isRedrawScheduled = true
       @animationRequestId = window.requestAnimationFrame =>
-        @isRedrawScheduled = false
-        renderToRoot(props)
-
-  on: (name, fn) =>
-    assert window?, 'z.router.on() called server-side'
-
-    (@events[name] = @events[name] or []).push(fn)
-
-  emit: (name) =>
-    args = _.rest arguments
-    _.map @events[name], (fn) ->
-      fn.apply null, args
-
-  off: (name, fn) =>
-    assert window?, 'z.router.off() called server-side'
-
-    @events[name] = _.without(@events[name], fn)
+        @animationRequestId = null
+        render @config.$$root, @$lastRoot
 
 router = new Router()
 module.exports = {
-  off: router.off
-  on: router.on
-  go: router.go
+  init: router.init
   link: router.link
-  config: router.config
-  Redirect: router.Redirect
+  use: router.use
+  go: router.go
 }

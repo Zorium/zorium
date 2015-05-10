@@ -41,7 +41,7 @@ class Renderer
     @nextRootId = ->
       id += 1
 
-  render: ($root, tree) =>
+  render: ($$root, tree) =>
     tree = flattenTree tree
 
     # Because the DOM doesn't let us directly manipulate top-level elements
@@ -49,44 +49,44 @@ class Renderer
     if tree?.tagName is 'HTML'
       {title, appTree} = parseFullTree tree
 
-      unless $root._zoriumId
-        seedRoot = $root.children[0]
+      unless $$root._zoriumId
+        seedRoot = $$root.children[0]
 
         # virtualize existing DOM
         if seedRoot
           seedTree = removeContentEditable virtualize seedRoot
           $el = seedRoot
           id = @nextRootId()
-          $root._zoriumId = id
+          $$root._zoriumId = id
           @registeredRoots[id] =
-            $root: $root
+            $$root: $$root
             node: $el
             tree: seedTree
 
       document.title = title
       tree = appTree
 
-    if $root._zoriumId
-      root = @registeredRoots[$root._zoriumId]
+    if $$root._zoriumId
+      root = @registeredRoots[$$root._zoriumId]
 
       patches = diff root.tree, tree
       root.node = patch root.node, patches
       root.tree = tree
 
-      return $root
+      return $$root
 
     $el = createElement tree
 
     id = @nextRootId()
-    $root._zoriumId = id
+    $$root._zoriumId = id
     @registeredRoots[id] =
-      $root: $root
+      $$root: $$root
       node: $el
       tree: tree
 
-    $root.appendChild $el
+    $$root.appendChild $el
 
-    return $root
+    return $$root
 
 renderer = new Renderer()
 module.exports = renderer.render
