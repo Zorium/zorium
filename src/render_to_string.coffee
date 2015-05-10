@@ -49,14 +49,13 @@ module.exports = (tree, {timeout} = {}) ->
             onError err
           disposables.push state.subscribe listener, onError
 
-      setImmediate ->
-        isDone = _.every allStates, (state) ->
-          state._isFulfilled()
-        if isDone
-          tryCatch ->
-            lastTree = flattenTree tree
-            finish(null)
-          , finish
+      isDone = _.every allStates, (state) ->
+        state._isFulfilled()
+      if isDone
+        tryCatch ->
+          lastTree = flattenTree tree
+          finish(null)
+        , finish
 
     onError = (err) ->
       tryCatch ->
