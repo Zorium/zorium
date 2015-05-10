@@ -1,6 +1,5 @@
 diff = require 'virtual-dom/diff'
 patch = require 'virtual-dom/patch'
-createElement = require 'virtual-dom/create-element'
 virtualize = require 'vdom-virtualize'
 
 flattenTree = require './flatten_tree'
@@ -12,19 +11,16 @@ parseFullTree = (tree) ->
   $head = flattenTree tree.children[0]
   $body = flattenTree tree.children[1]
   $title = flattenTree $head.children[0]
-  appTree = flattenTree $body.children[0]
+  $root = flattenTree $body.children[0]
 
   unless $head?.tagName is 'HEAD' and $title?.tagName is 'TITLE'
     throw new Error 'Invalid HEAD base element'
 
-  unless $body?.tagName is 'BODY' and appTree?.properties.id is 'zorium-root'
+  unless $body?.tagName is 'BODY' and $root?.properties.id is 'zorium-root'
     throw new Error 'Invalid BODY base element'
 
-  unless appTree.children.length is 1
-    throw new Error 'zorium-root must only contain 1 direct child'
-
   return {
-    appTree: appTree.children[0]
+    $root: $root
     title: $title?.children[0]?.text
   }
 
@@ -42,51 +38,35 @@ class Renderer
       id += 1
 
   render: ($$root, tree) =>
+    unless $$root instanceof HTMLElement
+      throw new Error 'invalid $$root'
+
     tree = flattenTree tree
 
     # Because the DOM doesn't let us directly manipulate top-level elements
     # We have to standardize a hack around it
     if tree?.tagName is 'HTML'
-      {title, appTree} = parseFullTree tree
-
-      unless $$root._zoriumId
-        seedRoot = $$root.children[0]
-
-        # virtualize existing DOM
-        if seedRoot
-          seedTree = removeContentEditable virtualize seedRoot
-          $el = seedRoot
-          id = @nextRootId()
-          $$root._zoriumId = id
-          @registeredRoots[id] =
-            $$root: $$root
-            node: $el
-            tree: seedTree
-
+      {title, $root} = parseFullTree tree
       document.title = title
-      tree = appTree
+      tree = $root
 
-    if $$root._zoriumId
-      root = @registeredRoots[$$root._zoriumId]
+    unless $$root._zoriumId
+      seedTree = removeContentEditable virtualize $$root
+      id = @nextRootId()
+      $$root._zoriumId = id
+      @registeredRoots[id] =
+        node: $$root
+        tree: seedTree
 
-      patches = diff root.tree, tree
-      root.node = patch root.node, patches
-      root.tree = tree
+    root = @registeredRoots[$$root._zoriumId]
 
-      return $$root
-
-    $el = createElement tree
-
-    id = @nextRootId()
-    $$root._zoriumId = id
-    @registeredRoots[id] =
-      $$root: $$root
-      node: $el
-      tree: tree
-
-    $$root.appendChild $el
+    patches = diff root.tree, tree
+    root.node = patch root.node, patches
+    root.tree = tree
 
     return $$root
+
+
 
 renderer = new Renderer()
 module.exports = renderer.render

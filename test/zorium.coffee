@@ -135,11 +135,11 @@ describe 'Virtual DOM', ->
 
     root = document.createElement 'div'
 
-    result = '<div><div>' +
+    result = '<div>' +
       '<div>a</div>' +
       '<div>b</div>' +
       '<noscript></noscript>' +
-    '</div></div>'
+    '</div>'
 
     z.render root, dom
 
@@ -159,10 +159,10 @@ describe 'Virtual DOM', ->
 
     root = document.createElement 'div'
 
-    result = '<div><div>' +
+    result = '<div>' +
       '<div>a</div>' +
       '<div>b</div>' +
-    '</div></div>'
+    '</div>'
 
     z.render root, dom
 
@@ -239,7 +239,7 @@ describe 'Virtual DOM', ->
 
     z.render root, $b
 
-    result = '<div><div><div>hello world</div></div></div>'
+    result = '<div><div>hello world</div></div>'
     root.isEqualNode(htmlToNode(result)).should.be true
 
 
@@ -345,34 +345,34 @@ describe 'Virtual DOM', ->
 describe 'render()', ->
   it 'renders to dom node', ->
     root = document.createElement('div')
-    z.render root, (z 'span', 'Hello World')
-    result = '<div><span>Hello World</span></div>'
+    z.render root, (z 'div', 'Hello World')
+    result = '<div>Hello World</div>'
     root.isEqualNode(htmlToNode(result)).should.be true
 
   it 'renders components', ->
     class HelloWorldComponent
       render: ->
-        z 'span', 'Hello World'
+        z 'div', 'Hello World'
     hello = new HelloWorldComponent()
 
     root = document.createElement('div')
     $el = z.render root, hello
-    result = '<div><span>Hello World</span></div>'
+    result = '<div>Hello World</div>'
 
     root.isEqualNode(htmlToNode(result)).should.be true
 
   it 'patches dom node on multiple renders', ->
     root = document.createElement('div')
-    z.render root, (z 'span', 'Hello World')
-    result1 = '<div><span>Hello World</span></div>'
+    z.render root, (z 'div', 'Hello World')
+    result1 = '<div>Hello World</div>'
     root.isEqualNode(htmlToNode(result1)).should.be true
 
-    z.render root, (z 'span', 'Sayonara')
-    result2 = '<div><span>Sayonara</span></div>'
+    z.render root, (z 'div', 'Sayonara')
+    result2 = '<div>Sayonara</div>'
     root.isEqualNode(htmlToNode(result2)).should.be true
 
-    z.render root, (z 'span', (z 'div', 'done'))
-    result3 = '<div><span><div>done</div></span></div>'
+    z.render root, (z 'div', (z 'div', 'done'))
+    result3 = '<div><div>done</div></div>'
     root.isEqualNode(htmlToNode(result3)).should.be true
 
 describe 'Lifecycle Callbacks', ->
@@ -709,8 +709,8 @@ describe 'router', ->
     z.router.use (req, res) ->
       res.send z router, {path: req.path, query: req.query}
 
-    result1 = '<div><div><div>Hello World</div></div></div>'
-    result2 = '<div><div><div>XXXXXXXXXXX</div></div></div>'
+    result1 = '<div><div>Hello World</div></div>'
+    result2 = '<div><div>XXXXXXXXXXX</div></div>'
 
     z.router.go '/testa1'
     root.isEqualNode(htmlToNode(result1)).should.be true
@@ -958,7 +958,7 @@ describe 'router', ->
     root = document.createElement 'div'
 
     result1 = '<div></div>'
-    result2 = '<div><div><div>Hello World</div></div></div>'
+    result2 = '<div><div>Hello World</div></div>'
 
     window.location.hash = '/test-pre-hash'
 
@@ -982,7 +982,7 @@ describe 'router', ->
     root = document.createElement 'div'
 
     result1 = '<div></div>'
-    result2 = '<div><div><div>Hello World</div></div></div>'
+    result2 = '<div><div>Hello World</div></div>'
 
     window.location.hash = '/test-pre-hash-search?x=abc'
 
@@ -1005,7 +1005,7 @@ describe 'router', ->
     root = document.createElement 'div'
 
     result1 = '<div></div>'
-    result2 = '<div><div><div>Hello World</div></div></div>'
+    result2 = '<div><div>Hello World</div></div>'
 
     window.history.pushState null, null, '/test-pre'
 
@@ -1029,7 +1029,7 @@ describe 'router', ->
     root = document.createElement 'div'
 
     result1 = '<div></div>'
-    result2 = '<div><div><div>Hello World</div></div></div>'
+    result2 = '<div><div>Hello World</div></div>'
 
     window.history.pushState null, null, '/test-pre-search?x=abc'
 
@@ -1064,8 +1064,8 @@ describe 'router', ->
     z.router.init {$$root: root, mode: 'hash'}
     z.router.use (req, res) ->
       res.send z router, {path: req.path, query: req.query}
-    result1 = '<div><div><div>Hello World</div></div></div>'
-    result2 = '<div><div><div>World Hello</div></div></div>'
+    result1 = '<div><div>Hello World</div></div>'
+    result2 = '<div><div>World Hello</div></div>'
 
     z.router.go '/test5'
 
@@ -1101,8 +1101,8 @@ describe 'router', ->
     z.router.init {$$root: root, mode: 'pathname'}
     z.router.use (req, res) ->
       res.send z router, {path: req.path, query: req.query}
-    result1 = '<div><div><div>Hello World</div></div></div>'
-    result2 = '<div><div><div>World Hello</div></div></div>'
+    result1 = '<div><div>Hello World</div></div>'
+    result2 = '<div><div>World Hello</div></div>'
 
 
     z.router.go '/testa'
@@ -1134,7 +1134,7 @@ describe 'router', ->
     z.router.use (req, res) ->
       res.send z router, {path: req.path, query: req.query}
     result1 = '<div></div>'
-    result2 = '<div><div><div>Hello World</div></div></div>'
+    result2 = '<div><div>Hello World</div></div>'
 
 
     event = new Event 'popstate'
@@ -1158,7 +1158,7 @@ describe 'router', ->
     z.router.init {$$root: root, mode: 'pathname'}
     z.router.use (req, res) ->
       res.send z router, {path: req.path, query: req.query}
-    result = '<div><div><div>Hello world</div></div></div>'
+    result = '<div><div>Hello world</div></div>'
     z.router.go('/test/world')
 
     root.isEqualNode(htmlToNode(result)).should.be true
@@ -1350,7 +1350,7 @@ describe 'router', ->
     z.router.use (req, res) ->
       res.send z router, {path: req.path, query: req.query}
 
-    result1 = '<div><div><div>' +
+    result1 = '<div><div>' +
                 '<div class="a1"><div class="z-a">' +
                   '<div>1-a1</div>' +
                   '<div>abc</div>' +
@@ -1359,9 +1359,9 @@ describe 'router', ->
                   '<div>1-a2</div>' +
                   '<div>abc</div>' +
                 '</div></div>' +
-              '</div></div></div>'
+              '</div></div>'
 
-    result2 = '<div><div><div>' +
+    result2 = '<div><div>' +
                 '<div class="a1"><div class="z-a">' +
                   '<div>2-a1</div>' +
                   '<div>xyz</div>' +
@@ -1370,9 +1370,9 @@ describe 'router', ->
                   '<div>2-a2</div>' +
                   '<div>xyz</div>' +
                 '</div></div>' +
-              '</div></div></div>'
+              '</div></div>'
 
-    result3 = '<div><div><div>' +
+    result3 = '<div><div>' +
                 '<div class="a1"><div class="z-a">' +
                   '<div>2-a1</div>' +
                   '<div>xxx</div>' +
@@ -1381,7 +1381,7 @@ describe 'router', ->
                   '<div>2-a2</div>' +
                   '<div>xxx</div>' +
                 '</div></div>' +
-              '</div></div></div>'
+              '</div></div>'
 
     z.router.go '/test-reuse'
     root.isEqualNode(htmlToNode(result1)).should.be true
@@ -1436,9 +1436,9 @@ describe 'router', ->
     z.router.use (req, res) ->
       res.send z router, {path: req.path, query: req.query}
 
-    result1 = '<div><div><div></div></div></div>'
-    result2 = '<div><div><div><div>abc</div></div></div></div>'
-    result3 = '<div><div><div><div>xyz</div></div></div></div>'
+    result1 = '<div><div></div></div>'
+    result2 = '<div><div><div>abc</div></div></div>'
+    result3 = '<div><div><div>xyz</div></div></div>'
 
     z.router.go '/test-new-child'
     root.isEqualNode(htmlToNode(result1)).should.be true
