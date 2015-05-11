@@ -1,6 +1,6 @@
 [![Zorium](./icons/zorium_logo.png)](https://zorium.org/)
 
-## [Zorium](https://zorium.org/) - The Functional Reactive CoffeeScript Web
+## [Zorium](https://zorium.org/) - The CoffeeScript Web Framework
 
 #### [zorium.org](https://zorium.org/)
 
