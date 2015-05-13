@@ -67,9 +67,6 @@ renderComponent = (child, props) ->
   tree.properties['zorium-hook'] = child._zorium_hook
   tree.hooks['zorium-hook'] = child._zorium_hook
 
-  if isRecordingStates and child.state
-    recordedStates.push child.state
-
   return tree
 
 class Thunk
@@ -98,6 +95,9 @@ safeRender = (child, props) ->
 parentComponent = null
 renderChild = (child, props = {}) ->
   if isComponent child
+    if isRecordingStates and child.state
+      recordedStates.push child.state
+
     if child._zorium_is_initialized
       return child._zorium_create_thunk props
 
