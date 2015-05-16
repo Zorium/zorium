@@ -10,8 +10,8 @@ flattenTree = require './flatten_tree'
 # FIXME: use native promises, upgrade node
 if not Promise? and not window?
   # Avoid webpack include
-  _bluebird = 'bluebird'
-  Promise = require _bluebird
+  _promiz = 'promiz'
+  Promise = require _promiz
 
 DEFAULT_TIMEOUT_MS = 250
 
@@ -30,8 +30,13 @@ module.exports = (tree, {timeout} = {}) ->
     allStates = [] # for unbinding
     disposables = []
     lastTree = null
+    hasCompleted = false
+    timeoutTimer = null
 
-    listener = ->
+    listener = _.debounce ->
+      if hasCompleted
+        return
+
       z._startRecordingStates()
       tryCatch ->
         lastTree = flattenTree tree
@@ -63,9 +68,12 @@ module.exports = (tree, {timeout} = {}) ->
         finish err
       , finish
 
-    finish = _.once (err) ->
-      _.map disposables, (disposable) -> disposable.dispose()
-      _.map allStates, (state) -> state._unbind_subscriptions()
+    finish = (err) ->
+      if hasCompleted
+        return
+      hasCompleted = true
+
+      clearTimeout timeoutTimer
 
       # Thunks make it difficult to render lastTree
       if err
@@ -81,7 +89,10 @@ module.exports = (tree, {timeout} = {}) ->
         , (err) ->
           reject err
 
-    setTimeout ->
+      _.map disposables, (disposable) -> disposable.dispose()
+      _.map allStates, (state) -> state._unbind_subscriptions()
+
+    timeoutTimer = setTimeout ->
       finish new Error "Timeout, request took longer than #{timeout}ms"
     , timeout
 
