@@ -1163,6 +1163,17 @@ describe 'router', ->
 
     root.isEqualNode(htmlToNode(result)).should.be true
 
+  it 'passes state', ->
+    root = document.createElement 'div'
+
+    z.router.init {$$root: root}
+    z.router.use (req, res) ->
+      res.send z 'div', req.state.x
+    result = '<div>abc</div>'
+    z.router.go('/', {x: 'abc'})
+
+    root.isEqualNode(htmlToNode(result)).should.be true
+
   it 'allows async redirect', (done) ->
     class App
       render: ->

@@ -87,7 +87,7 @@ class Router
 
   use: (@middleware) => null
 
-  go: (url) =>
+  go: (url, state) =>
     assert window?, 'z.router.go() called server-side'
     assert @config.$$root, 'z.router.go() called without $$root'
     assert @middleware, 'z.router.go() called without middleware'
@@ -116,10 +116,14 @@ class Router
       else
         window.location.hash = url
 
-      @middleware({path: pathname, query: query}, {send: _.once ($component) =>
-        @$lastRoot = $component
-        render @config.$$root, @$lastRoot
-      })
+      @middleware
+        path: pathname
+        query: query
+        state: state
+      ,
+        send: _.once ($component) =>
+          @$lastRoot = $component
+          render @config.$$root, @$lastRoot
     else
       @animationRequestId = window.requestAnimationFrame =>
         @animationRequestId = null
