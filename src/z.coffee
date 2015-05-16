@@ -94,10 +94,13 @@ safeRender = (child, props) ->
 
 parentComponent = null
 renderChild = (child, props = {}) ->
-  if isComponent child
-    if isRecordingStates and child.state
+  # Don't defer anything while rendering server-side
+  if isRecordingStates and isComponent(child)
+    if child.state?
       recordedStates.push child.state
+    return renderComponent child, props
 
+  if isComponent child
     if child._zorium_is_initialized
       return child._zorium_create_thunk props
 

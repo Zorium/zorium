@@ -79,10 +79,20 @@ describe 'server side rendering', ->
 
         z 'div', abc + ' ' + name
 
-    $async = new Async()
-    z.renderToString z $async, {name: 'xxx'}
+    class Parent
+      constructor: ->
+        @state = z.state
+          $async: new Async()
+
+      render: (params) =>
+        {$async} = @state.getValue()
+
+        z 'div',
+          z $async, params
+
+    z.renderToString z new Parent(), {name: 'xxx'}
     .then (html) ->
-      html.should.be '<div>abc xxx</div>'
+      html.should.be '<div><div>abc xxx</div></div>'
 
   it 'handles state errors, returning the latest tree', ->
     pending = new Rx.BehaviorSubject(null)

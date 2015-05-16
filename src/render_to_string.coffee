@@ -28,7 +28,6 @@ module.exports = (tree, {timeout} = {}) ->
 
   new Promise (resolve, reject) ->
     allStates = [] # for unbinding
-    states = []
     disposables = []
     lastTree = null
 
@@ -51,6 +50,7 @@ module.exports = (tree, {timeout} = {}) ->
 
       isDone = _.every allStates, (state) ->
         state._isFulfilled()
+
       if isDone
         tryCatch ->
           lastTree = flattenTree tree
