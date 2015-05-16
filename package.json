@@ -1,6 +1,6 @@
 {
   "name": "zorium",
-  "version": "1.0.0-rc18",
+  "version": "1.0.0-rc19",
   "description": "",
   "main": "src/zorium.coffee",
   "scripts": {
