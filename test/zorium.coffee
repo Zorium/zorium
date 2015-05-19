@@ -1324,6 +1324,51 @@ describe 'router', ->
 
     root.isEqualNode(htmlToNode(result)).should.be true
 
+  it 'binds to root state when full page rendering', (done) ->
+    class Root
+      constructor: ->
+        @state = z.state
+          changeme: 'changeme'
+      render: =>
+        {changeme} = @state.getValue()
+
+        z 'html',
+          z 'head',
+            z 'title', 'x'
+          z 'body',
+            z '#zorium-root',
+              z 'div', changeme
+
+    root = document.getElementById 'zorium-root'
+    if root
+      root._zoriumId = null
+    else
+      root = document.createElement 'div'
+      root.id = 'zorium-root'
+      document.body.appendChild root
+
+    $root = new Root()
+    z.router.init {$$root: root}
+    z.router.use (req, res) ->
+      res.send $root
+
+    z.router.go '/'
+
+    # TODO: figure out why class=""
+    result1 = '<div id="zorium-root"><div class="">changeme</div></div>'
+    result2 = '<div id="zorium-root"><div class="">xxx</div></div>'
+
+    root.isEqualNode(htmlToNode(result1)).should.be true
+
+    $root.state.set
+      changeme: 'xxx'
+
+    setTimeout ->
+      root.isEqualNode(htmlToNode(result2)).should.be true
+      done()
+    , 20
+
+
   it 'when re-using components, all instances are updated', (done) ->
     subject = new Rx.BehaviorSubject 'abc'
     prefix = '1-'
@@ -1400,14 +1445,16 @@ describe 'router', ->
     # change in props leads to both updating
     prefix = '2-'
     subject.onNext 'xyz'
-    window.requestAnimationFrame ->
+    setTimeout ->
       root.isEqualNode(htmlToNode(result2)).should.be true
 
       # change in state leads to both updating
       subject.onNext 'xxx'
-      window.requestAnimationFrame ->
+      setTimeout ->
         root.isEqualNode(htmlToNode(result3)).should.be true
         done()
+      , 20
+    , 20
 
   it 'binds updates when adding a new child', (done) ->
     subject = new Rx.BehaviorSubject 'abc'
@@ -1455,13 +1502,15 @@ describe 'router', ->
     root.isEqualNode(htmlToNode(result1)).should.be true
 
     $a.addChild $child
-    window.requestAnimationFrame ->
+    setTimeout ->
       root.isEqualNode(htmlToNode(result2)).should.be true
 
       subject.onNext 'xyz'
-      window.requestAnimationFrame ->
+      setTimeout ->
         root.isEqualNode(htmlToNode(result3)).should.be true
         done()
+      , 20
+    , 20
 
 describe 'z.ev', ->
   it 'wraps the this', ->

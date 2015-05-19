@@ -1,5 +1,6 @@
 _ = require 'lodash'
 Qs = require 'qs'
+isThunk = require 'virtual-dom/vnode/is-thunk'
 
 z = require './z'
 assert = require './assert'
@@ -122,7 +123,15 @@ class Router
         state: state
       ,
         send: _.once ($component) =>
+          getState = ($component) ->
+            if isThunk $component
+              $component.child.state
+            else
+              $component?.state
+
+          getState(@$lastRoot)?._unbind_subscriptions()
           @$lastRoot = $component
+          getState(@$lastRoot)?._bind_subscriptions()
           render @config.$$root, @$lastRoot
     else
       @animationRequestId = window.requestAnimationFrame =>
