@@ -110,10 +110,12 @@ renderChild = (child, props = {}) ->
     child._zorium_is_initialized = true
 
     child._zorium_hook = createHook ($el) ->
-      child.state?._bind_subscriptions()
-
       # Wait for insertion into the DOM
       setTimeout ->
+        # bind after insertion because of hook execution order
+        # (unhook can be called after hook in one update)
+        # TODO: add a test for this
+        child.state?._bind_subscriptions()
         child.onMount?($el)
     , ->
       child.state?._unbind_subscriptions()
