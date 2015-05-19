@@ -129,6 +129,8 @@ class Router
             else
               $component?.state
 
+          # FIXME: This does not take into account components in other
+          # parts of the full tree (e.g. <head>).
           getState(@$lastRoot)?._unbind_subscriptions()
           @$lastRoot = $component
           getState(@$lastRoot)?._bind_subscriptions()
