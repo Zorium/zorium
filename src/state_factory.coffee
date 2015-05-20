@@ -10,18 +10,7 @@ tryCatch = (fn, catcher) ->
     catcher err
 
 class StateFactory
-  constructor: ->
-    @anyUpdateListeners = []
-    @errorListeners = []
-
-  fireAnyUpdateListeners: =>
-    _.map @anyUpdateListeners, (fn) ->
-      fn()
-
-  onAnyUpdate: (fn) =>
-    @anyUpdateListeners.push fn
-
-  create: (initialState) =>
+  create: (initialState) ->
     assert _.isPlainObject(initialState), 'initialState must be a plain object'
 
     isSubscribing = false
@@ -61,15 +50,14 @@ class StateFactory
     state._isSubscribing = ->
       isSubscribing
 
-    state._bind_subscriptions = =>
+    state._bind_subscriptions = ->
       if isSubscribing
         return
       isSubscribing = true
       pendingSettlement = 0
 
       if window?
-        selfDisposable = state.subscribe @fireAnyUpdateListeners,
-                                         (err) -> throw err
+        selfDisposable = state.subscribeOnError (err) -> throw err
 
       mapObservables initialState, (val ,key) ->
         pendingSettlement += 1

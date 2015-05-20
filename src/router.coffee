@@ -57,10 +57,7 @@ class Router
     @animationRequestId = null
     @middleware = null
     @$lastRoot = null
-
-    StateFactory.onAnyUpdate =>
-      if @middleware
-        @go @currentUrl
+    @lastDispose = null
 
     # some browsers erroneously call popstate on intial page load (iOS Safari)
     # We need to ignore that first event.
@@ -123,17 +120,27 @@ class Router
         state: state
       ,
         send: _.once ($component) =>
+          $component = z $component
           getState = ($component) ->
             if isThunk $component
               $component.child.state
             else
               $component?.state
 
+          if @lastDispose
+            @lastDispose.dispose()
+            @lastDispose = null
+
           # FIXME: This does not take into account components in other
           # parts of the full tree (e.g. <head>).
           getState(@$lastRoot)?._unbind_subscriptions()
           @$lastRoot = $component
           getState(@$lastRoot)?._bind_subscriptions()
+
+          @lastDispose = $component.child?.__dirtyStream.subscribe (isDirty) =>
+            if isDirty
+              @go()
+
           render @config.$$root, @$lastRoot
     else
       @animationRequestId = window.requestAnimationFrame =>

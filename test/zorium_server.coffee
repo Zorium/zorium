@@ -234,7 +234,7 @@ describe 'server side rendering', ->
     .then ->
       throw new Error 'expected timeout error'
     , (err) ->
-      (Date.now() - startTime).should.be.greaterThan 249
+      (Date.now() - startTime).should.be.greaterThan 248
       err.message.should.be 'Timeout, request took longer than 250ms'
       err.html.should.be '<div>test 100</div>'
 

@@ -632,34 +632,6 @@ describe 'z.state', ->
       subject.onError new Error 'err'
     ).should.throw()
 
-  it 'listens for global updates', (done) ->
-    updateCnt = 0
-
-    settled = new Rx.BehaviorSubject(null)
-    pending1 = new Rx.ReplaySubject(1)
-    pending2 = new Rx.ReplaySubject(1)
-
-    state = z.state {
-      settled
-      pending1
-      pending2
-    }
-
-    state._bind_subscriptions()
-
-    StateFactory.onAnyUpdate ->
-      updateCnt += 1
-
-    setTimeout ->
-      pending1.onNext(null)
-
-      setTimeout ->
-        pending2.onNext(null)
-
-        setTimeout ->
-          updateCnt.should.be 2
-          done()
-
   it 'lazy subscribes', ->
     lazyRuns = 0
 
@@ -783,7 +755,6 @@ describe 'router', ->
     drawCnt.should.be 1
 
     subject.onNext 'abc'
-
     setTimeout ->
       window.requestAnimationFrame ->
         drawCnt.should.be 2
@@ -1110,18 +1081,19 @@ describe 'router', ->
     z.router.go '/test5'
 
     window.location.hash = '/test5'
-    setTimeout ->
-      root.isEqualNode(htmlToNode(result1)).should.be true
-
-      window.location.hash = '/test6'
+    setTimeout -> # TODO: figure out why this needs 2
       setTimeout ->
-        root.isEqualNode(htmlToNode(result2)).should.be true
+        root.isEqualNode(htmlToNode(result1)).should.be true
 
-        window.location.hash = '/test5'
-        window.location.hash.should.be '#/test5'
+        window.location.hash = '/test6'
         setTimeout ->
-          root.isEqualNode(htmlToNode(result1)).should.be true
-          done()
+          root.isEqualNode(htmlToNode(result2)).should.be true
+
+          window.location.hash = '/test5'
+          window.location.hash.should.be '#/test5'
+          setTimeout ->
+            root.isEqualNode(htmlToNode(result1)).should.be true
+            done()
 
   it 'responds to popstate', (done) ->
     class App
@@ -1158,7 +1130,7 @@ describe 'router', ->
         window.location.pathname.should.be '/testb'
         done()
       , 90
-    , 90
+    , 120
 
   it 'doesn\'t respond to popstate before initial route', ->
     class App
@@ -1271,7 +1243,7 @@ describe 'router', ->
     drawCnt.should.be 1
 
     window.requestAnimationFrame ->
-      drawCnt.should.be 2 # because first path-change is not batched
+      drawCnt.should.be 1
 
       changeSubject.onNext 1
       changeSubject.onNext 2
@@ -1281,7 +1253,7 @@ describe 'router', ->
       changeSubject.onNext 6
 
       window.requestAnimationFrame ->
-        drawCnt.should.be 3
+        drawCnt.should.be 2
 
         changeSubject.onNext 7
         changeSubject.onNext 8
@@ -1291,7 +1263,7 @@ describe 'router', ->
         changeSubject.onNext 12
 
         window.requestAnimationFrame ->
-          drawCnt.should.be 4
+          drawCnt.should.be 3
 
           changeSubject.onNext 7
           changeSubject.onNext 8
@@ -1301,7 +1273,7 @@ describe 'router', ->
           changeSubject.onNext 12
 
           window.requestAnimationFrame ->
-            drawCnt.should.be 5
+            drawCnt.should.be 4
             done()
 
   it 'renders full page, setting title and #zorium-root content', ->
@@ -1406,94 +1378,6 @@ describe 'router', ->
     setTimeout ->
       root.isEqualNode(htmlToNode(result2)).should.be true
       done()
-    , 20
-
-
-  it 'when re-using components, all instances are updated', (done) ->
-    subject = new Rx.BehaviorSubject 'abc'
-    prefix = '1-'
-
-    class A
-      constructor: ->
-        @state = z.state
-          abc: subject
-      render: ({name}) =>
-        {abc} = @state.getValue()
-
-        z '.z-a',
-          z 'div', name
-          z 'div', abc
-
-    class B
-      constructor: ->
-        @state = z.state
-          $a: new A()
-      render: ->
-        {$a} = @state.getValue()
-
-        z 'div',
-          z '.a1',
-            z $a, {name: prefix + 'a1'}
-          z '.a2',
-            z $a, {name: prefix + 'a2'}
-
-    router = new Router()
-    router.add '/test-reuse', new B()
-
-    root = document.createElement 'div'
-
-    z.router.init {$$root: root}
-    z.router.use (req, res) ->
-      res.send z router, {path: req.path, query: req.query}
-
-    result1 = '<div><div>' +
-                '<div class="a1"><div class="z-a">' +
-                  '<div>1-a1</div>' +
-                  '<div>abc</div>' +
-                '</div></div>' +
-                '<div class="a2"><div class="z-a">' +
-                  '<div>1-a2</div>' +
-                  '<div>abc</div>' +
-                '</div></div>' +
-              '</div></div>'
-
-    result2 = '<div><div>' +
-                '<div class="a1"><div class="z-a">' +
-                  '<div>2-a1</div>' +
-                  '<div>xyz</div>' +
-                '</div></div>' +
-                '<div class="a2"><div class="z-a">' +
-                  '<div>2-a2</div>' +
-                  '<div>xyz</div>' +
-                '</div></div>' +
-              '</div></div>'
-
-    result3 = '<div><div>' +
-                '<div class="a1"><div class="z-a">' +
-                  '<div>2-a1</div>' +
-                  '<div>xxx</div>' +
-                '</div></div>' +
-                '<div class="a2"><div class="z-a">' +
-                  '<div>2-a2</div>' +
-                  '<div>xxx</div>' +
-                '</div></div>' +
-              '</div></div>'
-
-    z.router.go '/test-reuse'
-    root.isEqualNode(htmlToNode(result1)).should.be true
-
-    # change in props leads to both updating
-    prefix = '2-'
-    subject.onNext 'xyz'
-    setTimeout ->
-      root.isEqualNode(htmlToNode(result2)).should.be true
-
-      # change in state leads to both updating
-      subject.onNext 'xxx'
-      setTimeout ->
-        root.isEqualNode(htmlToNode(result3)).should.be true
-        done()
-      , 20
     , 20
 
   it 'binds updates when adding a new child', (done) ->

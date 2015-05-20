@@ -1,5 +1,6 @@
 _ = require 'lodash'
 h = require 'virtual-dom/h'
+Rx = require 'rx-lite'
 isVNode = require 'virtual-dom/vnode/is-vnode'
 isVText = require 'virtual-dom/vnode/is-vtext'
 isWidget = require 'virtual-dom/vnode/is-widget'
@@ -51,7 +52,29 @@ createHook = (onBeforeMount, onBeforeUnmount) ->
 
   new Hook()
 
+class ComponentThunk
+  constructor: ({@renderFn, @props, @child}) -> null
+  type: 'Thunk'
+  isEqual: (previous) =>
+    not previous.child.__dirtySubject.getValue() and
+    previous.child is @child and
+    _.isEqual(@props, previous.props)
+  render: (previous) =>
+    if previous and @isEqual previous
+      return previous.vnode
+    else
+      return @renderFn @child, @props
+
+getChildren = (tree) ->
+  if isThunk tree
+    return [tree.child]
+  else if tree.children
+    return _.flatten _.map tree.children, getChildren
+  else
+    return []
+
 renderComponent = (child, props) ->
+  # TODO: this could be optimized to capture children during render
   tree = child.render props
 
   if isComponent(tree) or isThunk(tree)
@@ -69,30 +92,6 @@ renderComponent = (child, props) ->
 
   return tree
 
-class Thunk
-  constructor: ({@renderFn, @props, @child}) ->
-    @isDirty = false
-  type: 'Thunk'
-  dirty: =>
-    @isDirty = true
-  isEqual: (previous) =>
-    not previous.isDirty and
-    previous.child is @child and
-    _.isEqual(@props, previous.props)
-  render: (previous) =>
-    if previous and @isEqual previous
-      return previous.vnode
-    else
-      return @renderFn()
-
-safeRender = (child, props) ->
-  try
-    renderComponent(child, props)
-    return {error: null}
-  catch err
-    return {error: err}
-
-parentComponent = null
 renderChild = (child, props = {}) ->
   # Don't defer anything while rendering server-side
   if isRecordingStates and isComponent(child)
@@ -101,62 +100,51 @@ renderChild = (child, props = {}) ->
     return renderComponent child, props
 
   if isThunk child
-    return renderComponent child.child, child.props
+    return renderChild child.child, child.props
 
   if isComponent child
-    if child._zorium_is_initialized
-      return child._zorium_create_thunk props
+    unless child.__isInitialized
+      child.__isInitialized = true
+      child.__dirtySubject = new Rx.BehaviorSubject(false)
+      child.__dirtyStream = child.__dirtySubject.distinctUntilChanged()
+      child.__disposables = []
 
-    parent = parentComponent
+      if child.state
+        lastVal = child.state.getValue()
+        child.state.subscribe (val) ->
+          if lastVal isnt val
+            lastVal = val
+            child.__dirtySubject.onNext true
 
-    # initialize zorium component
-    child._zorium_is_initialized = true
+      child._zorium_hook = createHook ($el) ->
+        # Wait for insertion into the DOM
+        setTimeout ->
+          # bind after insertion because of hook execution order
+          # (unhook can be called after hook in one update)
+          # TODO: add a test for this
+          child.state?._bind_subscriptions()
+          child.onMount?($el)
+      , ->
+        child.state?._unbind_subscriptions()
+        child.onBeforeUnmount?()
 
-    child._zorium_hook = createHook ($el) ->
-      # Wait for insertion into the DOM
-      setTimeout ->
-        # bind after insertion because of hook execution order
-        # (unhook can be called after hook in one update)
-        # TODO: add a test for this
-        child.state?._bind_subscriptions()
-        child.onMount?($el)
-    , ->
-      child.state?._unbind_subscriptions()
-      child.onBeforeUnmount?()
+    renderFn = (child, props) ->
+      tree = renderComponent child, props
 
-    # Handle multiple rendered instances
-    child._zorium_thunks = []
-    child._zorium_create_thunk = (props) ->
-      thunk = new Thunk {
-        renderFn: ->
-          try
-            parentComponent = child
-            res = renderComponent child, props
-            parentComponent = parent
-            return res
-          catch err
-            parentComponent = parent
-            throw err
-        props: props
-        child: child
-      }
-      child._zorium_thunks.push thunk
-      return thunk
+      childrenStreams = _.filter _.pluck getChildren(tree), '__dirtyStream'
 
-    child._makeDirty = ->
-      parent?._makeDirty()
-      _.map child._zorium_thunks, (thunk) ->
-        thunk.dirty()
-      child._zorium_thunks = []
+      _.map child.__disposables, (disposable) ->
+        disposable.dispose()
 
-    # On state change, make parents dirty
-    lastVal = child.state?.getValue()
-    child.state?.subscribe (state) ->
-      unless lastVal is state
-        lastVal = state
-        child._makeDirty()
+      child.__disposables = _.map childrenStreams, (dirtyStream) ->
+        dirtyStream.subscribe (isDirty) ->
+          child.__dirtySubject.onNext isDirty
 
-    return child._zorium_create_thunk props
+      child.__dirtySubject.onNext false
+
+      return tree
+
+    return new ComponentThunk {child, props, renderFn}
 
   if _.isNumber(child)
     return '' + child
