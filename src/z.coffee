@@ -56,7 +56,8 @@ class ComponentThunk
   constructor: ({@renderFn, @props, @child}) -> null
   type: 'Thunk'
   isEqual: (previous) =>
-    not previous.child.__dirtySubject.getValue() and
+    # TODO: Add test for diffing existing DOM to understand why v-nodes come in
+    not previous.child?.__dirtySubject.getValue() and
     previous.child is @child and
     _.isEqual(@props, previous.props)
   render: (previous) =>
