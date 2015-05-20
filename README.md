@@ -5,7 +5,7 @@
 #### [zorium.org](https://zorium.org/)
 
 (╯°□°)╯︵ ┻━┻  
-v1.0.0-rc20
+v1.0.0-rc20.1
 
 ### Features
 
