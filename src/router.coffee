@@ -5,7 +5,6 @@ isThunk = require 'virtual-dom/vnode/is-thunk'
 z = require './z'
 assert = require './assert'
 render = require './render'
-StateFactory = require './state_factory'
 isSimpleClick = require './is_simple_click'
 ev = require './ev'
 

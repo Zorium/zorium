@@ -79,7 +79,7 @@ _.assign z,
   render: render
   renderToString: renderToString
   router: router
-  state: StateFactory.create
+  state: StateFactory
   ev: ev
   classKebab: classKebab
   isSimpleClick: isSimpleClick

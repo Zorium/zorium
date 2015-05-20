@@ -6,7 +6,6 @@ Routes = require 'routes'
 Qs = require 'qs'
 
 z = require '../src/zorium'
-StateFactory = require '../src/state_factory'
 
 htmlToNode = (html) ->
   root = document.createElement 'div'
