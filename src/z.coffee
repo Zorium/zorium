@@ -100,6 +100,9 @@ renderChild = (child, props = {}) ->
       recordedStates.push child.state
     return renderComponent child, props
 
+  if isThunk child
+    return renderComponent child.child, child.props
+
   if isComponent child
     if child._zorium_is_initialized
       return child._zorium_create_thunk props

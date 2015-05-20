@@ -53,7 +53,10 @@ gulp.task 'test:server', ->
     .pipe mocha()
 
 gulp.task 'watch', ->
-  gulp.watch paths.coffee, ['test:phantom', 'test:server']
+  gulp.watch paths.coffee, ['test:phantom']
+
+gulp.task 'watch:server', ->
+  gulp.watch paths.coffee, ['test:server']
 
 gulp.task 'lint', ->
   gulp.src paths.coffee

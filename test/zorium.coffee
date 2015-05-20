@@ -749,6 +749,46 @@ describe 'router', ->
         drawCnt.should.be 2
         done()
 
+  it 'redraws on child state observable change, pre-rendered', (done) ->
+    drawCnt = 0
+    subject = new Rx.BehaviorSubject(null)
+
+    class Child
+      constructor: ->
+        @state = z.state
+          subject: subject
+      render: ->
+        drawCnt += 1
+        return z 'div', 'x'
+
+    class App
+      constructor: ->
+        @state = z.state
+          $child: z new Child(), {}
+
+      render: =>
+        {$child} = @state.getValue()
+        z 'div', $child
+
+    router = new Router()
+    router.add '/testaChildRedraw', new App()
+
+    root = document.createElement 'div'
+
+    z.router.init {$$root: root}
+    z.router.use (req, res) ->
+      res.send z router, {path: req.path, query: req.query}
+
+    z.router.go '/testaChildRedraw'
+    drawCnt.should.be 1
+
+    subject.onNext 'abc'
+
+    setTimeout ->
+      window.requestAnimationFrame ->
+        drawCnt.should.be 2
+        done()
+
   it 'redraws on lazy state observable change', (done) ->
     drawCnt = 0
     lazyRuns = 0
@@ -1231,7 +1271,7 @@ describe 'router', ->
     drawCnt.should.be 1
 
     window.requestAnimationFrame ->
-      drawCnt.should.be 1
+      drawCnt.should.be 2 # because first path-change is not batched
 
       changeSubject.onNext 1
       changeSubject.onNext 2
@@ -1241,7 +1281,7 @@ describe 'router', ->
       changeSubject.onNext 6
 
       window.requestAnimationFrame ->
-        drawCnt.should.be 2
+        drawCnt.should.be 3
 
         changeSubject.onNext 7
         changeSubject.onNext 8
@@ -1251,7 +1291,7 @@ describe 'router', ->
         changeSubject.onNext 12
 
         window.requestAnimationFrame ->
-          drawCnt.should.be 3
+          drawCnt.should.be 4
 
           changeSubject.onNext 7
           changeSubject.onNext 8
@@ -1261,7 +1301,7 @@ describe 'router', ->
           changeSubject.onNext 12
 
           window.requestAnimationFrame ->
-            drawCnt.should.be 4
+            drawCnt.should.be 5
             done()
 
   it 'renders full page, setting title and #zorium-root content', ->

@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node_modules/gulp/bin/gulp.js test",
     "build": "node_modules/gulp/bin/gulp.js build",
-    "watch": "node_modules/gulp/bin/gulp.js watch"
+    "watch": "node_modules/gulp/bin/gulp.js watch",
+    "watch-server": "node_modules/gulp/bin/gulp.js watch:server"
   },
   "repository": {
     "type": "git",
