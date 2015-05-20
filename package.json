@@ -1,7 +1,19 @@
 {
   "name": "zorium",
   "version": "1.0.0-rc19",
-  "description": "",
+  "description": "Zorium, The CoffeeScript Web Framework. Zorium offers a full virtual-dom experience, similar to react, without the need for jsx. For more documentation see http://zorium.org",
+  "keywords": [
+    "zorium",
+    "CoffeeScript",
+    "virtual-dom",
+    "view",
+    "web",
+    "virtual",
+    "dom",
+    "framework",
+    "frp",
+    "coffee"
+  ],
   "main": "src/zorium.coffee",
   "scripts": {
     "test": "node_modules/gulp/bin/gulp.js test",
@@ -16,7 +28,12 @@
   "bugs": {
     "url": "https://github.com/claydotio/zorium.js/issues"
   },
-  "homepage": "https://github.com/claydotio/zorium.js",
+  "license": "MIT",
+  "author": {
+    "name": "Zolmeister",
+    "url": "http://zolmeister.com/"
+  },
+  "homepage": "https://zorium.org/",
   "devDependencies": {
     "clay-chai": "0.0.3",
     "clay-coffeescript-style-guide": "^1.0.0",
