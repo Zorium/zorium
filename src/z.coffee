@@ -43,12 +43,12 @@ parseZfuncArgs = (tagName, children...) ->
 
   return {tagName, props, children}
 
-createHook = (onBeforeMount, onBeforeUnmount) ->
+createHook = (beforeMount, beforeUnmount) ->
   class Hook
     hook: ($el, propName) ->
-      onBeforeMount($el)
+      beforeMount($el)
     unhook: ->
-      onBeforeUnmount()
+      beforeUnmount()
 
   new Hook()
 
@@ -123,10 +123,10 @@ renderChild = (child, props = {}) ->
           # (unhook can be called after hook in one update)
           # TODO: add a test for this
           child.state?._bind_subscriptions()
-          child.onMount?($el)
+          child.afterMount?($el)
       , ->
         child.state?._unbind_subscriptions()
-        child.onBeforeUnmount?()
+        child.beforeUnmount?()
 
     renderFn = (child, props) ->
       tree = renderComponent child, props

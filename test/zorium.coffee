@@ -375,11 +375,11 @@ describe 'render()', ->
     root.isEqualNode(htmlToNode(result3)).should.be true
 
 describe 'Lifecycle Callbacks', ->
-  describe 'onMount', ->
+  describe 'afterMount', ->
     it 'gets called after initial load', (done) ->
       mountCalled = 0
       class BindComponent
-        onMount: ($el) ->
+        afterMount: ($el) ->
           should.exist $el
           mountCalled += 1
         render: ->
@@ -398,7 +398,7 @@ describe 'Lifecycle Callbacks', ->
       mountCalled = 0
 
       class BindComponent
-        onMount: ($el) ->
+        afterMount: ($el) ->
           should.exist $el
           mountCalled += 1
         render: ->
@@ -437,10 +437,10 @@ describe 'Lifecycle Callbacks', ->
         , 20
       , 20
 
-  describe 'onBeforeUnmount', ->
+  describe 'beforeUnmount', ->
     it 'gets called before removal from DOM', (done) ->
       class BindComponent
-        onBeforeUnmount: ->
+        beforeUnmount: ->
           done()
         render: ->
           z 'div'
@@ -467,9 +467,9 @@ describe 'Lifecycle Callbacks', ->
       unmountCalled = 0
       mountCalled = 0
       class BindComponent
-        onMount: ->
+        afterMount: ->
           mountCalled += 1
-        onBeforeUnmount: ->
+        beforeUnmount: ->
           unmountCalled += 1
         render: ->
           z 'div',
@@ -494,9 +494,9 @@ describe 'Lifecycle Callbacks', ->
       unmountCalled = 0
       mountCalled = 0
       class BindComponent
-        onMount: ->
+        afterMount: ->
           mountCalled += 1
-        onBeforeUnmount: ->
+        beforeUnmount: ->
           unmountCalled += 1
         render: ->
           z 'div'
@@ -520,9 +520,9 @@ describe 'Lifecycle Callbacks', ->
       unmountCalled = 0
       mountCalled = 0
       class BindComponent
-        onMount: ->
+        afterMount: ->
           mountCalled += 1
-        onBeforeUnmount: ->
+        beforeUnmount: ->
           unmountCalled += 1
         render: ->
           z 'div',
@@ -551,13 +551,13 @@ describe 'Lifecycle Callbacks', ->
       unmountsCalled = 0
 
       class A
-        onBeforeUnmount: ->
+        beforeUnmount: ->
           unmountsCalled += 1
         render: ->
           z 'div', 'x'
 
       class B
-        onBeforeUnmount: ->
+        beforeUnmount: ->
           unmountsCalled += 1
         render: ->
           z 'div', 'x'
@@ -801,7 +801,7 @@ describe 'router', ->
 
       lazyPromise.resolve 'x'
 
-  it 'unbinds state onBeforeUnmount', (done) ->
+  it 'unbinds state beforeUnmount', (done) ->
     appDrawCnt = 0
     app2DrawCnt = 0
     lazyPromise = deferred()
