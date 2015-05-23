@@ -84,7 +84,7 @@ class Router
 
   use: (@middleware) => null
 
-  go: (url, state) =>
+  go: (url) =>
     assert window?, 'z.router.go() called server-side'
     assert @config.$$root, 'z.router.go() called without $$root'
     assert @middleware, 'z.router.go() called without middleware'
@@ -116,7 +116,6 @@ class Router
       @middleware
         path: pathname
         query: query
-        state: state
       ,
         send: _.once ($component) =>
           $component = z $component
