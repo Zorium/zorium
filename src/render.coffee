@@ -24,11 +24,6 @@ parseFullTree = (tree) ->
     title: $title?.children[0]?.text
   }
 
-removeContentEditable = (vnode) ->
-  delete vnode.properties?.contentEditable
-  _.map vnode.children, removeContentEditable
-  return vnode
-
 class Renderer
   constructor: ->
     @registeredRoots = {}
@@ -51,7 +46,7 @@ class Renderer
       tree = $root
 
     unless $$root._zoriumId
-      seedTree = removeContentEditable virtualize $$root
+      seedTree = virtualize $$root
       id = @nextRootId()
       $$root._zoriumId = id
       @registeredRoots[id] =
