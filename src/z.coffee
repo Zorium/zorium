@@ -118,12 +118,11 @@ renderChild = (child, props = {}) ->
             child.__dirtySubject.onNext true
 
       child._zorium_hook = createHook ($el) ->
-        # TODO: add a test for this checking if unhook can be called after hook
-        # in a single update might be an issue because of virtual-dom hook order
-        child.state?._bind_subscriptions()
-
         # Wait for insertion into the DOM
         setTimeout ->
+          # TODO: add a test for this verifying that hook order matters
+          # TODO: this may lead to race conditions binding/unbinding
+          child.state?._bind_subscriptions()
           child.afterMount?($el)
       , ->
         child.state?._unbind_subscriptions()

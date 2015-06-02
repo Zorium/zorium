@@ -1241,17 +1241,8 @@ describe 'router', ->
       changeSubject.onNext 6
 
       window.requestAnimationFrame ->
-        drawCnt.should.be 2
-
-        changeSubject.onNext 7
-        changeSubject.onNext 8
-        changeSubject.onNext 9
-        changeSubject.onNext 10
-        changeSubject.onNext 11
-        changeSubject.onNext 12
-
-        window.requestAnimationFrame ->
-          drawCnt.should.be 3
+        setTimeout -> # afterMount hook delay
+          drawCnt.should.be 2
 
           changeSubject.onNext 7
           changeSubject.onNext 8
@@ -1261,8 +1252,18 @@ describe 'router', ->
           changeSubject.onNext 12
 
           window.requestAnimationFrame ->
-            drawCnt.should.be 4
-            done()
+            drawCnt.should.be 3
+
+            changeSubject.onNext 7
+            changeSubject.onNext 8
+            changeSubject.onNext 9
+            changeSubject.onNext 10
+            changeSubject.onNext 11
+            changeSubject.onNext 12
+
+            window.requestAnimationFrame ->
+              drawCnt.should.be 4
+              done()
 
   it 'when re-using components, all instances are updated', (done) ->
     subject = new Rx.BehaviorSubject 'abc'
