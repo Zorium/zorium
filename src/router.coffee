@@ -82,7 +82,8 @@ class Router
 
     return node
 
-  use: (@middleware) => null
+  use: (@middleware) =>
+    @currentUrl = null
 
   go: (url) =>
     assert window?, 'z.router.go() called server-side'
