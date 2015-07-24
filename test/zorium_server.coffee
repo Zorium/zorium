@@ -65,6 +65,38 @@ describe 'server side rendering', ->
     .then (html) ->
       html.should.be '<div>abc</div>'
 
+  it 'supports async rendering to string after sync change', ->
+    componentSubject = new Rx.ReplaySubject(1)
+
+    class AsyncChild
+      constructor: ->
+        @pending = new Rx.ReplaySubject(1)
+        @state = z.state
+          abc: @pending
+      render: =>
+        {abc} = @state.getValue()
+
+        unless abc?
+          @pending.onNext 'abc'
+
+        z 'div', abc
+
+    class Root
+      constructor: ->
+        @state = z.state
+          $component: componentSubject
+      render: =>
+        {$component} = @state.getValue()
+
+        z 'div',
+          $component
+
+    $root = new Root()
+    componentSubject.onNext new AsyncChild()
+    z.renderToString $root
+    .then (html) ->
+      html.should.be '<div><div>abc</div></div>'
+
   it 'supports async rendering with props to string', ->
     class Async
       constructor: ->

@@ -21,6 +21,8 @@ tryCatch = (fn, catcher) ->
   catch err
     catcher(err)
 
+# FIXME: this whole file is a hack
+# coffeelint: disable=cyclomatic_complexity
 module.exports = (tree, {timeout} = {}) ->
   timeout ?= DEFAULT_TIMEOUT_MS
 
@@ -45,13 +47,26 @@ module.exports = (tree, {timeout} = {}) ->
       allStates = allStates.concat states
       z._stopRecordingStates()
 
+      isSyncronous = true
+      hasSynchronouslyChanged = false
+      syncChangeHack = ->
+        if isSyncronous and not hasSynchronouslyChanged
+          hasSynchronouslyChanged = true
+          listener()
+        else if not isSyncronous
+          listener()
+
       _.map states, (state) ->
         unless state._isSubscribing()
           tryCatch ->
             state._bind_subscriptions()
           , (err) ->
             onError err
-          disposables.push state.subscribe listener, onError
+          disposables.push state.subscribe syncChangeHack, onError
+
+      isSyncronous = false
+      if hasSynchronouslyChanged
+        return
 
       isDone = _.every allStates, (state) ->
         state._isFulfilled()
@@ -97,3 +112,4 @@ module.exports = (tree, {timeout} = {}) ->
     , timeout
 
     listener()
+# coffeelint: enable=cyclomatic_complexity
