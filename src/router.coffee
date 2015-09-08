@@ -90,7 +90,7 @@ class Router
     assert @config.$$root, 'z.router.go() called without $$root'
     assert @middleware, 'z.router.go() called without middleware'
 
-    url ?= getCurrentUrl(@mode)
+    url ?= getCurrentUrl(@config.mode)
     isRedraw = url is @currentUrl
     {pathname, search} = parseUrl url
     query = Qs.parse(search?.slice(1))
