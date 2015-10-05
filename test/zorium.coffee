@@ -374,6 +374,14 @@ describe 'render()', ->
     result3 = '<div><div>done</div></div>'
     root.isEqualNode(htmlToNode(result3)).should.be true
 
+  # https://github.com/Zorium/zorium/issues/68
+  it 'patches <iframe> node correctly', ->
+    root = document.createElement('iframe')
+    z.render root, (z 'iframe')
+    result = '<iframe></iframe>'
+    root.isEqualNode(htmlToNode(result)).should.be true
+
+
 describe 'Lifecycle Callbacks', ->
   describe 'afterMount', ->
     it 'gets called after initial load', (done) ->

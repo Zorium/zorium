@@ -67,8 +67,8 @@
     "promiz": "^1.0.3",
     "qs": "^2.4.2",
     "rx-lite": "^2.5.2",
+    "vdom-parser": "^1.2.1",
     "vdom-to-html": "^2.0.0",
-    "vdom-virtualize": "0.0.8",
     "virtual-dom": "^2.0.1"
   }
 }

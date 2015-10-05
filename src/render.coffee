@@ -1,6 +1,35 @@
+# parseFromString polyfill for Android 4.1 and 4.3
+# required for vdom-parser
+# source: https://gist.github.com/eligrey/1129031
+if window?
+  do (DOMParser = window.DOMParser) ->
+    DOMParser_proto = DOMParser.prototype
+    real_parseFromString = DOMParser_proto.parseFromString
+    # Firefox/Opera/IE throw errors on unsupported types
+    try
+      # WebKit returns null on unsupported types
+      if (new DOMParser).parseFromString('', 'text/html')
+        # text/html parsing is natively supported
+        return
+    catch ex
+
+    DOMParser_proto.parseFromString = (markup, type) ->
+      if /^\s*text\/html\s*(?:;|$)/i.test(type)
+        doc = document.implementation.createHTMLDocument('')
+        if markup.toLowerCase().indexOf('<!doctype') > -1
+          doc.documentElement.innerHTML = markup
+        else
+          doc.body.innerHTML = markup
+        doc
+      else
+        real_parseFromString.apply this, arguments
+    return
+
 diff = require 'virtual-dom/diff'
 patch = require 'virtual-dom/patch'
-virtualize = require 'vdom-virtualize'
+
+if window?
+  parser = require 'vdom-parser'
 
 flattenTree = require './flatten_tree'
 
@@ -46,7 +75,7 @@ class Renderer
       tree = $root
 
     unless $$root._zoriumId
-      seedTree = virtualize $$root
+      seedTree = parser $$root
       id = @nextRootId()
       $$root._zoriumId = id
       @registeredRoots[id] =
