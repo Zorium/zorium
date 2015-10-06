@@ -8,7 +8,6 @@ webpack = require 'gulp-webpack'
 coffeelint = require 'gulp-coffeelint'
 RewirePlugin = require 'rewire-webpack'
 webpackSource = require 'webpack'
-clayLintConfig = require 'clay-coffeescript-style-guide'
 
 packangeConf = require './package.json'
 
@@ -36,11 +35,11 @@ webpackProdConfig =
     exprContextRegExp: /$^/
     exprContextCritical: false
     postLoaders: [
-      { test: /\.coffee$/, loader: 'transform/cacheable?envify' }
+      {test: /\.coffee$/, loader: 'transform/cacheable?envify'}
     ]
     loaders: [
-      { test: /\.coffee$/, loader: 'coffee' }
-      { test: /\.json$/, loader: 'json' }
+      {test: /\.coffee$/, loader: 'coffee'}
+      {test: /\.json$/, loader: 'json'}
     ]
   resolve:
     extensions: ['.coffee', '.js', '.json', '']
@@ -60,7 +59,7 @@ gulp.task 'watch:server', ->
 
 gulp.task 'lint', ->
   gulp.src paths.coffee
-    .pipe coffeelint(null, clayLintConfig)
+    .pipe coffeelint()
     .pipe coffeelint.reporter()
 
 gulp.task 'test:phantom', ['scripts:test'], (cb) ->
@@ -77,11 +76,11 @@ gulp.task 'scripts:test', ->
       exprContextRegExp: /$^/
       exprContextCritical: false
       postLoaders: [
-        { test: /\.coffee$/, loader: 'transform/cacheable?envify' }
+        {test: /\.coffee$/, loader: 'transform/cacheable?envify'}
       ]
       loaders: [
-        { test: /\.coffee$/, loader: 'coffee' }
-        { test: /\.json$/, loader: 'json' }
+        {test: /\.coffee$/, loader: 'coffee'}
+        {test: /\.json$/, loader: 'json'}
       ]
     plugins: [
       new RewirePlugin()

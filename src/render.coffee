@@ -8,11 +8,12 @@ if window?
     # Firefox/Opera/IE throw errors on unsupported types
     try
       # WebKit returns null on unsupported types
-      if (new DOMParser).parseFromString('', 'text/html')
+      if (new DOMParser()).parseFromString('', 'text/html')
         # text/html parsing is natively supported
         return
     catch ex
 
+    # coffeelint: disable=missing_fat_arrows
     DOMParser_proto.parseFromString = (markup, type) ->
       if /^\s*text\/html\s*(?:;|$)/i.test(type)
         doc = document.implementation.createHTMLDocument('')
@@ -23,6 +24,7 @@ if window?
         doc
       else
         real_parseFromString.apply this, arguments
+    # coffeelint: enable=missing_fat_arrows
     return
 
 diff = require 'virtual-dom/diff'

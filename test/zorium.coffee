@@ -1292,7 +1292,7 @@ describe 'router', ->
       constructor: ->
         @state = z.state
           $a: new A()
-      render: ->
+      render: =>
         {$a} = @state.getValue()
 
         z 'div',

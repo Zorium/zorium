@@ -58,10 +58,10 @@ module.exports = (initialState) ->
     if window?
       selfDisposable = state.subscribeOnError (err) -> throw err
 
-    mapObservables initialState, (val ,key) ->
+    mapObservables initialState, (val, key) ->
       pendingSettlement += 1
 
-    mapObservables initialState, (val ,key) ->
+    mapObservables initialState, (val, key) ->
       settle = _.once ->
         pendingSettlement -= 1
 
