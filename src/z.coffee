@@ -138,7 +138,8 @@ renderChild = (child, props = {}) ->
 
       child.__disposables = _.map childrenStreams, (dirtyStream) ->
         dirtyStream.subscribe (isDirty) ->
-          child.__dirtySubject.onNext isDirty
+          if isDirty
+            child.__dirtySubject.onNext isDirty
 
       child.__dirtySubject.onNext false
 
