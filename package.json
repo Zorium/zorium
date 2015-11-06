@@ -41,7 +41,6 @@
     "coffee-loader": "^0.7.2",
     "coffee-script": "^1.9.2",
     "del": "^1.1.1",
-    "envify": "^3.4.0",
     "gulp": "^3.8.11",
     "gulp-coffeelint": "^0.5.0",
     "gulp-mocha": "^2.0.1",
@@ -58,7 +57,6 @@
     "rewire": "^2.3.1",
     "rewire-webpack": "^1.0.0",
     "routes": "^2.0.0",
-    "transform-loader": "^0.2.1",
     "webpack": "^1.8.4"
   },
   "dependencies": {
