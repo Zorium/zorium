@@ -1,20 +1,23 @@
-should = require('clay-chai').should()
+b = require 'b-assert'
 Rx = require 'rx-lite'
-Promise = require 'bluebird'
 
 z = require '../src/zorium'
 
-beforeEach (done) ->
-  # Deal with weird timer issues
-  setTimeout ->
-    done()
-  , 100
+# FIXME
+# beforeEach (done) ->
+#   # Deal with weird timer issues
+#   setTimeout ->
+#     done()
+#   , 100
 
 describe 'server side rendering', ->
+  if window?
+    return
+
   it 'supports basic render to string', ->
     z.renderToString z 'div', 'test'
     .then (html) ->
-      html.should.be '<div>test</div>'
+      b html, '<div>test</div>'
 
   it 'supports basic render of component to string', ->
     class Root
@@ -23,7 +26,7 @@ describe 'server side rendering', ->
 
     z.renderToString new Root()
     .then (html) ->
-      html.should.be '<div>test</div>'
+      b html, '<div>test</div>'
 
   it 'supports render of component with props to string', ->
     class Root
@@ -32,7 +35,7 @@ describe 'server side rendering', ->
 
     z.renderToString z new Root(), {name: 'abc'}
     .then (html) ->
-      html.should.be '<div>test abc</div>'
+      b html, '<div>test abc</div>'
 
   it 'propogates errors', ->
     class MoveAlong
@@ -44,7 +47,7 @@ describe 'server side rendering', ->
     .then ->
       throw new Error 'Expected error'
     , (err) ->
-      err.message.should.be 'test'
+      b err.message, 'test'
 
   it 'supports async rendering to string', ->
     class Async
@@ -63,7 +66,7 @@ describe 'server side rendering', ->
     $async = new Async()
     z.renderToString $async
     .then (html) ->
-      html.should.be '<div>abc</div>'
+      b html, '<div>abc</div>'
 
   it 'supports async rendering to string after sync change', ->
     componentSubject = new Rx.ReplaySubject(1)
@@ -95,7 +98,7 @@ describe 'server side rendering', ->
     componentSubject.onNext new AsyncChild()
     z.renderToString $root
     .then (html) ->
-      html.should.be '<div><div>abc</div></div>'
+      b html, '<div><div>abc</div></div>'
 
   it 'supports async rendering with props to string', ->
     class Async
@@ -124,9 +127,9 @@ describe 'server side rendering', ->
 
     z.renderToString z new Parent(), {name: 'xxx'}
     .then (html) ->
-      html.should.be '<div><div>abc xxx</div></div>'
+      b html, '<div><div>abc xxx</div></div>'
 
-  it 'handles state errors, returning the latest tree', ->
+  it 'handles state errors', ->
     pending = new Rx.BehaviorSubject(null)
     pending.onError new Error 'test'
 
@@ -144,10 +147,9 @@ describe 'server side rendering', ->
     .then ->
       throw new Error 'expected error'
     , (err) ->
-      err.message.should.be 'test'
-      should.exist err.html
-      err.html.should.be '<div>abc</div>'
-
+      b err.message, 'test'
+      b err.html?
+      b err.html, '<div>abc</div>'
 
   it 'handles runtime errors', ->
     class Root
@@ -161,8 +163,8 @@ describe 'server side rendering', ->
     .then ->
       throw new Error 'expected error'
     , (err) ->
-      err.message.should.be 'test'
-      should.not.exist err.html
+      b err.message, 'test'
+      b err.html?, false
 
   it 'handles async runtime errors, returning last render (not guaranteed)', ->
     pending = new Rx.ReplaySubject(1)
@@ -187,8 +189,8 @@ describe 'server side rendering', ->
     .then ->
       throw new Error 'expected error'
     , (err) ->
-      err.message.should.be 'test'
-      err.html.should.be '<div>abc</div>'
+      b err.message, 'test'
+      b err.html, '<div>abc</div>'
 
   it 'supports concurrent requests', (done) ->
     fastCallCnt = 0
@@ -214,50 +216,42 @@ describe 'server side rendering', ->
     $fast = new Fast()
     z.renderToString $slow
     .then (html) ->
-      fastCallCnt.should.be 4
-      html.should.be '<div>slow</div>'
+      b fastCallCnt, 4
+      b html, '<div>slow</div>'
       done()
     .catch done
 
     z.renderToString $fast
     .then (html) ->
-      html.should.be '<div>fast</div>'
+      b html, '<div>fast</div>'
       fastCallCnt += 1
     .catch done
 
     z.renderToString $fast
     .then (html) ->
-      html.should.be '<div>fast</div>'
+      b html, '<div>fast</div>'
       fastCallCnt += 1
     .catch done
 
     z.renderToString $fast
     .then (html) ->
-      html.should.be '<div>fast</div>'
+      b html, '<div>fast</div>'
       fastCallCnt += 1
     .catch done
 
     z.renderToString $fast
     .then (html) ->
-      html.should.be '<div>fast</div>'
+      b html, '<div>fast</div>'
       fastCallCnt += 1
     .catch done
 
-  it 'defaults to 250ms timeout, returning latest tree', ->
+  it 'defaults to 250ms timeout', ->
     class Timeout
       constructor: ->
         @state = z.state
-          oneHundredMs: Rx.Observable.fromPromise(
-            new Promise (resolve) ->
-              setTimeout ->
-                resolve '100'
-              , 100
-          )
           never: Rx.Observable.empty()
-      render: =>
-        {oneHundredMs} = @state.getValue()
-        oneHundredMs ?= ''
-        z 'div', 'test ' + oneHundredMs
+      render: ->
+        z 'div', 'test'
 
     $timeout = new Timeout()
     startTime = Date.now()
@@ -266,25 +260,17 @@ describe 'server side rendering', ->
     .then ->
       throw new Error 'expected timeout error'
     , (err) ->
-      (Date.now() - startTime).should.be.greaterThan 248
-      err.message.should.be 'Timeout, request took longer than 250ms'
-      err.html.should.be '<div>test 100</div>'
+      b (Date.now() - startTime) > 248
+      b err.message, 'Timeout, request took longer than 250ms'
+      b err.html, '<div>test</div>'
 
-  it 'allows custom timeouts, returning latest tree', ->
+  it 'allows custom timeouts', ->
     class Timeout
       constructor: ->
         @state = z.state
-          threeHundredMs: Rx.Observable.fromPromise(
-            new Promise (resolve) ->
-              setTimeout ->
-                resolve '300'
-              , 100
-          )
           never: Rx.Observable.empty()
-      render: =>
-        {threeHundredMs} = @state.getValue()
-        threeHundredMs ?= ''
-        z 'div', 'test ' + threeHundredMs
+      render: ->
+        z 'div', 'test'
 
     startTime = Date.now()
     $timeout = new Timeout()
@@ -293,6 +279,6 @@ describe 'server side rendering', ->
     .then ->
       throw new Error 'expected timeout error'
     , (err) ->
-      (Date.now() - startTime).should.be.greaterThan 299
-      err.message.should.be 'Timeout, request took longer than 300ms'
-      err.html.should.be '<div>test 300</div>'
+      b (Date.now() - startTime) > 299
+      b err.message, 'Timeout, request took longer than 300ms'
+      b err.html, '<div>test</div>'

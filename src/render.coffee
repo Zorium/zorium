@@ -29,20 +29,28 @@ if window?
 
 diff = require 'virtual-dom/diff'
 patch = require 'virtual-dom/patch'
+isThunk = require 'virtual-dom/vnode/is-thunk'
 
 if window?
   parser = require 'vdom-parser'
 
-flattenTree = require './flatten_tree'
+z = require './z'
+isComponent = require './is_component'
+
+flatten = (node) ->
+  if isThunk node
+    node.render()
+  else
+    node
 
 parseFullTree = (tree) ->
   unless tree?.tagName is 'HTML' and tree.children.length is 2
     throw new Error 'Invalid HTML base element'
 
-  $head = flattenTree tree.children[0]
-  $body = flattenTree tree.children[1]
-  $title = flattenTree $head.children[0]
-  $root = flattenTree $body.children[0]
+  $head = flatten tree.children[0]
+  $body = flatten tree.children[1]
+  $title = flatten $head.children[0]
+  $root = flatten $body.children[0]
 
   unless $head?.tagName is 'HEAD' and $title?.tagName is 'TITLE'
     throw new Error 'Invalid HEAD base element'
@@ -55,44 +63,25 @@ parseFullTree = (tree) ->
     title: $title?.children[0]?.text
   }
 
-class Renderer
-  constructor: ->
-    @registeredRoots = {}
+module.exports = ($$root, tree) ->
+  if isComponent tree
+    tree = z tree
 
-    id = 0
-    @nextRootId = ->
-      id += 1
-
-  render: ($$root, tree) =>
-    unless $$root instanceof HTMLElement
-      throw new Error 'invalid $$root'
-
-    tree = flattenTree tree
-
-    # Because the DOM doesn't let us directly manipulate top-level elements
-    # We have to standardize a hack around it
-    if tree?.tagName is 'HTML'
-      {title, $root} = parseFullTree tree
+  if isThunk tree
+    rendered = tree.render()
+    if rendered.tagName is 'HTML'
+      {title, $root} = parseFullTree(rendered)
       document.title = title
       tree = $root
 
-    unless $$root._zoriumId
-      seedTree = parser $$root
-      id = @nextRootId()
-      $$root._zoriumId = id
-      @registeredRoots[id] =
-        node: $$root
-        tree: seedTree
+  unless $$root._zorium_tree?
+    seedTree = parser $$root
+    $$root._zorium_tree = seedTree
 
-    root = @registeredRoots[$$root._zoriumId]
+  previousTree = $$root._zorium_tree
 
-    patches = diff root.tree, tree
-    root.node = patch root.node, patches
-    root.tree = tree
+  patches = diff previousTree, tree
+  patch $$root, patches
+  $$root._zorium_tree = tree
 
-    return $$root
-
-
-
-renderer = new Renderer()
-module.exports = renderer.render
+  return $$root

@@ -7,6 +7,7 @@ assert = require './assert'
 render = require './render'
 isSimpleClick = require './is_simple_click'
 ev = require './ev'
+bind = require './bind'
 
 getCurrentUrl = (mode) ->
   hash = window.location.hash.slice(1)
@@ -91,60 +92,31 @@ class Router
     assert @middleware, 'z.router.go() called without middleware'
 
     url ?= getCurrentUrl(@mode)
-    isRedraw = url is @currentUrl
     {pathname, search} = parseUrl url
     query = Qs.parse(search?.slice(1))
 
     # Batching on requestAnimationFrame
-    if @animationRequestId and isRedraw
-      return
-    else if @animationRequestId
+    if @animationRequestId?
       window.cancelAnimationFrame @animationRequestId
       @animationRequestId = null
 
-    if not isRedraw
-      hasRouted = Boolean @currentUrl
-      @currentUrl = url
+    hasRouted = Boolean @currentUrl
+    @currentUrl = url
 
-      if @config.mode is 'pathname'
-        if hasRouted
-          window.history.pushState null, null, url
-        else
-          window.history.replaceState null, null, url
+    if @config.mode is 'pathname'
+      if hasRouted
+        window.history.pushState null, null, url
       else
-        window.location.hash = url
-
-      @middleware
-        path: pathname
-        query: query
-      ,
-        send: _.once ($component) =>
-          $component = z $component
-          getState = ($component) ->
-            if isThunk $component
-              $component.child.state
-            else
-              $component?.state
-
-          if @lastDispose
-            @lastDispose.dispose()
-            @lastDispose = null
-
-          # FIXME: This does not take into account components in other
-          # parts of the full tree (e.g. <head>).
-          getState(@$lastRoot)?._unbind_subscriptions()
-          @$lastRoot = $component
-          getState(@$lastRoot)?._bind_subscriptions()
-
-          @lastDispose = $component.child?.__dirtyStream.subscribe (isDirty) =>
-            if isDirty
-              @go()
-
-          render @config.$$root, @$lastRoot
+        window.history.replaceState null, null, url
     else
-      @animationRequestId = window.requestAnimationFrame =>
-        @animationRequestId = null
-        render @config.$$root, @$lastRoot
+      window.location.hash = url
+
+    @middleware
+      path: pathname
+      query: query
+    ,
+      send: _.once ($component) =>
+        bind @config.$$root, $component
 
 router = new Router()
 module.exports = {

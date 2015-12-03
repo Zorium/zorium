@@ -25,8 +25,8 @@ karmaConf =
 
 paths =
   coffee: ['./src/**/*.coffee', './*.coffee', './test/**/*.coffee']
+  tests: './test/**/*.coffee'
   rootScripts: './src/zorium.coffee'
-  rootTests: './test/zorium.coffee'
   rootServerTests: './test/zorium_server.coffee'
   build: './build/'
 
@@ -66,7 +66,7 @@ gulp.task 'test:phantom', ['scripts:test'], (cb) ->
   }, karmaConf), cb
 
 gulp.task 'scripts:test', ->
-  gulp.src paths.rootTests
+  gulp.src paths.tests
   .pipe webpack
     devtool: '#inline-source-map'
     module:

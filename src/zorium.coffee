@@ -70,7 +70,7 @@ z = require './z'
 render = require './render'
 renderToString = require './render_to_string'
 router = require './router'
-StateFactory = require './state_factory'
+state = require './state'
 ev = require './ev'
 classKebab = require './class_kebab'
 isSimpleClick = require './is_simple_click'
@@ -79,7 +79,7 @@ _.assign z,
   render: render
   renderToString: renderToString
   router: router
-  state: StateFactory
+  state: state
   ev: ev
   classKebab: classKebab
   isSimpleClick: isSimpleClick

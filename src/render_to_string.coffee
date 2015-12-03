@@ -1,11 +1,11 @@
 _ = require 'lodash'
 Rx = require 'rx-lite'
-toHTML = require 'vdom-to-html'
+isThunk = require 'virtual-dom/vnode/is-thunk'
 
-z = require './z'
-assert = require './assert'
-StateFactory = require './state_factory'
-flattenTree = require './flatten_tree'
+if not window?
+  # Avoid webpack include
+  _toHTML = 'vdom-to-html'
+  toHTML = require _toHTML
 
 # FIXME: use native promises, upgrade node
 if not Promise? and not window?
@@ -13,103 +13,57 @@ if not Promise? and not window?
   _promiz = 'promiz'
   Promise = require _promiz
 
+z = require './z'
+assert = require './assert'
+isComponent = require './is_component'
+
 DEFAULT_TIMEOUT_MS = 250
 
-tryCatch = (fn, catcher) ->
-  try
-    fn()
-  catch err
-    catcher(err)
-
-# FIXME: this whole file is a hack
-# coffeelint: disable=cyclomatic_complexity
 module.exports = (tree, {timeout} = {}) ->
-  timeout ?= DEFAULT_TIMEOUT_MS
-
   assert not window?, 'z.renderToString() called client-side'
 
-  new Promise (resolve, reject) ->
-    allStates = [] # for unbinding
-    disposables = []
-    lastTree = null
-    hasCompleted = false
-    timeoutTimer = null
+  timeout ?= DEFAULT_TIMEOUT_MS
 
-    listener = _.debounce ->
-      if hasCompleted
-        return
+  if isComponent tree
+    tree = z tree
 
-      z._startRecordingStates()
-      tryCatch ->
-        lastTree = flattenTree tree
-      , finish
-      states = z._getRecordedStates()
-      allStates = allStates.concat states
-      z._stopRecordingStates()
+  # TODO: ugly, depends on timeout in closure
+  untilStable = (tree) ->
+    if isThunk(tree) and tree.component?
+      zthunk = tree
+      state = zthunk.component.state
 
-      isSyncronous = true
-      hasSynchronouslyChanged = false
-      syncChangeHack = ->
-        if isSyncronous and not hasSynchronouslyChanged
-          hasSynchronouslyChanged = true
-          listener()
-        else if not isSyncronous
-          listener()
+      # Begin resolving children before current node is stable for performance
+      try
+        _.map zthunk.render().children, untilStable
+      catch err
+        return Promise.reject err
 
-      _.map states, (state) ->
-        unless state._isSubscribing()
-          tryCatch ->
-            state._bind_subscriptions()
-          , (err) ->
-            onError err
-          disposables.push state.subscribe syncChangeHack, onError
+      new Promise (resolve, reject) ->
+        setTimeout ->
+          # FIXME: partial result
+          reject new Error "Timeout, request took longer than #{timeout}ms"
+        , timeout
 
-      isSyncronous = false
-      if hasSynchronouslyChanged
-        return
+        onStable = if state? then state._subscribeOnStable else (cb) -> cb()
+        onStable ->
+          try
+            children = zthunk.render().children
+          catch err
+            return reject err
+          resolve Promise.all _.map children, untilStable
+      .then -> zthunk
+    else
+      Promise.all _.map tree.children, untilStable
+      .then -> tree
 
-      isDone = _.every allStates, (state) ->
-        state._isFulfilled()
+  try
+    safe = toHTML tree
+  catch err
+    return Promise.reject err
 
-      if isDone
-        tryCatch ->
-          lastTree = flattenTree tree
-          finish(null)
-        , finish
-
-    onError = (err) ->
-      tryCatch ->
-        lastTree = flattenTree tree
-        finish err
-      , finish
-
-    finish = (err) ->
-      if hasCompleted
-        return
-      hasCompleted = true
-
-      clearTimeout timeoutTimer
-
-      # Thunks make it difficult to render lastTree
-      if err
-        if lastTree
-          tryCatch ->
-            err.html = toHTML lastTree
-          , (err) ->
-            reject err
-        reject err
-      else
-        tryCatch ->
-          resolve toHTML lastTree
-        , (err) ->
-          reject err
-
-      _.map disposables, (disposable) -> disposable.dispose()
-      _.map allStates, (state) -> state._unbind_subscriptions()
-
-    timeoutTimer = setTimeout ->
-      finish new Error "Timeout, request took longer than #{timeout}ms"
-    , timeout
-
-    listener()
-# coffeelint: enable=cyclomatic_complexity
+  untilStable tree
+  .then -> toHTML tree
+  .catch (err) ->
+    err.html = safe
+    throw err
