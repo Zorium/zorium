@@ -49,18 +49,17 @@ describe 'z.state', ->
     catch err
       b err?
 
-  # FIXME
-  # it 'throws errors', ->
-  #   subject = new Rx.BehaviorSubject(null)
-  #
-  #   state = z.state
-  #     subject: subject
-  #
-  #   try
-  #     subject.onError new Error 'err'
-  #     b false
-  #   catch err
-  #     b err?
+  it 'throws errors', ->
+    subject = new Rx.BehaviorSubject(null)
+
+    state = z.state
+      subject: subject
+
+    try
+      subject.onError new Error 'err'
+      b false
+    catch err
+      b err?
 
   it 'lazy subscribes', ->
     lazyRuns = 0

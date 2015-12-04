@@ -7,7 +7,7 @@ if not window?
   _toHTML = 'vdom-to-html'
   toHTML = require _toHTML
 
-# FIXME: use native promises, upgrade node
+# TODO: use native promises, upgrade node
 if not Promise? and not window?
   # Avoid webpack include
   _promiz = 'promiz'
@@ -41,7 +41,6 @@ module.exports = (tree, {timeout} = {}) ->
 
       new Promise (resolve, reject) ->
         setTimeout ->
-          # FIXME: partial result
           reject new Error "Timeout, request took longer than #{timeout}ms"
         , timeout
 

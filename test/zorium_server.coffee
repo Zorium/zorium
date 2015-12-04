@@ -3,13 +3,6 @@ Rx = require 'rx-lite'
 
 z = require '../src/zorium'
 
-# FIXME
-# beforeEach (done) ->
-#   # Deal with weird timer issues
-#   setTimeout ->
-#     done()
-#   , 100
-
 describe 'server side rendering', ->
   if window?
     return

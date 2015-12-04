@@ -46,6 +46,9 @@ renderChild = (child, props = {}) ->
       return child._zthunk
     return child._zthunk = new ZThunk {component: child, props}
 
+  if isThunk(child) and child.component?
+    return renderChild child.component, child.props
+
   if _.isNumber(child)
     return '' + child
 

@@ -21,6 +21,11 @@ class Router
         query: query
       }
 
+delay = (fn) ->
+  setTimeout ->
+    fn()
+  , 20
+
 describe 'router', ->
   it 'renders updated DOM', (done) ->
     class App
@@ -45,11 +50,11 @@ describe 'router', ->
     result2 = '<div><div>XXXXXXXXXXX</div></div>'
 
     z.router.go '/testa1'
-    window.requestAnimationFrame ->
+    delay ->
       b root.isEqualNode(util.htmlToNode(result1))
       z.router.go '/testa2'
 
-      window.requestAnimationFrame ->
+      delay ->
         b root.isEqualNode(util.htmlToNode(result2))
         done()
 
@@ -76,53 +81,50 @@ describe 'router', ->
     result2 = '<div><div>xyz</div></div>'
 
     z.router.go '/testaRedraw'
-    window.requestAnimationFrame ->
+    delay ->
       b root.isEqualNode(util.htmlToNode(result1))
       subject.onNext 'xyz'
 
-      window.requestAnimationFrame ->
+      delay ->
         b root.isEqualNode(util.htmlToNode(result2))
         done()
 
-  # FIXME: see bind prerendered tests
-  # it 'redraws on child state observable change, pre-rendered', (done) ->
-  #   subject = new Rx.BehaviorSubject('abc')
-  #
-  #   class Child
-  #     constructor: ->
-  #       @state = z.state
-  #         subject: subject
-  #     render: =>
-  #       z 'div', "#{@state.getValue().subject}"
-  #
-  #   class App
-  #     constructor: ->
-  #       @child = z new Child(), {}
-  #     render: =>
-  #       z 'div', @child
-  #
-  #   router = new Router()
-  #   router.add '/testaChildRedraw', new App()
-  #
-  #   root = document.createElement 'div'
-  #
-  #   z.router.init {$$root: root}
-  #   z.router.use (req, res) ->
-  #     res.send z router, {path: req.path, query: req.query}
-  #
-  #   result1 = '<div><div><div>abc</div></div></div>'
-  #   result2 = '<div><div><div>xyz</div></div></div>'
-  #
-  #   z.router.go '/testaChildRedraw'
-  #   window.requestAnimationFrame ->
-  #     console.log root
-  #     b root.isEqualNode(util.htmlToNode(result1))
-  #
-  #     subject.onNext 'xyz'
-  #     window.requestAnimationFrame ->
-  #       console.log root
-  #       b root.isEqualNode(util.htmlToNode(result2))
-  #       done()
+  it 'redraws on child state observable change, pre-rendered', (done) ->
+    subject = new Rx.BehaviorSubject('abc')
+
+    class Child
+      constructor: ->
+        @state = z.state
+          subject: subject
+      render: =>
+        z 'div', "#{@state.getValue().subject}"
+
+    class App
+      constructor: ->
+        @child = z new Child(), {}
+      render: =>
+        z 'div', @child
+
+    router = new Router()
+    router.add '/testaChildRedraw', new App()
+
+    root = document.createElement 'div'
+
+    z.router.init {$$root: root}
+    z.router.use (req, res) ->
+      res.send z router, {path: req.path, query: req.query}
+
+    result1 = '<div><div><div>abc</div></div></div>'
+    result2 = '<div><div><div>xyz</div></div></div>'
+
+    z.router.go '/testaChildRedraw'
+    delay ->
+      b root.isEqualNode(util.htmlToNode(result1))
+
+      subject.onNext 'xyz'
+      delay ->
+        b root.isEqualNode(util.htmlToNode(result2))
+        done()
 
   it 'redraws on lazy state observable change', (done) ->
     lazyRuns = 0
@@ -155,12 +157,12 @@ describe 'router', ->
     result2 = '<div><div>Hello xxx</div></div>'
 
     z.router.go '/testLazyRedraw'
-    window.requestAnimationFrame ->
+    delay ->
       b lazyRuns, 1
       b root.isEqualNode(util.htmlToNode(result1))
 
       lazyPromise.then ->
-        window.requestAnimationFrame ->
+        delay ->
           b lazyRuns, 1
           b root.isEqualNode(util.htmlToNode(result2))
           done()
@@ -198,8 +200,8 @@ describe 'router', ->
     z.router.use (req, res) ->
       res.send z router, {path: req.path, query: req.query}
     z.router.go '/testUnbindLazy'
-    window.requestAnimationFrame ->
-      b appDrawCnt, 2 # FIXME: 1
+    delay ->
+      b appDrawCnt, 2
       b app2DrawCnt, 0
 
       window.requestAnimationFrame ->
@@ -207,20 +209,20 @@ describe 'router', ->
 
         window.requestAnimationFrame ->
 
-          b appDrawCnt, 2 # FIXME: 1
-          b app2DrawCnt, 2 # FIXME: 1
+          b appDrawCnt, 2
+          b app2DrawCnt, 2
 
           window.requestAnimationFrame ->
-            b appDrawCnt, 2 # FIXME: 1
-            b app2DrawCnt, 2 # FIXME: 1
+            b appDrawCnt, 2
+            b app2DrawCnt, 2
 
             # should not cause re-draw
             lazyPromise.resolve 'x'
 
             lazyPromise.then ->
               window.requestAnimationFrame ->
-                b appDrawCnt, 2 # FIXME: 1
-                b app2DrawCnt, 2 # FIXME: 1
+                b appDrawCnt, 2
+                b app2DrawCnt, 2
                 done()
 
 
@@ -349,7 +351,7 @@ describe 'router', ->
       res.send z router, {path: req.path, query: req.query}
     b root.isEqualNode(util.htmlToNode(result1))
     z.router.go()
-    window.requestAnimationFrame ->
+    delay ->
       b root.isEqualNode(util.htmlToNode(result2))
       b window.location.hash, '#/test-pre-hash'
       done()
@@ -376,7 +378,7 @@ describe 'router', ->
     b root.isEqualNode(util.htmlToNode(result1))
     z.router.go()
 
-    window.requestAnimationFrame ->
+    delay ->
       b root.isEqualNode(util.htmlToNode(result2))
       b window.location.hash, '#/test-pre-hash-search?x=abc'
       done()
@@ -402,12 +404,11 @@ describe 'router', ->
     b root.isEqualNode(util.htmlToNode(result1))
     z.router.go()
 
-    window.requestAnimationFrame ->
+    delay ->
       b root.isEqualNode(util.htmlToNode(result2))
       b window.location.pathname, '/test-pre'
       done()
 
-  # FIXME: gross
   it 'routes to default current path in path mode with query string', (done) ->
     class App
       render: ({params, query}) ->
@@ -429,7 +430,7 @@ describe 'router', ->
       res.send z router, {path: req.path, query: req.query}
     b root.isEqualNode(util.htmlToNode(result1))
     z.router.go()
-    window.requestAnimationFrame ->
+    delay ->
       b root.isEqualNode(util.htmlToNode(result2))
       b window.location.pathname, '/test-pre-search'
       b window.location.search, '?x=abc'
@@ -457,19 +458,22 @@ describe 'router', ->
     result2 = '<div><div>World Hello</div></div>'
 
     z.router.go '/test5'
-
     window.location.hash = '/test5'
-    b root.isEqualNode(util.htmlToNode(result1))
 
-    window.location.hash = '/test6'
-    window.requestAnimationFrame ->
-      b root.isEqualNode(util.htmlToNode(result2))
+    delay ->
+      b root.isEqualNode(util.htmlToNode(result1))
+      window.location.hash = '/test6'
 
-      window.location.hash = '/test5'
-      b window.location.hash, '#/test5'
-      window.requestAnimationFrame ->
-        b root.isEqualNode(util.htmlToNode(result1))
-        done()
+      setTimeout ->
+        b root.isEqualNode(util.htmlToNode(result2))
+        window.location.hash = '/test5'
+        b window.location.hash, '#/test5'
+
+        setTimeout ->
+          b root.isEqualNode(util.htmlToNode(result1))
+          done()
+        , 90
+      , 90
 
   it 'responds to popstate', (done) ->
     class App
@@ -492,23 +496,25 @@ describe 'router', ->
     result1 = '<div><div>Hello World</div></div>'
     result2 = '<div><div>World Hello</div></div>'
 
-
     z.router.go '/testa'
     z.router.go '/testb'
-    window.history.back()
-    setTimeout ->
-      b root.isEqualNode(util.htmlToNode(result1))
-      z.router.go '/testb'
-      z.router.go '/testa'
+    delay ->
       window.history.back()
-      setTimeout ->
-        b root.isEqualNode(util.htmlToNode(result2))
-        b window.location.pathname, '/testb'
-        done()
-      , 90
-    , 120
 
-  it 'doesn\'t respond to popstate before initial route', ->
+      delay ->
+        b root.isEqualNode(util.htmlToNode(result1))
+        z.router.go '/testb'
+        z.router.go '/testa'
+
+        delay ->
+          window.history.back()
+
+          delay ->
+            b root.isEqualNode(util.htmlToNode(result2))
+            b window.location.pathname, '/testb'
+            done()
+
+  it 'doesn\'t respond to popstate before initial route', (done) ->
     class App
       render: ->
         z 'div', 'Hello World'
@@ -531,7 +537,10 @@ describe 'router', ->
     b root.isEqualNode(util.htmlToNode(result1))
 
     z.router.go '/'
-    b root.isEqualNode(util.htmlToNode(result2))
+
+    delay ->
+      b root.isEqualNode(util.htmlToNode(result2))
+      done()
 
   it 'passes params', (done) ->
     class App
@@ -548,7 +557,7 @@ describe 'router', ->
       res.send z router, {path: req.path, query: req.query}
     result = '<div><div>Hello world</div></div>'
     z.router.go('/test/world')
-    window.requestAnimationFrame ->
+    delay ->
       b root.isEqualNode(util.htmlToNode(result))
       done()
 
@@ -576,78 +585,77 @@ describe 'router', ->
 
     z.router.go '/test10'
 
-    window.requestAnimationFrame ->
+    delay ->
       b window.location.pathname, '/login2'
       done()
 
   # TODO: make sure batching to DOM (not necessarily render) happens
   # on animationFrame not just nextTick
-  # FIXME
-  # it 'batches redraws', (done) ->
-  #   drawCnt = 0
-  #   changeSubject = new Rx.BehaviorSubject null
-  #   class App
-  #     constructor: ->
-  #       @state = z.state
-  #         change: changeSubject
-  #     render: ->
-  #       drawCnt += 1
-  #       z 'div', 'Hello World'
-  #
-  #   router = new Router()
-  #   router.add '/testBatchRedraw', new App()
-  #
-  #   root = document.createElement 'div'
-  #
-  #   z.router.init {$$root: root}
-  #   z.router.use (req, res) ->
-  #     res.send z router, {path: req.path, query: req.query}
-  #
-  #   z.router.go '/testBatchRedraw'
-  #   z.router.go '/testBatchRedraw'
-  #   z.router.go '/testBatchRedraw'
-  #   z.router.go '/testBatchRedraw'
-  #   z.router.go '/testBatchRedraw'
-  #
-  #   # FIXME
-  #   # b drawCnt, 1
-  #
-  #   window.requestAnimationFrame ->
-  #     b drawCnt, 2 # FIXME: 1
-  #
-  #     changeSubject.onNext 1
-  #     changeSubject.onNext 2
-  #     changeSubject.onNext 3
-  #     changeSubject.onNext 4
-  #     changeSubject.onNext 5
-  #     changeSubject.onNext 6
-  #
-  #     window.requestAnimationFrame ->
-  #       # FIXME
-  #       window.requestAnimationFrame ->
-  #       # setTimeout -> # afterMount hook delay
-  #         b drawCnt, 5 # FIXME: 2
-  #
-  #         changeSubject.onNext 7
-  #         changeSubject.onNext 8
-  #         changeSubject.onNext 9
-  #         changeSubject.onNext 10
-  #         changeSubject.onNext 11
-  #         changeSubject.onNext 12
-  #
-  #         window.requestAnimationFrame ->
-  #           b drawCnt, 7 # FIXME: 3
-  #
-  #           changeSubject.onNext 7
-  #           changeSubject.onNext 8
-  #           changeSubject.onNext 9
-  #           changeSubject.onNext 10
-  #           changeSubject.onNext 11
-  #           changeSubject.onNext 12
-  #
-  #           window.requestAnimationFrame ->
-  #             b drawCnt, 9 # FIXME: 4
-  #             done()
+  it 'batches redraws', (done) ->
+    changeSubject = new Rx.BehaviorSubject 0
+    class App
+      constructor: ->
+        @state = z.state
+          change: changeSubject
+      render: =>
+        z 'div', "#{@state.getValue().change}"
+
+    router = new Router()
+    router.add '/testBatchRedraw', new App()
+
+    root = document.createElement 'div'
+
+    z.router.init {$$root: root}
+    z.router.use (req, res) ->
+      res.send z router, {path: req.path, query: req.query}
+
+    z.router.go '/testBatchRedraw'
+
+    result1 = '<div></div>'
+    result2 = '<div><div>0</div></div>'
+    result3 = '<div><div>6</div></div>'
+    result4 = '<div><div>12</div></div>'
+    result5 = '<div><div>18</div></div>'
+
+    b root.isEqualNode(util.htmlToNode(result1))
+
+    delay ->
+      b root.isEqualNode(util.htmlToNode(result2))
+
+      changeSubject.onNext 1
+      b root.isEqualNode(util.htmlToNode(result2))
+      changeSubject.onNext 2
+      b root.isEqualNode(util.htmlToNode(result2))
+      changeSubject.onNext 3
+      changeSubject.onNext 4
+      changeSubject.onNext 5
+      changeSubject.onNext 6
+
+      window.requestAnimationFrame ->
+        b root.isEqualNode(util.htmlToNode(result3))
+
+        changeSubject.onNext 7
+        changeSubject.onNext 8
+        changeSubject.onNext 9
+        b root.isEqualNode(util.htmlToNode(result3))
+        changeSubject.onNext 10
+        changeSubject.onNext 11
+        changeSubject.onNext 12
+
+        window.requestAnimationFrame ->
+          b root.isEqualNode(util.htmlToNode(result4))
+
+          changeSubject.onNext 13
+          changeSubject.onNext 14
+          changeSubject.onNext 15
+          b root.isEqualNode(util.htmlToNode(result4))
+          changeSubject.onNext 16
+          changeSubject.onNext 17
+          changeSubject.onNext 18
+
+          window.requestAnimationFrame ->
+            b root.isEqualNode(util.htmlToNode(result5))
+            done()
 
   it 'when re-using components, all instances are updated', (done) ->
     subject = new Rx.BehaviorSubject 'abc'
@@ -720,7 +728,7 @@ describe 'router', ->
               '</div></div>'
 
     z.router.go '/test-reuse'
-    window.requestAnimationFrame ->
+    delay ->
       b root.isEqualNode(util.htmlToNode(result1))
 
       # change in props leads to both updating
@@ -768,7 +776,7 @@ describe 'router', ->
 
     result = '<div id="zorium-root"><div>test-content</div></div>'
 
-    window.requestAnimationFrame ->
+    delay ->
       b document.title, 'test_title'
       b root.isEqualNode(util.htmlToNode(result))
       done()
@@ -800,7 +808,7 @@ describe 'router', ->
 
     result = '<div id="zorium-root"><div class="t">test-content</div></div>'
 
-    window.requestAnimationFrame ->
+    delay ->
       b root.isEqualNode(util.htmlToNode(result))
       done()
 
@@ -838,16 +846,15 @@ describe 'router', ->
     result1 = '<div id="zorium-root"><div class="">changeme</div></div>'
     result2 = '<div id="zorium-root"><div class="">xxx</div></div>'
 
-    window.requestAnimationFrame ->
+    delay ->
       b root.isEqualNode(util.htmlToNode(result1))
 
       $root.state.set
         changeme: 'xxx'
 
-      setTimeout ->
+      delay ->
         b root.isEqualNode(util.htmlToNode(result2))
         done()
-      , 20
 
   it 'binds updates when adding a new child', (done) ->
     subject = new Rx.BehaviorSubject 'abc'
@@ -891,19 +898,17 @@ describe 'router', ->
     result3 = '<div><div><div>xyz</div></div></div>'
 
     z.router.go '/test-new-child'
-    window.requestAnimationFrame ->
+    delay ->
       b root.isEqualNode(util.htmlToNode(result1))
 
       $a.addChild $child
-      setTimeout ->
+      delay ->
         b root.isEqualNode(util.htmlToNode(result2))
 
         subject.onNext 'xyz'
-        setTimeout ->
+        delay ->
           b root.isEqualNode(util.htmlToNode(result3))
           done()
-        , 20
-      , 20
 
   describe 'Anchor Tag', ->
     it 'defaults anchor tag onclick event to use router', (done) ->

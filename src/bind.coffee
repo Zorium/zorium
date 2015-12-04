@@ -7,7 +7,7 @@ render = require './render'
 isComponent = require './is_component'
 ZThunk = require './z_thunk'
 
-# FIXME: util?
+# TODO: util?
 forkJoin = (streams) ->
   Rx.Observable.combineLatest streams, (results...) -> results
 
@@ -18,7 +18,7 @@ watch = (tree) ->
 
     return state
       .flatMapLatest ->
-        # FIXME: ugly?
+        # TODO: ugly?
         subtree = zthunk.render()
         forkJoin _.map subtree.children, watch
         .map ->
@@ -42,5 +42,5 @@ module.exports = ($$root, tree) ->
     $$root._zorium_bind_disposable.dispose()
 
   $$root._zorium_bind_disposable = watch tree
-  .subscribe (tree) ->
+  .subscribe _.debounce (tree) ->
     render $$root, tree
