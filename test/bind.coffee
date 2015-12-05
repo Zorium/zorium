@@ -4,6 +4,7 @@ z = require '../src/zorium'
 bind = require '../src/bind'
 util = require './util'
 
+# TODO: performance tests on large trees
 describe 'bind()', ->
   it 'binds, basic', (done) ->
     class App

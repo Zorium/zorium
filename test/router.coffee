@@ -630,7 +630,7 @@ describe 'router', ->
       changeSubject.onNext 5
       changeSubject.onNext 6
 
-      window.requestAnimationFrame ->
+      delay ->
         b root.isEqualNode(util.htmlToNode(result3))
 
         changeSubject.onNext 7
@@ -641,7 +641,7 @@ describe 'router', ->
         changeSubject.onNext 11
         changeSubject.onNext 12
 
-        window.requestAnimationFrame ->
+        delay ->
           b root.isEqualNode(util.htmlToNode(result4))
 
           changeSubject.onNext 13
@@ -652,7 +652,7 @@ describe 'router', ->
           changeSubject.onNext 17
           changeSubject.onNext 18
 
-          window.requestAnimationFrame ->
+          delay ->
             b root.isEqualNode(util.htmlToNode(result5))
             done()
 

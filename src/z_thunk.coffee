@@ -36,18 +36,23 @@ module.exports = class ZThunk
         @component.__isDirty = true
         @component.__onDirty?()
 
+      # FIXME: this logic is brittle, breaks on A,B,B' (A' is removed instead)
+      @component.__disposables = []
       @component.__hook ?= hook
         beforeMount: ($el) =>
           # Wait for insertion into the DOM
+          # TODO: add a test for this verifying that hook order matters
+          # TODO: test race condition where mount is called after unmount
+          # TODO: document how a component may be mounted twice for
+          # a page transition of one state to the next (think about this more)
           setTimeout =>
-            if not @component.__disposable? and state?
-              @component.__disposable = state.subscribe dirty
-            # TODO: add a test for this verifying that hook order matters
+            if state?
+              @component.__disposables.push state.subscribe dirty
             @component.afterMount?($el)
         beforeUnmount: =>
           @component.beforeUnmount?()
-          @component.__disposable?.dispose()
-          @component.__disposable = null
+          disposable = @component.__disposables.shift()
+          disposable?.dispose()
 
       currentChildren = []
       @component.__onRender = (tree) =>
