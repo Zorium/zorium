@@ -160,6 +160,46 @@ describe 'bind()', ->
         b root.isEqualNode(util.htmlToNode(result2))
         done()
 
+  it 'binds new child', (done) ->
+    subject1 = new Rx.BehaviorSubject(null)
+    subject2 = new Rx.BehaviorSubject('2')
+
+    class Root
+      constructor: ->
+        @child = new Child()
+        @state = z.state
+          subject: subject1
+      render: =>
+        z 'div',
+          if @state.getValue().subject?
+            @child
+
+    class Child
+      constructor: ->
+        @state = z.state
+          subject: subject2
+      render: =>
+        z 'div', "#{@state.getValue().subject}"
+
+    root = document.createElement 'div'
+    result1 = '<div></div>'
+    result2 = '<div><div>2</div></div>'
+    result3 = '<div><div>3</div></div>'
+
+    bind root, new Root()
+    window.requestAnimationFrame ->
+      b root.isEqualNode(util.htmlToNode(result1))
+      subject1.onNext true
+
+      window.requestAnimationFrame ->
+        b root.isEqualNode(util.htmlToNode(result2))
+        subject2.onNext '3'
+
+        setTimeout ->
+          window.requestAnimationFrame ->
+            b root.isEqualNode(util.htmlToNode(result3))
+            done()
+
   # TODO: this test is perhaps a bit superfluous
   it 'binds a deep mutating tree', (done) ->
     subject1 = new Rx.BehaviorSubject('1')

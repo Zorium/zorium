@@ -41,10 +41,7 @@ parseZfuncArgs = (tagName, children...) ->
 
 renderChild = (child, props = {}) ->
   if isComponent child
-    # TODO: understand impact, see bind.coffee (~L38)
-    if child._zthunk? and _.isEqual child._zthunk.props, props
-      return child._zthunk
-    return child._zthunk = new ZThunk {component: child, props}
+    return new ZThunk {component: child, props}
 
   if isThunk(child) and child.component?
     return renderChild child.component, child.props

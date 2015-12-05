@@ -111,12 +111,16 @@ class Router
     else
       window.location.hash = url
 
+    # TODO: how this is used in zorium-seed shows that just exposing a
+    # request stream and bind() is probably sufficient
     @middleware
       path: pathname
       query: query
     ,
       send: _.once ($component) =>
-        bind @config.$$root, $component
+        if $component isnt @$lastRoot
+          @$lastRoot = $component
+          bind @config.$$root, @$lastRoot
 
 router = new Router()
 module.exports = {

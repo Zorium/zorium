@@ -208,13 +208,12 @@ describe 'router', ->
         z.router.go '/testUnbindLazy2'
 
         window.requestAnimationFrame ->
-
           b appDrawCnt, 2
-          b app2DrawCnt, 2
+          b app2DrawCnt, 1
 
           window.requestAnimationFrame ->
             b appDrawCnt, 2
-            b app2DrawCnt, 2
+            b app2DrawCnt, 1
 
             # should not cause re-draw
             lazyPromise.resolve 'x'
@@ -222,7 +221,7 @@ describe 'router', ->
             lazyPromise.then ->
               window.requestAnimationFrame ->
                 b appDrawCnt, 2
-                b app2DrawCnt, 2
+                b app2DrawCnt, 1
                 done()
 
 
@@ -611,7 +610,7 @@ describe 'router', ->
 
     z.router.go '/testBatchRedraw'
 
-    result1 = '<div></div>'
+    result1 = '<div><div>0</div></div>'
     result2 = '<div><div>0</div></div>'
     result3 = '<div><div>6</div></div>'
     result4 = '<div><div>12</div></div>'
@@ -893,19 +892,19 @@ describe 'router', ->
     z.router.use (req, res) ->
       res.send z router, {path: req.path, query: req.query}
 
-    result1 = '<div></div>'
+    result1 = '<div><div></div></div>'
     result2 = '<div><div><div>abc</div></div></div>'
     result3 = '<div><div><div>xyz</div></div></div>'
 
     z.router.go '/test-new-child'
     delay ->
       b root.isEqualNode(util.htmlToNode(result1))
-
       $a.addChild $child
+
       delay ->
         b root.isEqualNode(util.htmlToNode(result2))
-
         subject.onNext 'xyz'
+
         delay ->
           b root.isEqualNode(util.htmlToNode(result3))
           done()
