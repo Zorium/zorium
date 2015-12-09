@@ -1,5 +1,6 @@
 b = require 'b-assert'
 Rx = require 'rx-lite'
+Promise = require 'promiz'
 
 z = require '../src/zorium'
 
