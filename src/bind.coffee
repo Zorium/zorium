@@ -14,12 +14,10 @@ module.exports = ($$root, tree) ->
   if isComponent tree
     tree = z tree
 
-  # FIXME
+  # TODO: support trees, not just components
   unless isZThunk tree
-    throw new Error 'Not passed a component'
+    throw new Error 'Passed a tree, not a component'
 
-  # FIXME: if re-binding does not stop listening for old tree changes
-  # though maybe it's fine because the component unmounts
   onchange = _.debounce ->
     render $$root, new ZThunk {
       component: tree.component
