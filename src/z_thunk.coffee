@@ -36,23 +36,40 @@ module.exports = class ZThunk
         @component.__isDirty = true
         @component.__onDirty?()
 
-      # FIXME: this logic is brittle, breaks on A,B,B' (A' is removed instead)
-      @component.__disposables = []
-      @component.__hook ?= hook
-        beforeMount: ($el) =>
-          # Wait for insertion into the DOM
-          # TODO: add a test for this verifying that hook order matters
-          # TODO: test race condition where mount is called after unmount
-          # TODO: document how a component may be mounted twice for
-          # a page transition of one state to the next (think about this more)
-          setTimeout =>
-            if state?
-              @component.__disposables.push state.subscribe dirty
-            @component.afterMount?($el)
-        beforeUnmount: =>
+      mountQueueCnt = 0
+      unmountQueueCnt = 0
+      mountedEl = null
+      runHooks = =>
+        $el = mountedEl
+
+        if mountQueueCnt > unmountQueueCnt + 1
+          throw new Error "Component '#{@component.constructor?.name}'
+            cannot be mounted twice at the same time"
+
+        if unmountQueueCnt > 0
           @component.beforeUnmount?()
-          disposable = @component.__disposables.shift()
-          disposable?.dispose()
+          @component.__disposable?.dispose()
+          unmountQueueCnt = 0
+          mountedEl = null
+
+        if mountQueueCnt > 0 and mountQueueCnt >= unmountQueueCnt
+          @component.__disposable = state?.subscribe dirty
+          @component.afterMount?($el)
+          mountQueueCnt = 0
+
+      @component.__hook ?= hook
+        beforeMount: ($el) ->
+          mountQueueCnt += 1
+          mountedEl = $el
+
+          setTimeout ->
+            runHooks()
+
+        beforeUnmount: ->
+          unmountQueueCnt += 1
+
+          setTimeout ->
+            runHooks()
 
       currentChildren = []
       @component.__onRender = (tree) =>

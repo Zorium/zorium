@@ -114,8 +114,10 @@ describe 'Lifecycle Callbacks', ->
         b unmountCalled, 0
         z.render root, z 'div'
         z.render root, bind
-        b unmountCalled, 1
-        done()
+
+        setTimeout ->
+          b unmountCalled, 1
+          done()
       , 20
 
     it 'remounts after unmounting', (done) ->
@@ -137,12 +139,13 @@ describe 'Lifecycle Callbacks', ->
         b mountCalled, 1
         z.render root, z 'div'
 
-        b unmountCalled, 1
-        z.render root, bind
-
         setTimeout ->
-          b mountCalled, 2
-          done()
+          b unmountCalled, 1
+          z.render root, bind
+
+          setTimeout ->
+            b mountCalled, 2
+            done()
 
     it 'only doesn\'t get called if not unmounted', (done) ->
       unmountCalled = 0
@@ -175,7 +178,7 @@ describe 'Lifecycle Callbacks', ->
             , 20
 
     # https://github.com/claydotio/zorium/issues/13
-    it 'property replacing diff calls unhook method', ->
+    it 'property replacing diff calls unhook method', (done) ->
       unmountsCalled = 0
 
       class A
@@ -196,7 +199,12 @@ describe 'Lifecycle Callbacks', ->
       root = document.createElement 'div'
 
       z.render root, $a
-      z.render root, $b
-      z.render root, z 'x'
+      setTimeout ->
+        z.render root, $b
 
-      b unmountsCalled, 2
+        setTimeout ->
+          z.render root, z 'x'
+
+          setTimeout ->
+            b unmountsCalled, 2
+            done()

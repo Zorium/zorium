@@ -54,6 +54,28 @@ describe 'bind()', ->
         b root.isEqualNode(util.htmlToNode(result2))
         done()
 
+  it 'dissalows re-using components', (done) ->
+    class Root
+      constructor: ->
+        @child = new Child()
+      render: =>
+        z 'div',
+          @child
+          @child
+
+    class Child
+      render: -> z 'div', 'x'
+
+    root = document.createElement 'div'
+
+    onerror = window.onerror
+    window.onerror = (err) ->
+      b err?
+      window.onerror = onerror
+      done()
+
+    bind root, new Root()
+
   it 'passes props', (done) ->
     subject = new Rx.BehaviorSubject(null)
 
