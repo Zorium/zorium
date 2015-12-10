@@ -34,16 +34,19 @@ module.exports = (tree, {timeout} = {}) ->
       state = zthunk.component.state
 
       # Begin resolving children before current node is stable for performance
+      # TODO: test performance assumption
       try
         _.map zthunk.render().children, untilStable
       catch err
         return Promise.reject err
 
+      # TODO: this timeout is per-component, should be global
       new Promise (resolve, reject) ->
         setTimeout ->
           reject new Error "Timeout, request took longer than #{timeout}ms"
         , timeout
 
+        # TODO: make sure this doesn't leak
         onStable = if state? then state._subscribeOnStable else (cb) -> cb()
         onStable ->
           try
