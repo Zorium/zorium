@@ -74,6 +74,7 @@ state = require './state'
 ev = require './ev'
 classKebab = require './class_kebab'
 isSimpleClick = require './is_simple_click'
+bind = require './bind'
 
 _.assign z,
   render: render
@@ -83,5 +84,6 @@ _.assign z,
   ev: ev
   classKebab: classKebab
   isSimpleClick: isSimpleClick
+  bind: bind
 
 module.exports = z
