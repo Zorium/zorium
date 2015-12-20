@@ -47,31 +47,71 @@ parseFullTree = (tree) ->
   unless tree?.tagName is 'HTML' and tree.children.length is 2
     throw new Error 'Invalid HTML base element'
 
-  $head = flatten tree.children[0]
-  $body = flatten tree.children[1]
-  $title = flatten $head.children[0]
-  $root = flatten $body.children[0]
+  $head = tree.children[0]
+  body = flatten tree.children[1]
+  root = flatten body.children[0]
 
-  unless $head?.tagName is 'HEAD' and $title?.tagName is 'TITLE'
-    throw new Error 'Invalid HEAD base element'
-
-  unless $body?.tagName is 'BODY' and $root?.properties.id is 'zorium-root'
+  unless body?.tagName is 'BODY' and root?.properties.id is 'zorium-root'
     throw new Error 'Invalid BODY base element'
 
   return {
-    $root: $root
-    title: $title?.children[0]?.text
+    $root: root
+    $head: $head
   }
 
-module.exports = ($$root, tree) ->
+renderHead = ($head) ->
+  head = flatten $head
+
+  unless head?.tagName is 'HEAD'
+    throw new Error 'Invalid HEAD base element, not type <head>'
+
+  title = head.children?[0]?.children?[0]?.text
+
+  unless title?
+    throw new Error 'Invalid HEAD base element, missing title'
+
+  document.title = title
+
+  mutable = _.filter head.children, (node) ->
+    node.tagName is 'META' or node.tagName is 'LINK'
+
+  current = _.filter document.head.children, (node) ->
+    node.tagName is 'META' or node.tagName is 'LINK'
+
+  if _.isEmpty mutable
+    return null
+
+  unless mutable.length is current.length
+    throw new Error 'Cannot mutate <head> element count dynamically'
+
+  _.map _.zip(current, mutable), ([current, mutable]) ->
+    if current.tagName isnt mutable.tagName
+      throw new Error 'Type mismatch when updating <head>'
+
+    _.map mutable.properties, (val, key) ->
+      if current[key] isnt val
+        current[key] = val
+
+module.exports = render = ($$root, tree) ->
   if isComponent tree
     tree = z tree
 
   if isThunk tree
     rendered = tree.render()
     if rendered.tagName is 'HTML'
-      {title, $root} = parseFullTree(rendered)
-      document.title = title
+      {$root, $head} = parseFullTree(rendered)
+
+      onchange = _.debounce ->
+        renderHead $head
+
+      document.head.__disposable?.dispose()
+      hasState = $head.component?.state?
+
+      if hasState
+        document.head.__disposable = $head.component.state.subscribe onchange
+      else
+        renderHead $head
+
       tree = $root
 
   unless $$root._zorium_tree?
