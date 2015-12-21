@@ -3,6 +3,7 @@ h = require 'virtual-dom/h'
 isThunk = require 'virtual-dom/vnode/is-thunk'
 
 isComponent = require './is_component'
+getZThunks = require './get_z_thunks'
 
 # TODO: explain why the fat arrow breaks it...
 hook = ({beforeMount, beforeUnmount}) ->
@@ -13,15 +14,6 @@ hook = ({beforeMount, beforeUnmount}) ->
       beforeUnmount()
 
   new Hook()
-
-isZThunk = (node) ->
-  isThunk(node) and node.component?
-
-getZThunks = (node) ->
-  if isZThunk node
-    [node]
-  else
-    _.flatten _.map node.children, getZThunks
 
 module.exports = class ZThunk
   constructor: ({@props, @component}) ->

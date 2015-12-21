@@ -75,15 +75,18 @@ ev = require './ev'
 classKebab = require './class_kebab'
 isSimpleClick = require './is_simple_click'
 bind = require './bind'
+untilStable = require './until_stable'
 
-_.assign z,
-  render: render
-  renderToString: renderToString
-  router: router
-  state: state
-  ev: ev
-  classKebab: classKebab
-  isSimpleClick: isSimpleClick
-  bind: bind
+_.assign z, {
+  render
+  renderToString
+  router
+  state
+  ev
+  classKebab
+  isSimpleClick
+  bind
+  untilStable
+}
 
 module.exports = z

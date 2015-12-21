@@ -6,9 +6,7 @@ z = require './z'
 render = require './render'
 isComponent = require './is_component'
 ZThunk = require './z_thunk'
-
-isZThunk = (node) ->
-  isThunk(node) and node.component?
+isZThunk = require './is_z_thunk'
 
 module.exports = ($$root, tree) ->
   if isComponent tree

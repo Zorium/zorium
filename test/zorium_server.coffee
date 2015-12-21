@@ -1,6 +1,5 @@
 b = require 'b-assert'
 Rx = require 'rx-lite'
-Promise = require 'promiz'
 
 z = require '../src/zorium'
 
@@ -73,9 +72,6 @@ describe 'server side rendering', ->
       render: =>
         {abc} = @state.getValue()
 
-        unless abc?
-          @pending.onNext 'abc'
-
         z 'div', abc
 
     class Root
@@ -89,7 +85,10 @@ describe 'server side rendering', ->
           $component
 
     $root = new Root()
-    componentSubject.onNext new AsyncChild()
+    child = new AsyncChild()
+    componentSubject.onNext child
+    setTimeout ->
+      child.pending.onNext 'abc'
     z.renderToString $root
     .then (html) ->
       b html, '<div><div>abc</div></div>'
