@@ -41,13 +41,14 @@ module.exports = class ZThunk
         if unmountQueueCnt > 0
           @component.beforeUnmount?()
           @component.__disposable?.dispose()
-          unmountQueueCnt = 0
           mountedEl = null
 
-        if mountQueueCnt > 0 and mountQueueCnt >= unmountQueueCnt
+        if mountQueueCnt > 0 and mountQueueCnt > unmountQueueCnt
           @component.__disposable = state?.subscribe dirty
           @component.afterMount?($el)
-          mountQueueCnt = 0
+
+        unmountQueueCnt = 0
+        mountQueueCnt = 0
 
       @component.__hook ?= hook
         beforeMount: ($el) ->
