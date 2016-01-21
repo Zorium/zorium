@@ -31,8 +31,9 @@ module.exports = class ZThunk
       mountQueueCnt = 0
       unmountQueueCnt = 0
       mountedEl = null
+      isMounted = false
       runHooks = =>
-        $el = mountedEl
+        wasMounted = isMounted
 
         if mountQueueCnt > unmountQueueCnt + 1
           throw new Error "Component '#{@component.constructor?.name}'
@@ -41,11 +42,16 @@ module.exports = class ZThunk
         if unmountQueueCnt > 0
           @component.beforeUnmount?()
           @component.__disposable?.dispose()
-          mountedEl = null
+          isMounted = false
 
-        if mountQueueCnt > 0 and mountQueueCnt > unmountQueueCnt
+        # basic if mounts > unmounts but also
+        # if component is mounted and unmountCnt == mountCnt, re-mount it!
+        if mountQueueCnt > 0 and \
+            (mountQueueCnt > unmountQueueCnt or
+            wasMounted and mountQueueCnt is unmountQueueCnt)
           @component.__disposable = state?.subscribe dirty
-          @component.afterMount?($el)
+          @component.afterMount?(mountedEl)
+          isMounted = true
 
         unmountQueueCnt = 0
         mountQueueCnt = 0
