@@ -24,15 +24,10 @@ untilStable = (zthunk) ->
   catch err
     return Promise.reject err
 
-  new Promise (resolve, reject) ->
-    # TODO: make sure this doesn't leak
-    onStable = if state? then state._subscribeOnStable else (cb) -> cb()
-    onStable ->
-      try
-        children = getZThunks zthunk.render()
-      catch err
-        return reject err
-      resolve Promise.all _.map children, untilStable
+  onStable = if state? then state._onStable else (-> Promise.resolve null)
+  onStable().then ->
+    children = getZThunks zthunk.render()
+    Promise.all _.map children, untilStable
   .then -> zthunk
 
 module.exports = (tree, {timeout} = {}) ->

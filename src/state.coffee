@@ -21,6 +21,7 @@ subjectFromInitialState = (initialState) ->
     else
       val
 
+# TODO: fix cyclomatic complexity
 module.exports = (initialState) ->
   assert _.isPlainObject(initialState), 'initialState must be a plain object'
 
@@ -61,11 +62,27 @@ module.exports = (initialState) ->
 
     stateSubject.onNext currentState
 
-  state._subscribeOnStable = (cb) ->
-    hasSettled = false
-    state.subscribe (currentState) ->
-      if pendingSettlement is 0 and not hasSettled
-        hasSettled = true
-        cb true
+  stablePromise = null
+  state._onStable = ->
+    if stablePromise?
+      return stablePromise
+    disposable = null
+    stablePromise = new Promise (resolve) ->
+      hasSettled = false
+      # TODO: make sure this doesn't leak server-side
+      disposable = state.subscribe ->
+        if pendingSettlement is 0 and not hasSettled
+          hasSettled = true
+          resolve()
+    .catch (err) ->
+      # disposing here server-side breaks cache
+      if window?
+        disposable?.dispose()
+      throw err
+    .then ->
+      # disposing here server-side breaks cache
+      if window?
+        disposable.dispose()
+      return null
 
   return state
