@@ -59,38 +59,49 @@ parseFullTree = (tree) ->
     $head: $head
   }
 
+assert = (isTrue, message) ->
+  unless isTrue?
+    throw new Error message
+
 renderHead = ($head) ->
   head = flatten $head
 
-  unless head?.tagName is 'HEAD'
-    throw new Error 'Invalid HEAD base element, not type <head>'
+  assert head?.tagName is 'HEAD', 'Invalid HEAD base element, not type <head>'
 
   title = head.children?[0]?.children?[0]?.text
 
-  unless title?
-    throw new Error 'Invalid HEAD base element, missing title'
+  assert title?, 'Invalid HEAD base element, missing title'
 
-  document.title = title
+  if document.title isnt title
+    document.title = title
 
-  mutable = _.filter head.children, (node) ->
+  current = _.filter document.head.__lastTree.children, (node) ->
     node.tagName is 'META' or node.tagName is 'LINK'
 
-  current = _.filter document.head.children, (node) ->
+  $current = document.head.querySelectorAll 'meta,link'
+
+  next = _.filter head.children, (node) ->
     node.tagName is 'META' or node.tagName is 'LINK'
 
-  if _.isEmpty mutable
+  if _.isEmpty next
     return null
 
-  unless mutable.length is current.length
-    throw new Error 'Cannot mutate <head> element count dynamically'
+  assert $current.length is current.length, '<head> does not match virtual-dom'
+  assert current.length is next.length,
+    'Cannot mutate <head> element count dynamically'
 
-  _.map _.zip(current, mutable), ([current, mutable]) ->
-    if current.tagName isnt mutable.tagName
-      throw new Error 'Type mismatch when updating <head>'
+  _.map current, (currentNode, index) ->
+    $currentNode = $current[index]
+    nextNode = next[index]
 
-    _.map mutable.properties, (val, key) ->
-      if current[key] isnt val
-        current[key] = val
+    assert nextNode.tagName isnt currentNode.tagName,
+      'Type mismatch when updating <head>'
+
+    _.map nextNode.properties, (val, key) ->
+      if currentNode[key] isnt val
+        $currentNode[key] = val
+
+  document.head.__lastTree = head
 
 module.exports = render = ($$root, tree) ->
   if isComponent tree
@@ -106,6 +117,7 @@ module.exports = render = ($$root, tree) ->
 
       document.head.__disposable?.dispose()
       hasState = $head.component?.state?
+      document.head.__lastTree = parser document.head
 
       if hasState
         document.head.__disposable = $head.component.state.subscribe onchange
