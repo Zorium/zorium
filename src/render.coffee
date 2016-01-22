@@ -76,12 +76,12 @@ renderHead = ($head) ->
     document.title = title
 
   current = _.filter document.head.__lastTree.children, (node) ->
-    node.tagName is 'META' or node.tagName is 'LINK'
+    node.tagName is 'META' #or node.tagName is 'LINK'
 
   $current = document.head.querySelectorAll 'meta,link'
 
   next = _.filter head.children, (node) ->
-    node.tagName is 'META' or node.tagName is 'LINK'
+    node.tagName is 'META' #or node.tagName is 'LINK'
 
   if _.isEmpty next
     return null
