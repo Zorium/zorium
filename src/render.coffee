@@ -97,8 +97,8 @@ renderHead = ($head) ->
     assert nextNode.tagName isnt currentNode.tagName,
       'Type mismatch when updating <head>'
 
-    _.map nextNode.properties, (val, key) ->
-      if currentNode[key] isnt val
+    _.map currentNode.properties, (val, key) ->
+      if nextNode.properties[key] isnt val
         $currentNode[key] = val
 
   document.head.__lastTree = head
