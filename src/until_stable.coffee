@@ -16,19 +16,21 @@ getZThunks = require './get_z_thunks'
 untilStable = (zthunk) ->
   state = zthunk.component.state
 
-  # Begin resolving children before current node is stable for performance
-  # TODO: test performance assumption
   try
-    children = getZThunks zthunk.render()
-    Promise.all _.map children, untilStable
+    # Begin resolving children before current node is stable for performance
+    # TODO: test performance assumption
+    preloadPromise = Promise.all _.map getZThunks zthunk.render(), untilStable
+    onStable = if state? then state._onStable else (-> Promise.resolve null)
+    Promise.all [
+      preloadPromise
+      onStable()
+    ]
+    .then ->
+      children = getZThunks zthunk.render()
+      Promise.all _.map children, untilStable
+    .then -> zthunk
   catch err
     return Promise.reject err
-
-  onStable = if state? then state._onStable else (-> Promise.resolve null)
-  onStable().then ->
-    children = getZThunks zthunk.render()
-    Promise.all _.map children, untilStable
-  .then -> zthunk
 
 module.exports = (tree, {timeout} = {}) ->
   if isComponent tree
@@ -37,6 +39,7 @@ module.exports = (tree, {timeout} = {}) ->
   return new Promise (resolve, reject) ->
     if timeout?
       setTimeout ->
+        # TODO: this, print better explanation (maybe only in dev mode)
         reject new Error "Timeout, request took longer than #{timeout}ms"
       , timeout
 

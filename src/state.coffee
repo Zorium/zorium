@@ -40,8 +40,12 @@ module.exports = (initialState) ->
     if val?.subscribe?
       pendingSettlement += 1
       hasSettled = false
-
-      Rx.Observable.just(null).concat val.doOnNext (update) ->
+      val = val
+      .doOnError ->
+        unless hasSettled
+          pendingSettlement -= 1
+          hasSettled = true
+      .doOnNext (update) ->
         unless hasSettled
           pendingSettlement -= 1
           hasSettled = true
@@ -51,6 +55,7 @@ module.exports = (initialState) ->
           stateSubject.onNext _.defaults {
             "#{key}": update
           }, currentState
+      Rx.Observable.just(null).concat val
     else
       Rx.Observable.just null
   .flatMapLatest -> stateSubject
@@ -75,13 +80,12 @@ module.exports = (initialState) ->
     if stablePromise?
       return stablePromise
     disposable = null
-    stablePromise = new Promise (resolve) ->
-      hasSettled = false
+    stablePromise = new Promise (resolve, reject) ->
       # TODO: make sure this doesn't leak server-side
       disposable = state.subscribe ->
-        if pendingSettlement is 0 and not hasSettled
-          hasSettled = true
+        if pendingSettlement is 0
           resolve()
+      , reject
     .catch (err) ->
       # disposing here server-side breaks cache
       if window?
