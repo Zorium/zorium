@@ -60,7 +60,7 @@ parseFullTree = (tree) ->
   }
 
 assert = (isTrue, message) ->
-  unless isTrue?
+  unless isTrue
     throw new Error message
 
 renderHead = ($head) ->
@@ -94,7 +94,7 @@ renderHead = ($head) ->
     $currentNode = $current[index]
     nextNode = next[index]
 
-    assert nextNode.tagName isnt currentNode.tagName,
+    assert nextNode.tagName is currentNode.tagName,
       'Type mismatch when updating <head>'
 
     _.map currentNode.properties, (val, key) ->
