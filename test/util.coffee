@@ -1,5 +1,3 @@
-Promise = require 'promiz'
-
 module.exports =
   htmlToNode: (html) ->
     root = document.createElement 'div'

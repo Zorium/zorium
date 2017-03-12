@@ -1,4 +1,5 @@
 b = require 'b-assert'
+Rx = require 'rxjs/Rx'
 Routes = require 'routes'
 createElement = require 'virtual-dom/create-element'
 
@@ -83,7 +84,7 @@ describe 'router', ->
     z.router.go '/testaRedraw'
     delay ->
       b root.isEqualNode(util.htmlToNode(result1))
-      subject.onNext 'xyz'
+      subject.next 'xyz'
 
       delay ->
         b root.isEqualNode(util.htmlToNode(result2))
@@ -121,7 +122,7 @@ describe 'router', ->
     delay ->
       b root.isEqualNode(util.htmlToNode(result1))
 
-      subject.onNext 'xyz'
+      subject.next 'xyz'
       delay ->
         b root.isEqualNode(util.htmlToNode(result2))
         done()
@@ -621,36 +622,36 @@ describe 'router', ->
     delay ->
       b root.isEqualNode(util.htmlToNode(result2))
 
-      changeSubject.onNext 1
+      changeSubject.next 1
       b root.isEqualNode(util.htmlToNode(result2))
-      changeSubject.onNext 2
+      changeSubject.next 2
       b root.isEqualNode(util.htmlToNode(result2))
-      changeSubject.onNext 3
-      changeSubject.onNext 4
-      changeSubject.onNext 5
-      changeSubject.onNext 6
+      changeSubject.next 3
+      changeSubject.next 4
+      changeSubject.next 5
+      changeSubject.next 6
 
       delay ->
         b root.isEqualNode(util.htmlToNode(result3))
 
-        changeSubject.onNext 7
-        changeSubject.onNext 8
-        changeSubject.onNext 9
+        changeSubject.next 7
+        changeSubject.next 8
+        changeSubject.next 9
         b root.isEqualNode(util.htmlToNode(result3))
-        changeSubject.onNext 10
-        changeSubject.onNext 11
-        changeSubject.onNext 12
+        changeSubject.next 10
+        changeSubject.next 11
+        changeSubject.next 12
 
         delay ->
           b root.isEqualNode(util.htmlToNode(result4))
 
-          changeSubject.onNext 13
-          changeSubject.onNext 14
-          changeSubject.onNext 15
+          changeSubject.next 13
+          changeSubject.next 14
+          changeSubject.next 15
           b root.isEqualNode(util.htmlToNode(result4))
-          changeSubject.onNext 16
-          changeSubject.onNext 17
-          changeSubject.onNext 18
+          changeSubject.next 16
+          changeSubject.next 17
+          changeSubject.next 18
 
           delay ->
             b root.isEqualNode(util.htmlToNode(result5))
@@ -812,7 +813,7 @@ describe 'router', ->
 
       delay ->
         b root.isEqualNode(util.htmlToNode(result2))
-        subject.onNext 'xyz'
+        subject.next 'xyz'
 
         delay ->
           b root.isEqualNode(util.htmlToNode(result3))

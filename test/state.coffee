@@ -1,5 +1,5 @@
 b = require 'b-assert'
-Promise = require 'promiz'
+Rx = require 'rxjs/Rx'
 
 z = require '../src/zorium'
 
@@ -21,7 +21,7 @@ describe 'z.state', ->
 
     promise.then ->
       b state.getValue(), {a: 'a', b: 'b', c: null}
-      subject.onNext 'c'
+      subject.next 'c'
       b state.getValue(), {a: 'a', b: 'b', c: 'c'}
 
       state.set x: 'x'
@@ -56,7 +56,7 @@ describe 'z.state', ->
       subject: subject
 
     try
-      subject.onError new Error 'err'
+      subject.error new Error 'err'
       b false
     catch err
       b err?
@@ -66,7 +66,7 @@ describe 'z.state', ->
 
     cold = Rx.Observable.defer ->
       lazyRuns += 1
-      Rx.Observable.return lazyRuns
+      Rx.Observable.of lazyRuns
 
     state = z.state
       lazy: cold

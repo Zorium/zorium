@@ -1,4 +1,5 @@
 b = require 'b-assert'
+Rx = require 'rxjs/Rx'
 
 z = require '../src/zorium'
 bind = require '../src/bind'
@@ -48,7 +49,7 @@ describe 'bind()', ->
     bind root, new Root()
     window.requestAnimationFrame ->
       b root.isEqualNode(util.htmlToNode(result1))
-      subject.onNext 'xyz'
+      subject.next 'xyz'
 
       window.requestAnimationFrame ->
         b root.isEqualNode(util.htmlToNode(result2))
@@ -68,10 +69,7 @@ describe 'bind()', ->
 
     root = document.createElement 'div'
 
-    onerror = window.onerror
-    window.onerror = (err) ->
-      b err?
-      window.onerror = onerror
+    window.__mountTwiceError = ->
       done()
 
     bind root, new Root()
@@ -102,7 +100,7 @@ describe 'bind()', ->
     bind root, new Root()
     window.requestAnimationFrame ->
       b root.isEqualNode(util.htmlToNode(result1))
-      subject.onNext 'xxx'
+      subject.next 'xxx'
 
       window.requestAnimationFrame ->
         b root.isEqualNode(util.htmlToNode(result2))
@@ -143,11 +141,11 @@ describe 'bind()', ->
     bind root, new Root()
     window.requestAnimationFrame ->
       b root.isEqualNode(util.htmlToNode(result1))
-      subject1.onNext 'xyz'
+      subject1.next 'xyz'
 
       window.requestAnimationFrame ->
         b root.isEqualNode(util.htmlToNode(result2))
-        subject2.onNext 'yyy'
+        subject2.next 'yyy'
 
         window.requestAnimationFrame ->
           b root.isEqualNode(util.htmlToNode(result3))
@@ -177,7 +175,7 @@ describe 'bind()', ->
     bind root, new Root()
     window.requestAnimationFrame ->
       b root.isEqualNode(util.htmlToNode(result1))
-      subject.onNext 'xyz'
+      subject.next 'xyz'
 
       window.requestAnimationFrame ->
         b root.isEqualNode(util.htmlToNode(result2))
@@ -212,11 +210,11 @@ describe 'bind()', ->
     bind root, new Root()
     window.requestAnimationFrame ->
       b root.isEqualNode(util.htmlToNode(result1))
-      subject1.onNext true
+      subject1.next true
 
       window.requestAnimationFrame ->
         b root.isEqualNode(util.htmlToNode(result2))
-        subject2.onNext '3'
+        subject2.next '3'
 
         setTimeout ->
           window.requestAnimationFrame ->
@@ -256,24 +254,24 @@ describe 'bind()', ->
     bind root, a, true
     window.requestAnimationFrame ->
       b root.isEqualNode(util.htmlToNode(result1))
-      subject1.onNext 'one'
+      subject1.next 'one'
 
       window.requestAnimationFrame ->
         b root.isEqualNode(util.htmlToNode(result2))
-        subject2.onNext 'two'
+        subject2.next 'two'
 
         window.requestAnimationFrame ->
           b root.isEqualNode(util.htmlToNode(result3))
-          subject3.onNext 'three'
+          subject3.next 'three'
 
           window.requestAnimationFrame ->
             b root.isEqualNode(util.htmlToNode(result4))
-            subject4.onNext 'four'
+            subject4.next 'four'
 
             window.requestAnimationFrame ->
               b root.isEqualNode(util.htmlToNode(result5))
               topChildren.pop()
-              subject1.onNext 'xxx'
+              subject1.next 'xxx'
 
               window.requestAnimationFrame ->
                 b root.isEqualNode(util.htmlToNode(result6))

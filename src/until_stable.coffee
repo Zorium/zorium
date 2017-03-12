@@ -1,14 +1,6 @@
 _ = require 'lodash'
 isThunk = require 'virtual-dom/vnode/is-thunk'
 
-# TODO: use native promises, upgrade node
-if window?
-  Promise = window.Promise
-else
-  # Avoid webpack include
-  _promiz = 'promiz'
-  Promise = global.Promise or require _promiz
-
 z = require './z'
 isComponent = require './is_component'
 getZThunks = require './get_z_thunks'
