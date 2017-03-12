@@ -61,7 +61,7 @@
   },
   "dependencies": {
     "coffee-script": "^1.9.2",
-    "lodash": "^3.6.0",
+    "lodash": "^4.17.4",
     "promiz": "^1.0.3",
     "qs": "^2.4.2",
     "rx-lite": "^2.5.2",

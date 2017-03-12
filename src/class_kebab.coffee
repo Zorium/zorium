@@ -1,5 +1,5 @@
 _ = require 'lodash'
 
 module.exports = (classes) ->
-  _.map _.keys(_.pick classes, _.identity), _.kebabCase
+  _.map _.keys(_.pickBy classes, _.identity), _.kebabCase
   .join ' '
