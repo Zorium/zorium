@@ -1,14 +1,6 @@
 _ = require 'lodash'
 Rx = require 'rx-lite'
 
-# TODO: use native promises, upgrade node
-if window?
-  Promise = window.Promise
-else
-  # Avoid webpack include
-  _promiz = 'promiz'
-  Promise = global.Promise or require _promiz
-
 assert = require './assert'
 
 # TODO: move to util?

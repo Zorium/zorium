@@ -3,14 +3,6 @@ if not window?
   _toHTML = 'vdom-to-html'
   toHTML = require _toHTML
 
-# TODO: use native promises, upgrade node
-if window?
-  Promise = window.Promise
-else
-  # Avoid webpack include
-  _promiz = 'promiz'
-  Promise = global.Promise or require _promiz
-
 z = require './z'
 assert = require './assert'
 isComponent = require './is_component'

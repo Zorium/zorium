@@ -1,5 +1,4 @@
 b = require 'b-assert'
-Promise = require 'promiz'
 
 z = require '../src/zorium'
 

@@ -62,7 +62,6 @@
   "dependencies": {
     "coffee-script": "^1.9.2",
     "lodash": "^4.17.4",
-    "promiz": "^1.0.3",
     "qs": "^2.4.2",
     "rx-lite": "^2.5.2",
     "vdom-parser": "^1.2.1",
