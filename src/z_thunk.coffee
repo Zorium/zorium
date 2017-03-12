@@ -36,12 +36,14 @@ module.exports = class ZThunk
         wasMounted = isMounted
 
         if mountQueueCnt > unmountQueueCnt + 1
+          # expose for testing, window.onerror stopped working
+          window?.__mountTwiceError?()
           throw new Error "Component '#{@component.constructor?.name}'
             cannot be mounted twice at the same time"
 
         if unmountQueueCnt > 0
           @component.beforeUnmount?()
-          @component.__disposable?.dispose()
+          @component.__disposable?.unsubscribe()
           isMounted = false
 
         # basic if mounts > unmounts but also

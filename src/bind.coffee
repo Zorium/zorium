@@ -1,5 +1,4 @@
 _ = require 'lodash'
-Rx = require 'rx-lite'
 isThunk = require 'virtual-dom/vnode/is-thunk'
 
 z = require './z'
@@ -25,7 +24,7 @@ module.exports = ($$root, tree) ->
   tree.component.__onDirty = onchange
 
   # for full-page rendering, root node is never mounted
-  $$root.__disposable?.dispose()
+  $$root.__disposable?.unsubscribe()
   $$root.__disposable = tree.component.state?.subscribe onchange
 
   render $$root, new ZThunk {

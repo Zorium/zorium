@@ -115,7 +115,7 @@ module.exports = render = ($$root, tree) ->
       onchange = _.debounce ->
         renderHead $head
 
-      document.head.__disposable?.dispose()
+      document.head.__disposable?.unsubscribe()
       hasState = $head.component?.state?
       document.head.__lastTree = parser document.head
 

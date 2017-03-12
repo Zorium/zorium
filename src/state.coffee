@@ -1,5 +1,5 @@
 _ = require 'lodash'
-Rx = require 'rx-lite'
+Rx = require 'rxjs/Rx'
 
 assert = require './assert'
 
@@ -33,24 +33,24 @@ module.exports = (initialState) ->
       pendingSettlement += 1
       hasSettled = false
       val = val
-      .doOnError ->
+      .do null, ->
         unless hasSettled
           pendingSettlement -= 1
           hasSettled = true
-      .doOnNext (update) ->
+      .do (update) ->
         unless hasSettled
           pendingSettlement -= 1
           hasSettled = true
 
         currentState = stateSubject.getValue()
         if currentState[key] isnt update
-          stateSubject.onNext _.defaults {
+          stateSubject.next _.defaults {
             "#{key}": update
           }, currentState
-      Rx.Observable.just(null).concat val
+      Rx.Observable.of(null).concat val
     else
-      Rx.Observable.just null
-  .flatMapLatest -> stateSubject
+      Rx.Observable.of null
+  .switchMap -> stateSubject
 
   state.getValue = _.bind stateSubject.getValue, stateSubject
   state.set = (diff) ->
@@ -65,7 +65,7 @@ module.exports = (initialState) ->
         if currentState[key] isnt val
           currentState[key] = val
 
-    stateSubject.onNext currentState
+    stateSubject.next currentState
 
   stablePromise = null
   state._onStable = ->
@@ -81,12 +81,12 @@ module.exports = (initialState) ->
     .catch (err) ->
       # disposing here server-side breaks cache
       if window?
-        disposable?.dispose()
+        disposable?.unsubscribe()
       throw err
     .then ->
       # disposing here server-side breaks cache
       if window?
-        disposable.dispose()
+        disposable.unsubscribe()
       return null
 
   return state
