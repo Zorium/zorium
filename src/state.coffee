@@ -73,20 +73,15 @@ module.exports = (initialState) ->
       return stablePromise
     disposable = null
     stablePromise = new Promise (resolve, reject) ->
-      # TODO: make sure this doesn't leak server-side
       disposable = state.subscribe ->
         if pendingSettlement is 0
           resolve()
       , reject
     .catch (err) ->
-      # disposing here server-side breaks cache
-      if window?
-        disposable?.unsubscribe()
+      disposable?.unsubscribe()
       throw err
     .then ->
-      # disposing here server-side breaks cache
-      if window?
-        disposable.unsubscribe()
+      disposable.unsubscribe()
       return null
 
   return state
