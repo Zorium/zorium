@@ -16,48 +16,33 @@
   ],
   "main": "src/zorium.coffee",
   "scripts": {
-    "test": "node_modules/gulp/bin/gulp.js test",
-    "build": "node_modules/gulp/bin/gulp.js build",
-    "watch": "node_modules/gulp/bin/gulp.js watch",
-    "watch-server": "node_modules/gulp/bin/gulp.js watch:server"
+    "test": "gulp test",
+    "build": "gulp build",
+    "watch": "gulp watch"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/claydotio/zorium.js.git"
-  },
+  "repository": "https://github.com/zorium/zorium.git",
   "bugs": {
-    "url": "https://github.com/claydotio/zorium.js/issues"
+    "url": "https://github.com/zorium/zorium/issues"
   },
   "license": "MIT",
-  "author": {
-    "name": "Zolmeister",
-    "url": "http://zolmeister.com/"
-  },
+  "author": "Zolmeister (https://zolmeister.com)",
   "homepage": "https://zorium.org/",
   "devDependencies": {
     "b-assert": "^0.1.2",
-    "bluebird": "^2.9.25",
-    "clay-coffeescript-style-guide": "^1.1.0",
     "coffee-loader": "^0.7.2",
     "coffee-script": "^1.9.2",
-    "del": "^1.1.1",
     "gulp": "^3.8.11",
-    "gulp-coffeelint": "^0.5.0",
-    "gulp-mocha": "^2.0.1",
-    "gulp-rename": "^1.2.2",
+    "gulp-coffeelint": "^0.6.0",
+    "gulp-mocha": "^4.3.1",
     "gulp-webpack": "^1.3.2",
-    "json-loader": "^0.5.1",
     "karma": "^1.3.0",
-    "karma-chrome-launcher": "^2.0.0",
-    "karma-firefox-launcher": "^1.0.1",
-    "karma-mocha": "^0.1.10",
-    "karma-phantomjs-launcher": "^0.1.4",
-    "merge-stream": "^0.1.7",
-    "mocha": "^2.2.4",
-    "rewire": "^2.3.1",
-    "rewire-webpack": "^1.0.0",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-mocha": "^1.3.0",
+    "location-router": "^0.1.2",
+    "mocha": "^3.5.0",
     "routes": "^2.0.0",
-    "webpack": "^1.8.4"
+    "webpack": "^3.5.3",
+    "zorium-coffeelint-config": "^1.0.0"
   },
   "dependencies": {
     "coffee-script": "^1.9.2",

@@ -237,6 +237,7 @@ describe 'server side rendering', ->
       b html, '<div>fast</div>'
       fastCallCnt += 1
     .catch done
+    null
 
   it 'defaults to 250ms timeout', ->
     class Timeout
