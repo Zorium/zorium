@@ -69,7 +69,6 @@ if window?
 z = require './z'
 render = require './render'
 renderToString = require './render_to_string'
-router = require './router'
 state = require './state'
 ev = require './ev'
 classKebab = require './class_kebab'
@@ -80,7 +79,6 @@ untilStable = require './until_stable'
 _.assign z, {
   render
   renderToString
-  router
   state
   ev
   classKebab
