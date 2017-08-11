@@ -1,34 +1,19 @@
 _ = require 'lodash'
-del = require 'del'
 gulp = require 'gulp'
 mocha = require 'gulp-mocha'
-karma = require('karma').server
-rename = require 'gulp-rename'
+karma = require 'karma'
 webpack = require 'gulp-webpack'
 coffeelint = require 'gulp-coffeelint'
-RewirePlugin = require 'rewire-webpack'
 webpackSource = require 'webpack'
-
-packangeConf = require './package.json'
-
-karmaConf =
-  frameworks: ['mocha']
-  client:
-    useIframe: true
-    captureConsole: true
-    mocha:
-      timeout: 300
-  files: [
-    'build/tests.js'
-  ]
-  browsers: ['Chrome', 'Firefox']
 
 paths =
   coffee: ['./src/**/*.coffee', './*.coffee', './test/**/*.coffee']
   tests: './test/**/*.coffee'
   rootScripts: './src/zorium.coffee'
   rootServerTests: './test/zorium_server.coffee'
-  build: './build/'
+  build: './build'
+  output:
+    tests: 'tests.js'
 
 webpackProdConfig =
   module:
@@ -41,49 +26,50 @@ webpackProdConfig =
   resolve:
     extensions: ['.coffee', '.js', '.json', '']
 
-gulp.task 'test', ['scripts:test', 'lint', 'test:server'], (cb) ->
-  karma.start _.defaults(singleRun: true, karmaConf), cb
-
-gulp.task 'test:server', ->
-  gulp.src paths.rootServerTests
-    .pipe mocha()
+gulp.task 'test', ['test:lint', 'test:server', 'test:browser']
 
 gulp.task 'watch', ->
-  gulp.watch paths.coffee, ['test:phantom']
+  gulp.watch paths.coffee, ['test:browser', 'test:server']
 
-gulp.task 'watch:server', ->
-  gulp.watch paths.coffee, ['test:server']
-
-gulp.task 'lint', ->
+gulp.task 'test:lint', ->
   gulp.src paths.coffee
     .pipe coffeelint()
     .pipe coffeelint.reporter()
 
-gulp.task 'test:phantom', ['scripts:test'], (cb) ->
-  karma.start _.defaults({
-    singleRun: true,
-    browsers: ['PhantomJS']
-  }, karmaConf), cb
+gulp.task 'test:server', ->
+  gulp.src paths.rootServerTests
+    .pipe mocha
+      compilers: 'coffee:coffee-script/register'
+      timeout: 400
+      useColors: true
+
+gulp.task 'test:browser', ['scripts:test'], (cb) ->
+  new karma.Server({
+    singleRun: true
+    frameworks: ['mocha']
+    client:
+      useIframe: true
+      captureConsole: true
+      mocha:
+        timeout: 300
+    files: [
+      "#{paths.build}/#{paths.output.tests}"
+    ]
+    browsers: ['ChromeHeadless']
+  }, cb).start()
 
 gulp.task 'scripts:test', ->
   gulp.src paths.tests
   .pipe webpack
     devtool: '#inline-source-map'
+    output:
+      filename: paths.output.tests
     module:
       exprContextRegExp: /$^/
       exprContextCritical: false
       loaders: [
-        {test: /\.coffee$/, loader: 'coffee'}
-        {test: /\.json$/, loader: 'json'}
+        {test: /\.coffee$/, loader: 'coffee-loader'}
       ]
-    plugins: [
-      new RewirePlugin()
-    ]
     resolve:
-      extensions: ['.coffee', '.js', '.json', '']
-      modulesDirectories: ['node_modules', './src']
-  .pipe rename 'tests.js'
+      extensions: ['.coffee', '.js', '']
   .pipe gulp.dest paths.build
-
-gulp.task 'watch:test', ->
-  gulp.watch paths.scripts.concat([paths.tests]), ['test:phantom']
