@@ -1,41 +1,48 @@
 _ = require 'lodash'
-isThunk = require 'virtual-dom/vnode/is-thunk'
 
 z = require './z'
-isComponent = require './is_component'
-getZThunks = require './get_z_thunks'
 
-untilStable = (zthunk) ->
-  state = zthunk.component.state
-
+render = (child, component) ->
   try
-    # Begin resolving children before current node is stable for performance
-    # TODO: test performance assumption
-    preloadPromise = Promise.all _.map getZThunks zthunk.render(), untilStable
-    onStable = if state? then state._onStable else (-> Promise.resolve null)
-    Promise.all [
-      preloadPromise
-      onStable()
-    ]
-    .then ->
-      children = getZThunks zthunk.render()
-      Promise.all _.map children, untilStable
-    .then -> zthunk
+    child.render component.props
   catch err
-    return Promise.reject err
+    # TODO: understand why a noop here is fine
+    {}
+
+getComponents = (tree) ->
+  if tree.type?.zoriumComponent?
+    [tree]
+  else
+    children = []
+    unless tree.children?.forEach
+      return children
+    tree.children.forEach (child) -> children.push child
+    _.flatten _.map children, getComponents
+
+untilStable = (component) ->
+  child = component.type.zoriumComponent
+
+  # TODO: test performance assumption of preloading
+  stateVal = null
+  if child.state?
+    stateVal = child.state.getValue()
+    cached = _.map getComponents(render(child, component)), untilStable
+
+  Promise.all [
+    if child.state?
+      child.state._onStable().catch (err) -> child.afterThrow? err
+  ]
+  .then ->
+    if child.state? and stateVal is child.state.getValue()
+      return Promise.all cached
+    Promise.all _.map getComponents(render(child, component)), untilStable
 
 module.exports = (tree, {timeout} = {}) ->
-  if isComponent tree
-    tree = z tree
-
   return new Promise (resolve, reject) ->
     if timeout?
       setTimeout ->
-        # TODO: this, print better explanation (maybe only in dev mode)
         reject new Error "Timeout, request took longer than #{timeout}ms"
       , timeout
-
-    Promise.all _.map getZThunks(tree), (zthunk) ->
-      untilStable zthunk
-    .then resolve
-    .catch reject
+    Promise.all _.map getComponents(tree), untilStable
+    .then resolve, reject
+  .then -> null

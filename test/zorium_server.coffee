@@ -10,7 +10,7 @@ describe 'server side rendering', ->
   it 'supports basic render to string', ->
     z.renderToString z 'div', 'test'
     .then (html) ->
-      b html, '<div>test</div>'
+      b html, '<DIV>test</DIV>'
 
   it 'supports basic render of component to string', ->
     class Root
@@ -19,7 +19,7 @@ describe 'server side rendering', ->
 
     z.renderToString new Root()
     .then (html) ->
-      b html, '<div>test</div>'
+      b html, '<DIV>test</DIV>'
 
   it 'supports render of component with props to string', ->
     class Root
@@ -28,19 +28,20 @@ describe 'server side rendering', ->
 
     z.renderToString z new Root(), {name: 'abc'}
     .then (html) ->
-      b html, '<div>test abc</div>'
+      b html, '<DIV>test abc</DIV>'
 
   it 'propogates errors', ->
+    localError = null
     class MoveAlong
+      afterThrow: (err) ->
+        localError = err
       render: ->
         throw new Error 'test'
 
     $move = new MoveAlong()
     z.renderToString $move
     .then ->
-      throw new Error 'Expected error'
-    , (err) ->
-      b err.message, 'test'
+      b localError.message, 'test'
 
   it 'supports async rendering to string', ->
     class Async
@@ -51,15 +52,15 @@ describe 'server side rendering', ->
       render: =>
         {abc} = @state.getValue()
 
-        unless abc?
-          @pending.next 'abc'
-
         z 'div', abc
 
     $async = new Async()
+    setTimeout ->
+      $async.pending.next 'abc'
+    , 20
     z.renderToString $async
     .then (html) ->
-      b html, '<div>abc</div>'
+      b html, '<DIV>abc</DIV>'
 
   it 'supports async rendering to string after sync change', ->
     componentSubject = new Rx.ReplaySubject(1)
@@ -91,19 +92,16 @@ describe 'server side rendering', ->
       child.pending.next 'abc'
     z.renderToString $root
     .then (html) ->
-      b html, '<div><div>abc</div></div>'
+      b html, '<DIV><DIV>abc</DIV></DIV>'
 
   it 'supports async rendering with props to string', ->
+    pending = new Rx.ReplaySubject(1)
     class Async
       constructor: ->
-        @pending = new Rx.ReplaySubject(1)
         @state = z.state
-          abc: @pending
+          abc: pending
       render: ({name}) =>
         {abc} = @state.getValue()
-
-        unless abc?
-          @pending.next 'abc'
 
         z 'div', abc + ' ' + name
 
@@ -118,34 +116,44 @@ describe 'server side rendering', ->
         z 'div',
           z $async, params
 
+    setTimeout ->
+      pending.next 'abc'
+    , 50
+
     z.renderToString z new Parent(), {name: 'xxx'}
     .then (html) ->
-      b html, '<div><div>abc xxx</div></div>'
+      b html, '<DIV><DIV>abc xxx</DIV></DIV>'
 
   it 'handles state errors', ->
     pending = new Rx.BehaviorSubject(null)
     pending.error new Error 'test'
+    localError = null
 
     class Root
       constructor: ->
         @state = z.state
           pending: pending
 
+      afterThrow: (err) ->
+        localError = err
+        return null
       render: ->
         z 'div', 'abc'
 
     $root = new Root()
 
     z.renderToString $root
-    .then ->
-      throw new Error 'expected error'
-    , (err) ->
-      b err.message, 'test'
-      b err.html?
-      b err.html, '<div>abc</div>'
+    .then (html) ->
+      b html, '<DIV>abc</DIV>'
+      b localError?.message, 'test'
 
   it 'handles runtime errors', ->
+    localError = null
+
     class Root
+      afterThrow: (err) ->
+        localError = err
+        null
       render: ->
         throw new Error 'test'
         z 'div', 'abc'
@@ -153,20 +161,21 @@ describe 'server side rendering', ->
     $root = new Root()
 
     z.renderToString $root
-    .then ->
-      throw new Error 'expected error'
-    , (err) ->
-      b err.message, 'test'
-      b err.html?, false
+    .then (html) ->
+      b html, ''
+      b localError?.message, 'test'
 
   it 'handles async runtime errors, returning last render (not guaranteed)', ->
     pending = new Rx.ReplaySubject(1)
+    localError = null
 
     class Root
       constructor: ->
         @state = z.state
           err: pending
-
+      afterThrow: (err) ->
+        localError = err
+        null
       render: =>
         {err} = @state.getValue()
         if err is 'invalid'
@@ -177,13 +186,12 @@ describe 'server side rendering', ->
 
     setTimeout ->
       pending.next 'invalid'
+    , 200
 
     z.renderToString $root
-    .then ->
-      throw new Error 'expected error'
-    , (err) ->
-      b err.message, 'test'
-      b err.html, '<div>abc</div>'
+    .then (html) ->
+      b html, ''
+      b localError?.message, 'test'
 
   it 'supports concurrent requests', (done) ->
     fastCallCnt = 0
@@ -210,31 +218,31 @@ describe 'server side rendering', ->
     z.renderToString $slow
     .then (html) ->
       b fastCallCnt, 4
-      b html, '<div>slow</div>'
+      b html, '<DIV>slow</DIV>'
       done()
     .catch done
 
     z.renderToString $fast
     .then (html) ->
-      b html, '<div>fast</div>'
+      b html, '<DIV>fast</DIV>'
       fastCallCnt += 1
     .catch done
 
     z.renderToString $fast
     .then (html) ->
-      b html, '<div>fast</div>'
+      b html, '<DIV>fast</DIV>'
       fastCallCnt += 1
     .catch done
 
     z.renderToString $fast
     .then (html) ->
-      b html, '<div>fast</div>'
+      b html, '<DIV>fast</DIV>'
       fastCallCnt += 1
     .catch done
 
     z.renderToString $fast
     .then (html) ->
-      b html, '<div>fast</div>'
+      b html, '<DIV>fast</DIV>'
       fastCallCnt += 1
     .catch done
     null
@@ -256,7 +264,7 @@ describe 'server side rendering', ->
     , (err) ->
       b (Date.now() - startTime) > 248
       b err.message, 'Timeout, request took longer than 250ms'
-      b err.html, '<div>test</div>'
+      b err.html, '<DIV>test</DIV>'
 
   it 'allows custom timeouts', ->
     class Timeout
@@ -275,4 +283,4 @@ describe 'server side rendering', ->
     , (err) ->
       b (Date.now() - startTime) > 299
       b err.message, 'Timeout, request took longer than 300ms'
-      b err.html, '<div>test</div>'
+      b err.html, '<DIV>test</DIV>'

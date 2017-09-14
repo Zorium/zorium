@@ -1,5 +1,4 @@
 b = require 'b-assert'
-createElement = require 'virtual-dom/create-element'
 
 z = require '../src/zorium'
 util = require './util'
@@ -15,16 +14,16 @@ describe 'z()', ->
           eatme: 'true'
         z 'img'
 
-    $el = createElement(dom)
-
-    result = '<div>' +
+    result = '<div><div>' +
       '<div id="cid" class="cname">abc</div>' +
-      '<a href="#" data-non="123" eatme="true" class="b">' +
+      '<a href="#" class="b" data-non="123" eatme="true">' +
         '<img>' +
       '</a>' +
-    '</div>'
+    '</div></div>'
 
-    b $el.isEqualNode(util.htmlToNode(result)), true
+    $el = document.createElement('div')
+    z.render dom, $el
+    util.assertDOM $el, util.htmlToNode result
 
   it 'sets style', ->
     dom = z 'img',
@@ -32,16 +31,19 @@ describe 'z()', ->
         backgroundColor: 'red'
         lineHeight: '1rem'
 
-    $el = createElement(dom)
-    b $el.style.lineHeight, '1rem'
-    b $el.style.backgroundColor, 'red'
+    $el = document.createElement('div')
+    z.render dom, $el
+    b $el.children[0].style.lineHeight, '1rem'
+    b $el.children[0].style.backgroundColor, 'red'
 
   it 'renders numbers', ->
     dom = z 'div', 123
 
     result = '<div>123</div>'
-    $el = createElement(dom)
-    b $el.isEqualNode(util.htmlToNode(result)), true
+
+    $el = document.createElement('div')
+    z.render dom, $el
+    b $el.innerHTML, result
 
   it 'supports default div tag prefixing', ->
     dom = z 'div',
@@ -53,8 +55,9 @@ describe 'z()', ->
       '<div id="layout"></div>' +
     '</div>'
 
-    $el = createElement(dom)
-    b $el.isEqualNode(util.htmlToNode(result)), true
+    $el = document.createElement('div')
+    z.render dom, $el
+    b $el.innerHTML, result
 
   it 'supports nested zorium components', ->
     class HelloWorldComponent
@@ -63,11 +66,11 @@ describe 'z()', ->
     hello = new HelloWorldComponent()
     dom = z 'div', hello
 
-    $el = createElement(dom)
-
     result = '<div><span>Hello World</span></div>'
 
-    b $el.isEqualNode(util.htmlToNode(result)), true
+    $el = document.createElement('div')
+    z.render dom, $el
+    b $el.innerHTML, result
 
   it 'supports arrs', ->
     dom = z 'div', [
@@ -75,10 +78,10 @@ describe 'z()', ->
       z 'div', 'b'
     ]
 
-    $el = createElement(dom)
+    result = '<div><div><div>a</div><div>b</div></div></div>'
 
-    result = '<div><div>a</div><div>b</div></div>'
-
+    $el = document.createElement('div')
+    z.render dom, $el
     b $el.isEqualNode(util.htmlToNode(result)), true
 
   it 'allows component render to return undefined', ->
@@ -91,25 +94,20 @@ describe 'z()', ->
     dom = z 'div',
       z 'div', 'a'
       z 'div', 'b'
+      hello
 
     root = document.createElement 'div'
 
-    result = '<div>' +
+    result = '<div><div>' +
       '<div>a</div>' +
       '<div>b</div>' +
-      '<noscript></noscript>' +
-    '</div>'
+      # BREAKING
+      # '<noscript></noscript>' +
+    '</div></div>'
 
-    z.render root, dom
+    z.render dom, root
 
-    dom = z 'div',
-      z 'div', 'a'
-      z 'div', 'b'
-      hello
-
-    z.render root, dom
-
-    b root.isEqualNode(util.htmlToNode(result)), true
+    util.assertDOM(root, util.htmlToNode(result))
 
   it 'allows undefined children on redraw', ->
     dom = z 'div',
@@ -118,21 +116,20 @@ describe 'z()', ->
 
     root = document.createElement 'div'
 
-    result = '<div>' +
+    result = '<div><div>' +
       '<div>a</div>' +
       '<div>b</div>' +
-    '</div>'
+    '</div></div>'
 
-    z.render root, dom
+    z.render dom, root
 
     dom = z 'div',
       z 'div', 'a'
       z 'div', 'b'
       undefined
 
-    z.render root, dom
-
-    b root.isEqualNode(util.htmlToNode(result)), true
+    z.render dom, root
+    util.assertDOM root, util.htmlToNode result
 
   it 'handles null children', ->
     dom = z 'div',
@@ -144,22 +141,24 @@ describe 'z()', ->
         z 'div', 'World Hello'
       ]
 
-    $el = createElement(dom)
+    $el = document.createElement 'div'
+    z.render dom, $el
 
-    result = '<div>' +
+    result = '<div><div>' +
       '<span>Hello World</span>' +
       '<div>' +
         '<div>World Hello</div>' +
       '</div>' +
-    '</div>'
+    '</div></div>'
 
-    b $el.isEqualNode(util.htmlToNode(result)), true
+    util.assertDOM $el, util.htmlToNode result
 
   # https://github.com/claydotio/zorium.js/issues/1
   it 'doesn\'t add extra class names', ->
     dom = z 'a', href: 'http://192.168.1.0', 'test'
-    $el = createElement(dom)
-    result = '<a href="http://192.168.1.0">test</a>'
+    $el = document.createElement 'div'
+    z.render dom, $el
+    result = '<div><a href="http://192.168.1.0">test</a></div>'
 
     b $el.isEqualNode(util.htmlToNode(result)), true
 
@@ -173,12 +172,12 @@ describe 'z()', ->
     dom = new Uniq()
 
     root = document.createElement 'div'
-    z.render root, dom
+    z.render dom, root
     first = root.querySelector '#uniq'
     b (first is root.querySelector '#uniq'), true
-    z.render root, dom
+    z.render dom, root
     b (first is root.querySelector '#uniq'), true
-    z.render root, dom, z 'd'
+    z.render dom, root
 
   it 'passes props to render when z is used with a component', ->
     class A
@@ -196,18 +195,18 @@ describe 'z()', ->
 
     root = document.createElement 'div'
 
-    z.render root, $b
+    z.render $b, root
 
-    result = '<div><div>hello world</div></div>'
+    result = '<div><div><div>hello world</div></div></div>'
     b root.isEqualNode(util.htmlToNode(result)), true
 
 describe 'z.ev', ->
-  it 'wraps the this', ->
+  it 'extracts the DOM node', ->
     fn = z.ev (e, $$el) ->
       b e.ev, 'x'
       b $$el.a, 'b'
 
-    fn.call {a: 'b'}, {ev: 'x'}
+    fn.call null, {ev: 'x', currentTarget: {a: 'b'}}
 
 describe 'z.classKebab', ->
   it 'kebabs objects', ->
