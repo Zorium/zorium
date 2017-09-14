@@ -1,12 +1,6 @@
 _ = require 'lodash'
 Rx = require 'rxjs/Rx'
 
-assert = require './assert'
-
-# TODO: move to util?
-forkJoin = (observables...) ->
-  Rx.Observable.combineLatest _.flatten(observables), (results...) -> results
-
 subjectFromInitialState = (initialState) ->
   new Rx.BehaviorSubject _.mapValues initialState, (val) ->
     if val?.subscribe?
@@ -21,22 +15,18 @@ subjectFromInitialState = (initialState) ->
     else
       val
 
-# TODO: fix cyclomatic complexity
 module.exports = (initialState) ->
-  assert _.isPlainObject(initialState), 'initialState must be a plain object'
+  unless _.isPlainObject(initialState)
+    throw new Error 'initialState must be a plain object'
 
   pendingSettlement = 0
   stateSubject = subjectFromInitialState initialState
 
-  state = forkJoin _.map initialState, (val, key) ->
+  state = Rx.Observable.combineLatest _.map initialState, (val, key) ->
     if val?.subscribe?
       pendingSettlement += 1
       hasSettled = false
       val = val
-      .do null, ->
-        unless hasSettled
-          pendingSettlement -= 1
-          hasSettled = true
       .do (update) ->
         unless hasSettled
           pendingSettlement -= 1
@@ -44,17 +34,23 @@ module.exports = (initialState) ->
 
         currentState = stateSubject.getValue()
         if currentState[key] isnt update
+          # TODO: avoid double state subject updates for single child update
           stateSubject.next _.defaults {
             "#{key}": update
           }, currentState
-      Rx.Observable.of(null).concat val
+      , ->
+        unless hasSettled
+          pendingSettlement -= 1
+          hasSettled = true
+      Rx.Observable.of(null).concat(val)
     else
       Rx.Observable.of null
   .switchMap -> stateSubject
 
   state.getValue = _.bind stateSubject.getValue, stateSubject
   state.set = (diff) ->
-    assert _.isPlainObject(diff), 'diff must be a plain object'
+    unless _.isPlainObject(diff)
+      throw new Error 'diff must be a plain object'
 
     currentState = stateSubject.getValue()
 

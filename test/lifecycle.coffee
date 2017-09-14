@@ -16,7 +16,7 @@ describe 'Lifecycle Callbacks', ->
       bind = new BindComponent()
       root = document.createElement 'div'
 
-      z.render root, bind
+      z.render bind, root
       setTimeout ->
         b mountCalled, 1
         done()
@@ -41,21 +41,21 @@ describe 'Lifecycle Callbacks', ->
 
 
       root = document.createElement 'div'
-      z.render root, dom
+      z.render dom, root
 
       setTimeout ->
-        z.render root, dom
+        z.render dom, root
 
         setTimeout ->
-          z.render root, dom
+          z.render dom, root
 
           dom = z 'div',
             bind
             z 'span', 'world'
-          z.render root, dom
+          z.render dom, root
 
           setTimeout ->
-            z.render root, dom
+            z.render dom, root
 
             setTimeout ->
               b mountCalled, 1
@@ -86,9 +86,9 @@ describe 'Lifecycle Callbacks', ->
 
       container = new ContainerComponent()
       root = document.createElement 'div'
-      z.render root, container
+      z.render container, root
       setTimeout ->
-        z.render root, z 'div'
+        z.render z('div'), root
       , 20
 
     it 'gets called after mounting only', (done) ->
@@ -107,13 +107,13 @@ describe 'Lifecycle Callbacks', ->
       bind = new BindComponent()
 
       root = document.createElement 'div'
-      z.render root, bind
+      z.render bind, root
 
       setTimeout ->
         b mountCalled, 1
         b unmountCalled, 0
-        z.render root, z 'div'
-        z.render root, bind
+        z.render z('div'), root
+        z.render bind, root
 
         setTimeout ->
           b unmountCalled, 1
@@ -133,15 +133,15 @@ describe 'Lifecycle Callbacks', ->
 
       bind = new BindComponent()
       root = document.createElement 'div'
-      z.render root, bind
+      z.render bind, root
 
       setTimeout ->
         b mountCalled, 1
-        z.render root, z 'div'
+        z.render z('div'), root
 
         setTimeout ->
           b unmountCalled, 1
-          z.render root, bind
+          z.render bind, root
 
           setTimeout ->
             b mountCalled, 2
@@ -163,13 +163,13 @@ describe 'Lifecycle Callbacks', ->
       bind = new BindComponent()
 
       root = document.createElement 'div'
-      z.render root, bind
+      z.render bind, root
       window.requestAnimationFrame ->
-        z.render root, bind
+        z.render bind, root
         window.requestAnimationFrame ->
-          z.render root, bind
+          z.render bind, root
           window.requestAnimationFrame ->
-            z.render root, bind
+            z.render bind, root
 
             setTimeout ->
               b mountCalled, 1
@@ -198,12 +198,12 @@ describe 'Lifecycle Callbacks', ->
 
       root = document.createElement 'div'
 
-      z.render root, $a
+      z.render $a, root
       setTimeout ->
-        z.render root, $b
+        z.render $b, root
 
         setTimeout ->
-          z.render root, z 'x'
+          z.render z('x'), root
 
           setTimeout ->
             b unmountsCalled, 2

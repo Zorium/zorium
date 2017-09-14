@@ -1,6 +1,5 @@
+# TODO: deprecate
 module.exports = (fn) ->
-  # coffeelint: disable=missing_fat_arrows
   (e) ->
-    $$el = this
+    $$el = e.currentTarget
     fn(e, $$el)
-  # coffeelint: enable=missing_fat_arrows

@@ -15,17 +15,6 @@ paths =
   output:
     tests: 'tests.js'
 
-webpackProdConfig =
-  module:
-    exprContextRegExp: /$^/
-    exprContextCritical: false
-    loaders: [
-      {test: /\.coffee$/, loader: 'coffee'}
-      {test: /\.json$/, loader: 'json'}
-    ]
-  resolve:
-    extensions: ['.coffee', '.js', '.json', '']
-
 gulp.task 'test', ['test:lint', 'test:server', 'test:browser']
 
 gulp.task 'watch', ->
