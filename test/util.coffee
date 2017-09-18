@@ -26,6 +26,10 @@ assertDOM = (a, b) ->
     assertDOM(a.children[i], b.children[i])
     i -= 1
 
+  unless a.innerHTML is b.innerHTML
+    throw new Error "Content mismatch \n\
+      #{a.innerHTML} \n#{b.innerHTML}"
+
   return null
 
 module.exports =

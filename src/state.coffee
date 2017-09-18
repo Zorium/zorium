@@ -52,7 +52,7 @@ module.exports = (initialState) ->
     unless _.isPlainObject(diff)
       throw new Error 'diff must be a plain object'
 
-    currentState = stateSubject.getValue()
+    currentState = _.merge {}, stateSubject.getValue()
 
     _.map diff, (val, key) ->
       if initialState[key]?.subscribe?

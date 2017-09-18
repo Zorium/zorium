@@ -43,6 +43,13 @@ describe 'server side rendering', ->
     .then ->
       b localError.message, 'test'
 
+  # FIXME
+  # it.only 'bubbles errors', ->
+  #   Throw = -> throw new Error 'x'
+  #   Root = -> h('div', Throw)
+  #   Root.componentDidCatch = -> console.log 'never printed'
+  #   '' + h(Root)
+
   it 'supports async rendering to string', ->
     class Async
       constructor: ->

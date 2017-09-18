@@ -1,10 +1,8 @@
-_ = require 'lodash'
 gulp = require 'gulp'
 mocha = require 'gulp-mocha'
 karma = require 'karma'
-webpack = require 'gulp-webpack'
+webpackStream = require 'webpack-stream'
 coffeelint = require 'gulp-coffeelint'
-webpackSource = require 'webpack'
 
 paths =
   coffee: ['./src/**/*.coffee', './*.coffee', './test/**/*.coffee']
@@ -49,7 +47,7 @@ gulp.task 'test:browser', ['scripts:test'], (cb) ->
 
 gulp.task 'scripts:test', ->
   gulp.src paths.tests
-  .pipe webpack
+  .pipe webpackStream
     devtool: '#inline-source-map'
     output:
       filename: paths.output.tests
@@ -60,5 +58,5 @@ gulp.task 'scripts:test', ->
         {test: /\.coffee$/, loader: 'coffee-loader'}
       ]
     resolve:
-      extensions: ['.coffee', '.js', '']
+      extensions: ['.coffee', '.js']
   .pipe gulp.dest paths.build
