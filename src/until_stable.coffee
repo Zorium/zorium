@@ -10,6 +10,10 @@ render = (child, component) ->
     {}
 
 getComponents = (tree) ->
+  # TODO: add a test for this
+  if _.isArray tree
+    return _.flatten _.map tree, getComponents
+
   if tree.type?.zoriumComponent?
     [tree]
   else
@@ -38,6 +42,9 @@ untilStable = (component) ->
     Promise.all _.map getComponents(render(child, component)), untilStable
 
 module.exports = (tree, {timeout} = {}) ->
+  if tree.render? # TODO: test
+    tree = z tree
+
   return new Promise (resolve, reject) ->
     if timeout?
       setTimeout ->

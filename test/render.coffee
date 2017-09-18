@@ -437,6 +437,22 @@ describe 'render()', ->
       , 17
     , 17
 
+  it 'state.set re-renders component', ->
+    class Root
+      constructor: ->
+        @state = z.state
+          x: 'abc'
+      render: =>
+        {x} = @state.getValue()
+        z 'div', x
+
+    result = '<div><div>xxx</div></div>'
+    root = new Root()
+    $el = document.createElement 'div'
+    z.render root, $el
+    root.state.set {x: 'xxx'}
+    util.assertDOM $el, util.htmlToNode result
+
   it 'remove array of children properly', (done) ->
     class Ripple
       constructor: ->

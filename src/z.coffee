@@ -82,6 +82,7 @@ zChildToHChild = (child) ->
           compareChildren(this.props, props)
         # coffeelint: enable=missing_fat_arrows
         getInitialState: ->
+          # TODO: understand what this does and add a test for it
           if child.state?
             child.state.getValue()
 
