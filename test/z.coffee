@@ -9,14 +9,13 @@ describe 'z()', ->
       z '.cname#cid', 'abc'
       z 'a.b',
         href: '#'
-        attributes:
-          'data-non': 123
-          eatme: 'true'
+        'data-non': 123
+        eatme: 'true'
         z 'img'
 
     result = '<div><div>' +
       '<div id="cid" class="cname">abc</div>' +
-      '<a href="#" class="b" data-non="123" eatme="true">' +
+      '<a href="#" data-non="123" eatme="true" class="b">' +
         '<img>' +
       '</a>' +
     '</div></div>'
@@ -199,14 +198,6 @@ describe 'z()', ->
 
     result = '<div><div><div>hello world</div></div></div>'
     b root.isEqualNode(util.htmlToNode(result)), true
-
-describe 'z.ev', ->
-  it 'extracts the DOM node', ->
-    fn = z.ev (e, $$el) ->
-      b e.ev, 'x'
-      b $$el.a, 'b'
-
-    fn.call null, {ev: 'x', currentTarget: {a: 'b'}}
 
 describe 'z.classKebab', ->
   it 'kebabs objects', ->

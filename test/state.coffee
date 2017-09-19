@@ -89,3 +89,26 @@ describe 'z.state', ->
 
     b state.getValue().lazy, 1
     b state2.getValue().lazy, 2
+
+  # TODO
+  # it.only 'updates efficiently', (done) ->
+  #   updates = 0
+  #   s = new Rx.BehaviorSubject 's'
+  #   state = z.state
+  #     a: 'a'
+  #     s: s
+  #
+  #   unsub = state.subscribe ->
+  #     updates += 1
+  #
+  #   b updates, 1
+  #   setTimeout ->
+  #     b updates, 1
+  #     s.next 'ss'
+  #     setTimeout ->
+  #       b updates, 2
+  #       state.set {a: 'x'}
+  #       setTimeout ->
+  #         b updates, 3
+  #         unsub.unsubscribe()
+  #         done()

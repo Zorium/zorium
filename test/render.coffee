@@ -559,6 +559,29 @@ describe 'render()', ->
     err.error new Error 'oh no'
     b localError?.message, 'oh no'
 
+  # FIXME
+  # it.only 'bubbles async errors', (done) ->
+  #   {h, render} = require 'dio.js'
+  #
+  #   ThrowAsync = ->
+  #     h 'div',
+  #       {
+  #         onclick: ->
+  #           setTimeout ->
+  #             # this.error new Error 'x'
+  #             throw new Error 'x'
+  #       }
+  #       'throws'
+  #   didThrow = false
+  #   ThrowAsync.componentDidCatch = -> didThrow = true
+  #
+  #   render ThrowAsync, $el = document.createElement('div')
+  #   $el.querySelector('div').dispatchEvent(new Event('click'))
+  #   setTimeout ->
+  #     b didThrow
+  #     done()
+  #   , 17
+
   it 'logs state errors if uncaught', (done) ->
     err = new Rx.BehaviorSubject null
 

@@ -768,13 +768,9 @@ diffie-hellman@^5.0.0:
     miller-rabin "^4.0.0"
     randombytes "^2.0.0"
 
-dio.js@^7.1.0:
-  version "7.1.0"
-  resolved "https://registry.yarnpkg.com/dio.js/-/dio.js-7.1.0.tgz#899a8334ec107087389fd6e432227878c5be2574"
-
-"dio.js@https://github.com/thysultan/dio.js.git#1df77b9d8c194ba4bd2865e3e2b3b17caa3a56a5":
+"dio.js@https://github.com/thysultan/dio.js.git#ce18699943bb976dc6e19227fff4f3fcfc626fc4":
   version "8.0.0"
-  resolved "https://github.com/thysultan/dio.js.git#1df77b9d8c194ba4bd2865e3e2b3b17caa3a56a5"
+  resolved "https://github.com/thysultan/dio.js.git#ce18699943bb976dc6e19227fff4f3fcfc626fc4"
 
 dom-serialize@^2.2.0:
   version "2.2.1"
