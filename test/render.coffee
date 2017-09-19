@@ -1,7 +1,7 @@
 b = require 'b-assert'
 Rx = require 'rxjs/Rx'
 
-z = require '../src/zorium'
+z = require '../src'
 util = require './util'
 
 describe 'render()', ->
@@ -541,7 +541,7 @@ describe 'render()', ->
       done()
     , 17
 
-  it 'passes state errors to afterThrow', ->
+  it 'passes state errors to afterThrow', (done) ->
     err = new Rx.BehaviorSubject null
     localError = null
 
@@ -557,30 +557,33 @@ describe 'render()', ->
     z.render new Root(), document.createElement('div')
     b localError, null
     err.error new Error 'oh no'
-    b localError?.message, 'oh no'
+    setTimeout ->
+      b localError?.message, 'oh no'
+      done()
 
-  # FIXME
-  # it.only 'bubbles async errors', (done) ->
-  #   {h, render} = require 'dio.js'
-  #
-  #   ThrowAsync = ->
-  #     h 'div',
-  #       {
-  #         onclick: ->
-  #           setTimeout ->
-  #             # this.error new Error 'x'
-  #             throw new Error 'x'
-  #       }
-  #       'throws'
-  #   didThrow = false
-  #   ThrowAsync.componentDidCatch = -> didThrow = true
-  #
-  #   render ThrowAsync, $el = document.createElement('div')
-  #   $el.querySelector('div').dispatchEvent(new Event('click'))
-  #   setTimeout ->
-  #     b didThrow
-  #     done()
-  #   , 17
+  it 'bubbles state errors', (done) ->
+    err = new Rx.BehaviorSubject null
+    localError = null
+
+    class Child
+      constructor: ->
+        @state = z.state {err}
+      render: ->
+        z 'div', 'xxx'
+
+    class Root
+      constructor: ->
+        @$child = new Child()
+      afterThrow: (err) -> localError = err
+      render: =>
+        z 'div', @$child
+
+    z.render new Root(), document.createElement('div')
+    b localError, null
+    err.error new Error 'oh no'
+    setTimeout ->
+      b localError?.message, 'oh no'
+      done()
 
   it 'logs state errors if uncaught', (done) ->
     err = new Rx.BehaviorSubject null
@@ -592,11 +595,10 @@ describe 'render()', ->
       render: ->
         z 'div', 'xxx'
 
-    window.__stateError = (err) ->
-      window.__stateError = null
-      b err.message, 'oh no'
+    originalLog = console.error
+    console.error = ->
+      console.error = originalLog
       done()
-
     z.render new Root(), document.createElement('div')
     err.error new Error 'oh no'
 

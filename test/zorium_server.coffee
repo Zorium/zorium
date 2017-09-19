@@ -1,7 +1,7 @@
 b = require 'b-assert'
 Rx = require 'rxjs/Rx'
 
-z = require '../src/zorium'
+z = require '../src'
 
 describe 'server side rendering', ->
   if window?
@@ -124,26 +124,21 @@ describe 'server side rendering', ->
     .then (html) ->
       b html, '<DIV><DIV>abc xxx</DIV></DIV>'
 
-  it 'handles state errors', ->
-    pending = new Rx.BehaviorSubject(null)
-    pending.error new Error 'test'
+  it 'logs state errors', ->
     localError = null
-
     class Root
       constructor: ->
         @state = z.state
-          pending: pending
-
-      afterThrow: (err) ->
-        localError = err
-        return null
+          pending: Rx.Observable.throw new Error 'test'
       render: ->
         z 'div', 'abc'
 
-    $root = new Root()
-
-    z.renderToString $root
+    oldLog = console.error
+    console.error = (err) ->
+      localError = err
+    z.renderToString new Root()
     .then (html) ->
+      console.error = oldLog
       b html, '<DIV>abc</DIV>'
       b localError?.message, 'test'
 
@@ -284,3 +279,14 @@ describe 'server side rendering', ->
       b (Date.now() - startTime) > 299
       b err.message, 'Timeout, request took longer than 300ms'
       b err.html, '<DIV>test</DIV>'
+
+  it 'names components for logging', (done) ->
+    class Throw
+      render: ->
+        throw new Error 'x'
+    oldLog = console.error
+    console.error = (msg) ->
+      console.error = oldLog
+      b msg.indexOf('<Throw>') isnt -1
+      done()
+    '' + z new Throw()

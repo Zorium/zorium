@@ -1,6 +1,6 @@
 b = require 'b-assert'
 
-z = require '../src/zorium'
+z = require '../src'
 util = require './util'
 
 describe 'z()', ->

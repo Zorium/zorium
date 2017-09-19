@@ -1,6 +1,6 @@
 b = require 'b-assert'
 
-parseTag = require '../src/parseTag'
+parseTag = require '../src/parse_tag'
 
 describe 'parseTag', ->
   it 'parses class names and ids from tag names, with side-effects', ->

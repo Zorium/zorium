@@ -1,7 +1,7 @@
 b = require 'b-assert'
 Rx = require 'rxjs/Rx'
 
-z = require '../src/zorium'
+z = require '../src'
 
 describe 'z.state', ->
   it 'obesrves state, returning an observable', ->

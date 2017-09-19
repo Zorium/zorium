@@ -1,6 +1,6 @@
 _ = require 'lodash'
 
-parseTag = require './parseTag.js'
+parseTag = require './parse_tag'
 {h} = require 'dio.js'
 
 hasOwnProperty = Object.hasOwnProperty
@@ -42,6 +42,7 @@ zChildToHChild = (child) ->
 
       # TODO: perf difference vs class constructor
       kv =
+        displayName: child.constructor.name
         zoriumComponent: child
         componentDidMount: ($$el) ->
           if isMounted
@@ -56,15 +57,8 @@ zChildToHChild = (child) ->
           unless subscription
             subscription = child.state?.subscribe (state) =>
               this.setState state
-            , (err) ->
-              if child.afterThrow?
-                child.afterThrow err
-              else
-                if window.__stateError? # tests
-                  window.__stateError err
-                else
-                  throw new Error err
-
+            , (err) =>
+              this.setState Promise.reject err
           child.afterMount? $$el
         componentWillUnmount: ->
           isMounted = false

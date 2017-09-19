@@ -14,7 +14,7 @@
     "frp",
     "coffee"
   ],
-  "main": "src/zorium.coffee",
+  "main": "src/index.coffee",
   "scripts": {
     "test": "gulp test",
     "build": "gulp build",
