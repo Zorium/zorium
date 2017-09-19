@@ -93,6 +93,7 @@ zChildToHChild = (child) ->
   else
     child
 
+# BREAKING: no longer supports {attributes} prop
 module.exports = z = (tagName, props, children...) ->
   unless _.isPlainObject props
     children = [props].concat children
@@ -105,10 +106,6 @@ module.exports = z = (tagName, props, children...) ->
     tagName = parseTag tagName, props
   else
     tagName = zChildToHChild tagName
-
-  # TODO: remove
-  _.merge props, props.attributes
-  delete props.attributes
 
   # TODO: test perf
   # chillen = _.map children, zChildToHChild
