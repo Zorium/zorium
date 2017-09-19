@@ -1,7 +1,8 @@
+_ = require 'lodash'
 b = require 'b-assert'
 Rx = require 'rxjs/Rx'
 
-z = require '../src/zorium'
+z = require '../src'
 
 describe 'z.state', ->
   it 'obesrves state, returning an observable', ->
@@ -14,8 +15,8 @@ describe 'z.state', ->
 
     b _.isFunction(state.subscribe), true
 
-    state.subscribe (state) ->
-      b state.a, 'a'
+    state.subscribe (update) ->
+      b update.a, 'a'
 
     b state.getValue(), {a: 'a', b: null, c: null}
 
@@ -54,12 +55,15 @@ describe 'z.state', ->
 
     state = z.state
       subject: subject
+    disposable = state.subscribe -> null
 
     try
       subject.error new Error 'err'
       b false
     catch err
       b err?
+
+    disposable.unsubscribe()
 
   it 'lazy subscribes', ->
     lazyRuns = 0

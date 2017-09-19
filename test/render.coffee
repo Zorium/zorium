@@ -1,7 +1,8 @@
+_ = require 'lodash'
 b = require 'b-assert'
 Rx = require 'rxjs/Rx'
 
-z = require '../src/zorium'
+z = require '../src'
 util = require './util'
 
 describe 'render()', ->
@@ -17,8 +18,7 @@ describe 'render()', ->
         z 'div', 'Hello World'
     hello = new HelloWorldComponent()
 
-    root = document.createElement('div')
-    $el = z.render hello, root
+    z.render hello, root = document.createElement('div')
     result = '<div><div>Hello World</div></div>'
 
     b root.isEqualNode(util.htmlToNode(result)), true
@@ -541,7 +541,7 @@ describe 'render()', ->
       done()
     , 17
 
-  it 'passes state errors to afterThrow', ->
+  it 'passes state errors to afterThrow', (done) ->
     err = new Rx.BehaviorSubject null
     localError = null
 
@@ -554,33 +554,41 @@ describe 'render()', ->
       render: ->
         z 'div', 'xxx'
 
+    originalLog = console.error
+    console.error = ->
+      console.error = originalLog
+      done new Error 'console.error called'
     z.render new Root(), document.createElement('div')
     b localError, null
     err.error new Error 'oh no'
-    b localError?.message, 'oh no'
+    setTimeout ->
+      b localError?.message, 'oh no'
+      console.error = originalLog
+      done()
 
-  # FIXME
-  # it.only 'bubbles async errors', (done) ->
-  #   {h, render} = require 'dio.js'
-  #
-  #   ThrowAsync = ->
-  #     h 'div',
-  #       {
-  #         onclick: ->
-  #           setTimeout ->
-  #             # this.error new Error 'x'
-  #             throw new Error 'x'
-  #       }
-  #       'throws'
-  #   didThrow = false
-  #   ThrowAsync.componentDidCatch = -> didThrow = true
-  #
-  #   render ThrowAsync, $el = document.createElement('div')
-  #   $el.querySelector('div').dispatchEvent(new Event('click'))
-  #   setTimeout ->
-  #     b didThrow
-  #     done()
-  #   , 17
+  it 'bubbles state errors', (done) ->
+    err = new Rx.BehaviorSubject null
+    localError = null
+
+    class Child
+      constructor: ->
+        @state = z.state {err}
+      render: ->
+        z 'div', 'xxx'
+
+    class Root
+      constructor: ->
+        @$child = new Child()
+      afterThrow: (err) -> localError = err
+      render: =>
+        z 'div', @$child
+
+    z.render new Root(), document.createElement('div')
+    b localError, null
+    err.error new Error 'oh no'
+    setTimeout ->
+      b localError?.message, 'oh no'
+      done()
 
   it 'logs state errors if uncaught', (done) ->
     err = new Rx.BehaviorSubject null
@@ -592,11 +600,10 @@ describe 'render()', ->
       render: ->
         z 'div', 'xxx'
 
-    window.__stateError = (err) ->
-      window.__stateError = null
-      b err.message, 'oh no'
+    originalLog = console.error
+    console.error = ->
+      console.error = originalLog
       done()
-
     z.render new Root(), document.createElement('div')
     err.error new Error 'oh no'
 
@@ -610,7 +617,7 @@ describe 'render()', ->
       constructor: ->
         @state = z.state
           b: s2
-      render: ({x}) ->
+      render: ->
         childRenders += 1
         z 'div', 'x'
 
@@ -652,3 +659,81 @@ describe 'render()', ->
       , 17
     .catch done
     null
+
+  it 'handles mount-state consistency', ->
+    s = new Rx.BehaviorSubject 'a'
+    stack = []
+
+    class Child1
+      constructor: (@id) -> null
+      afterMount: => stack.push 'mount|' + @id
+      beforeUnmount: => stack.push 'unmount|' + @id
+      render: -> z 'div'
+
+    class Child2
+      constructor: (@id) -> null
+      afterMount: => stack.push 'mount|' + @id
+      beforeUnmount: => stack.push 'unmount|' + @id
+      render: -> z 'div'
+
+    class Root
+      constructor: ->
+        @$c1 = new Child1('1')
+        @$c11 = new Child1('2')
+        @$c2 = new Child2('3')
+        @state = z.state
+          status: s
+      render: =>
+        {status} = @state.getValue()
+        z 'div',
+          switch status
+            when 'a'
+              @$c1
+            when 'b'
+              @$c11
+            when 'c'
+              @$c2
+            when 'd'
+              [@$c1, @$c11, @$c2]
+            when 'e'
+              [@$c2, @$c11, @$c1]
+
+    tStack = []
+    b stack, tStack
+    z.render new Root(), document.createElement('div')
+    b stack, tStack = tStack.concat ['mount|1']
+    s.next 'b'
+    b stack, tStack = tStack.concat ['mount|2', 'unmount|1']
+    s.next 'c'
+    b stack, tStack = tStack.concat ['mount|3', 'unmount|2']
+    s.next 'd'
+    b stack, tStack = \
+      tStack.concat ['mount|1', 'unmount|3', 'mount|2', 'mount|3']
+    s.next 'e'
+    b stack, tStack = \
+      tStack.concat ['unmount|3', 'mount|3', 'unmount|1', 'mount|1']
+
+  it 'doesnt double-mount when key updates', (done) ->
+    k = new Rx.BehaviorSubject 'abc'
+    class Child
+      render: -> z 'div'
+    class Root
+      constructor: ->
+        @$child = new Child()
+        @state = z.state
+          key: k
+
+      render: =>
+        {key} = @state.getValue()
+        z 'div', z @$child, {key}
+
+    oldLog = console.error
+    console.error = (err) ->
+      console.error = oldLog
+      done new Error err + ''
+    z.render new Root(), document.createElement 'div'
+    k.next 'xxx'
+    setTimeout ->
+      console.error = oldLog
+      done()
+    , 17

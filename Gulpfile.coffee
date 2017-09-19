@@ -7,7 +7,7 @@ coffeelint = require 'gulp-coffeelint'
 paths =
   coffee: ['./src/**/*.coffee', './*.coffee', './test/**/*.coffee']
   tests: './test/**/*.coffee'
-  rootScripts: './src/zorium.coffee'
+  rootScripts: './src/index.coffee'
   rootServerTests: './test/zorium_server.coffee'
   build: './build'
   output:

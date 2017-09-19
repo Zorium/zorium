@@ -3,14 +3,15 @@ _ = require 'lodash'
 z = require './z'
 
 render = (child, component) ->
+  # NOTE: untilStable is only meant to pre-fill state
+  #   and generally succeed except with malformed trees
+  #   render() errors will be caught during stringification / mounting
   try
     child.render component.props
-  catch err
-    # TODO: understand why a noop here is fine
+  catch
     {}
 
 getComponents = (tree) ->
-  # TODO: add a test for this
   if _.isArray tree
     return _.flatten _.map tree, getComponents
 
@@ -23,6 +24,7 @@ getComponents = (tree) ->
     tree.children.forEach (child) -> children.push child
     _.flatten _.map children, getComponents
 
+# TODO: leaks memory if tree never stabilizes, needs to cancel on timeout?
 untilStable = (component) ->
   child = component.type.zoriumComponent
 
@@ -34,7 +36,9 @@ untilStable = (component) ->
 
   Promise.all [
     if child.state?
-      child.state._onStable().catch (err) -> child.afterThrow? err
+      # NOTE: untilStable is only meant to pre-fill state
+      #   and generally succeed except with malformed trees
+      child.state._onStable().catch (err) -> console.error err
   ]
   .then ->
     if child.state? and stateVal is child.state.getValue()
@@ -42,7 +46,7 @@ untilStable = (component) ->
     Promise.all _.map getComponents(render(child, component)), untilStable
 
 module.exports = (tree, {timeout} = {}) ->
-  if tree.render? # TODO: test
+  if tree.render?
     tree = z tree
 
   return new Promise (resolve, reject) ->

@@ -1,6 +1,4 @@
-b = require 'b-assert'
-
-z = require '../src/zorium'
+z = require '../src'
 util = require './util'
 
 describe 'z.hydrate()', ->
@@ -45,4 +43,49 @@ describe 'z.hydrate()', ->
 
     $el = document.createElement('div')
     z.hydrate z(new X()), $el
+    util.assertDOM $el, util.htmlToNode(result)
+
+  it 'hydrates undefined', ->
+    class Root
+      render: ->
+        z 'div',
+          undefined
+          z 'span'
+
+    result = '<div><div><span></span></span></div>'
+    $el = document.createElement 'div'
+    $el.innerHTML = '<div><div>xxx</div></div>'
+    z.hydrate Root, $el
+    util.assertDOM $el, util.htmlToNode(result)
+
+  it 'hydrates deep', ->
+    class Child
+      render: ->
+        z 'div'
+
+    class Root
+      constructor: ->
+        @$child = new Child()
+      render: =>
+        z 'div',
+          undefined
+          @$child
+          undefined
+
+    result = '<div><div><div></div></div></div>'
+    $el = document.createElement 'div'
+    $el.innerHTML = '<div><div style="color:red;">xxx</div></div>'
+    z.hydrate Root, $el
+    util.assertDOM $el, util.htmlToNode(result)
+
+  it 'hydrates text replacing node', ->
+    class Root
+      render: ->
+        z 'div',
+          'abc'
+
+    result = '<div><div>abc</div></div>'
+    $el = document.createElement 'div'
+    $el.innerHTML = '<div>abc<a>XXX</a></div>'
+    z.hydrate Root, $el
     util.assertDOM $el, util.htmlToNode(result)

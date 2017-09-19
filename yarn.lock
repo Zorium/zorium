@@ -520,6 +520,12 @@ coffeelint@^1.4.0:
     resolve "^0.6.3"
     strip-json-comments "^1.0.2"
 
+coffeescope2@^0.4.6:
+  version "0.4.6"
+  resolved "https://registry.yarnpkg.com/coffeescope2/-/coffeescope2-0.4.6.tgz#147f027015d15823f978597ab9a1094181a41dbd"
+  dependencies:
+    globals "^10.1.0"
+
 colors@^1.1.0:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/colors/-/colors-1.1.2.tgz#168a4701756b6a7f51a12ce0c97bfa28c084ed63"
@@ -768,9 +774,9 @@ diffie-hellman@^5.0.0:
     miller-rabin "^4.0.0"
     randombytes "^2.0.0"
 
-"dio.js@https://github.com/thysultan/dio.js.git#ce18699943bb976dc6e19227fff4f3fcfc626fc4":
+"dio.js@https://github.com/thysultan/dio.js.git#acf54b53de74e2ae27cc4c83492a0b4ac8f5c9de":
   version "8.0.0"
-  resolved "https://github.com/thysultan/dio.js.git#ce18699943bb976dc6e19227fff4f3fcfc626fc4"
+  resolved "https://github.com/thysultan/dio.js.git#acf54b53de74e2ae27cc4c83492a0b4ac8f5c9de"
 
 dom-serialize@^2.2.0:
   version "2.2.1"
@@ -1343,6 +1349,10 @@ global@^4.3.2:
   dependencies:
     min-document "^2.19.0"
     process "~0.5.1"
+
+globals@^10.1.0:
+  version "10.1.0"
+  resolved "https://registry.yarnpkg.com/globals/-/globals-10.1.0.tgz#4425a1881be0d336b4a823a82a7be725d5dd987c"
 
 globule@~0.1.0:
   version "0.1.0"
@@ -3523,6 +3533,6 @@ yeast@0.1.2:
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/yeast/-/yeast-0.1.2.tgz#008e06d8094320c372dbc2f8ed76a0ca6c8ac419"
 
-zorium-coffeelint-config@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/zorium-coffeelint-config/-/zorium-coffeelint-config-1.0.0.tgz#660e133027234fa7e2f698afff9eb878c5c68319"
+zorium-coffeelint-config@^1.1.0:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/zorium-coffeelint-config/-/zorium-coffeelint-config-1.1.1.tgz#6546696aa7c0984d1ea333fa404c122fc0450fef"
