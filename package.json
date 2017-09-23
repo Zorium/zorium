@@ -31,6 +31,7 @@
     "b-assert": "^0.1.2",
     "coffee-loader": "^0.7.3",
     "coffee-script": "^1.9.2",
+    "coffeescope2": "^0.4.6",
     "gulp": "^3.8.11",
     "gulp-coffeelint": "^0.6.0",
     "gulp-mocha": "^4.3.1",
@@ -41,11 +42,11 @@
     "mocha": "^3.5.0",
     "routes": "^2.0.0",
     "webpack-stream": "^4.0.0",
-    "zorium-coffeelint-config": "^1.0.0"
+    "zorium-coffeelint-config": "^1.1.0"
   },
   "dependencies": {
     "coffee-script": "^1.9.2",
-    "dio.js": "https://github.com/thysultan/dio.js.git#ae8148bb815e60a6e7c11efdc42a3c6f6a05169a",
+    "dio.js": "https://github.com/thysultan/dio.js.git#acf54b53de74e2ae27cc4c83492a0b4ac8f5c9de",
     "lodash": "^4.17.4",
     "rxjs": "^5.2.0"
   }

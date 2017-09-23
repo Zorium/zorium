@@ -77,3 +77,15 @@ describe 'z.hydrate()', ->
     $el.innerHTML = '<div><div style="color:red;">xxx</div></div>'
     z.hydrate Root, $el
     util.assertDOM $el, util.htmlToNode(result)
+
+  it 'hydrates text replacing node', ->
+    class Root
+      render: ->
+        z 'div',
+          'abc'
+
+    result = '<div><div>abc</div></div>'
+    $el = document.createElement 'div'
+    $el.innerHTML = '<div>abc<a>XXX</a></div>'
+    z.hydrate Root, $el
+    util.assertDOM $el, util.htmlToNode(result)

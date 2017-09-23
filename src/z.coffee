@@ -73,7 +73,7 @@ zChildToHChild = (child) ->
             throw new Error 'Unreachable! Something went horribly wrong'
         componentDidCatch: if child.afterThrow? then (err) ->
           child.afterThrow err
-          err.report = false
+          err.preventDefault()
           return null
         # coffeelint: disable=missing_fat_arrows
         shouldComponentUpdate: (props, state) ->

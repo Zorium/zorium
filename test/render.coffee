@@ -554,11 +554,16 @@ describe 'render()', ->
       render: ->
         z 'div', 'xxx'
 
+    originalLog = console.error
+    console.error = ->
+      console.error = originalLog
+      done new Error 'console.error called'
     z.render new Root(), document.createElement('div')
     b localError, null
     err.error new Error 'oh no'
     setTimeout ->
       b localError?.message, 'oh no'
+      console.error = originalLog
       done()
 
   it 'bubbles state errors', (done) ->

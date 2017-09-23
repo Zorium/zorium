@@ -12,6 +12,14 @@ describe 'server side rendering', ->
     .then (html) ->
       b html, '<DIV>test</DIV>'
 
+  it 'renders un-paired tags properly', ->
+    z.renderToString z 'br'
+    .then (html) ->
+      b html, '<BR>'
+      z.renderToString z 'input'
+    .then (html) ->
+      b html, '<INPUT>'
+
   it 'supports basic render of component to string', ->
     class Root
       render: ->
