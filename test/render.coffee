@@ -1,3 +1,4 @@
+_ = require 'lodash'
 b = require 'b-assert'
 Rx = require 'rxjs/Rx'
 
@@ -17,8 +18,7 @@ describe 'render()', ->
         z 'div', 'Hello World'
     hello = new HelloWorldComponent()
 
-    root = document.createElement('div')
-    $el = z.render hello, root
+    z.render hello, root = document.createElement('div')
     result = '<div><div>Hello World</div></div>'
 
     b root.isEqualNode(util.htmlToNode(result)), true
@@ -612,7 +612,7 @@ describe 'render()', ->
       constructor: ->
         @state = z.state
           b: s2
-      render: ({x}) ->
+      render: ->
         childRenders += 1
         z 'div', 'x'
 
@@ -654,3 +654,81 @@ describe 'render()', ->
       , 17
     .catch done
     null
+
+  it 'handles mount-state consistency', ->
+    s = new Rx.BehaviorSubject 'a'
+    stack = []
+
+    class Child1
+      constructor: (@id) -> null
+      afterMount: => stack.push 'mount|' + @id
+      beforeUnmount: => stack.push 'unmount|' + @id
+      render: -> z 'div'
+
+    class Child2
+      constructor: (@id) -> null
+      afterMount: => stack.push 'mount|' + @id
+      beforeUnmount: => stack.push 'unmount|' + @id
+      render: -> z 'div'
+
+    class Root
+      constructor: ->
+        @$c1 = new Child1('1')
+        @$c11 = new Child1('2')
+        @$c2 = new Child2('3')
+        @state = z.state
+          status: s
+      render: =>
+        {status} = @state.getValue()
+        z 'div',
+          switch status
+            when 'a'
+              @$c1
+            when 'b'
+              @$c11
+            when 'c'
+              @$c2
+            when 'd'
+              [@$c1, @$c11, @$c2]
+            when 'e'
+              [@$c2, @$c11, @$c1]
+
+    tStack = []
+    b stack, tStack
+    z.render new Root(), document.createElement('div')
+    b stack, tStack = tStack.concat ['mount|1']
+    s.next 'b'
+    b stack, tStack = tStack.concat ['mount|2', 'unmount|1']
+    s.next 'c'
+    b stack, tStack = tStack.concat ['mount|3', 'unmount|2']
+    s.next 'd'
+    b stack, tStack = \
+      tStack.concat ['mount|1', 'unmount|3', 'mount|2', 'mount|3']
+    s.next 'e'
+    b stack, tStack = \
+      tStack.concat ['unmount|3', 'mount|3', 'unmount|1', 'mount|1']
+
+  it 'doesnt double-mount when key updates', (done) ->
+    k = new Rx.BehaviorSubject 'abc'
+    class Child
+      render: -> z 'div'
+    class Root
+      constructor: ->
+        @$child = new Child()
+        @state = z.state
+          key: k
+
+      render: =>
+        {key} = @state.getValue()
+        z 'div', z @$child, {key}
+
+    oldLog = console.error
+    console.error = (err) ->
+      console.error = oldLog
+      done new Error err + ''
+    z.render new Root(), document.createElement 'div'
+    k.next 'xxx'
+    setTimeout ->
+      console.error = oldLog
+      done()
+    , 17

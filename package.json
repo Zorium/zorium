@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "coffee-script": "^1.9.2",
-    "dio.js": "https://github.com/thysultan/dio.js.git#ce18699943bb976dc6e19227fff4f3fcfc626fc4",
+    "dio.js": "https://github.com/thysultan/dio.js.git#ae8148bb815e60a6e7c11efdc42a3c6f6a05169a",
     "lodash": "^4.17.4",
     "rxjs": "^5.2.0"
   }

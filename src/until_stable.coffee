@@ -8,7 +8,7 @@ render = (child, component) ->
   #   render() errors will be caught during stringification / mounting
   try
     child.render component.props
-  catch err
+  catch
     {}
 
 getComponents = (tree) ->
@@ -24,6 +24,7 @@ getComponents = (tree) ->
     tree.children.forEach (child) -> children.push child
     _.flatten _.map children, getComponents
 
+# TODO: leaks memory if tree never stabilizes, needs to cancel on timeout?
 untilStable = (component) ->
   child = component.type.zoriumComponent
 

@@ -37,7 +37,7 @@ zChildToHChild = (child) ->
     if child._component?
       child._component
     else
-      isMounted = false
+      mountCounter = 0
       subscription = null
 
       # TODO: perf difference vs class constructor
@@ -45,14 +45,17 @@ zChildToHChild = (child) ->
         displayName: child.constructor.name
         zoriumComponent: child
         componentDidMount: ($$el) ->
-          if isMounted
-            err = new Error "Component mounted twice #{child.constructor.name}"
-            if window.__mountTwiceError? # tests
-              window.__mountTwiceError err
-            else
-              throw err
-            return
-          isMounted = true
+          mountCounter += 1
+          if mountCounter > 1
+            child.beforeUnmount?()
+            setTimeout ->
+              if mountCounter > 1
+                err = \
+                  new Error "Component mounted twice #{child.constructor.name}"
+                if window.__mountTwiceError? # tests
+                  window.__mountTwiceError err
+                else
+                  throw err
           # TODO: .distinctUntilChanged() ?
           unless subscription
             subscription = child.state?.subscribe (state) =>
@@ -61,10 +64,13 @@ zChildToHChild = (child) ->
               this.setState Promise.reject err
           child.afterMount? $$el
         componentWillUnmount: ->
-          isMounted = false
-          subscription?.unsubscribe()
-          subscription = null
-          child.beforeUnmount?()
+          mountCounter -= 1
+          if mountCounter is 0
+            subscription?.unsubscribe()
+            subscription = null
+            child.beforeUnmount?()
+          if mountCounter < 0
+            throw new Error 'Unreachable! Something went horribly wrong'
         componentDidCatch: if child.afterThrow? then (err) ->
           child.afterThrow err
           err.report = false
@@ -88,7 +94,7 @@ zChildToHChild = (child) ->
     child
 
 # BREAKING: no longer supports {attributes} prop
-module.exports = z = (tagName, props, children...) ->
+module.exports = (tagName, props, children...) ->
   unless _.isPlainObject props
     children = [props].concat children
     props = {}
