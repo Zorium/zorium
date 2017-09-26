@@ -290,11 +290,10 @@ describe 'server side rendering', ->
 
   it 'names components for logging', (done) ->
     class Throw
+      afterThrow: (err) ->
+        err.preventDefault()
+        b err.componentStack.indexOf('<Throw>') isnt -1
+        done()
       render: ->
         throw new Error 'x'
-    oldLog = console.error
-    console.error = (msg) ->
-      console.error = oldLog
-      b msg.indexOf('<Throw>') isnt -1
-      done()
     '' + z new Throw()
