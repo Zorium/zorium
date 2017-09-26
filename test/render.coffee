@@ -737,3 +737,50 @@ describe 'render()', ->
       console.error = oldLog
       done()
     , 17
+
+  it 're-mounts child component properly', ->
+    s = new Rx.BehaviorSubject 'a'
+    m = new Rx.BehaviorSubject 'one'
+    class Shared
+      constructor: ->
+        @state = z.state
+          x: s
+      render: =>
+        {x} = @state.getValue()
+        z 'div',
+          'shared: ' + x
+
+    $shared = new Shared()
+
+    class Middleman
+      render: ->
+        z 'div',
+          $shared
+
+    class Root
+      constructor: ->
+        @$m1 = new Middleman()
+        @$m2 = new Middleman()
+        @state = z.state
+          middle: m
+      render: =>
+        {middle} = @state.getValue()
+        z 'div',
+          if middle is 'one'
+            @$m1
+          else
+            @$m2
+
+    result1 = '<div><div><div><div>shared: a</div></div></div></div>'
+    result2 = '<div><div><div><div>shared: b</div></div></div></div>'
+    result3 = '<div><div><div><div>shared: b</div></div></div></div>'
+    result4 = '<div><div><div><div>shared: c</div></div></div></div>'
+
+    z.render new Root(), $el = document.createElement 'div'
+    util.assertDOM $el, util.htmlToNode(result1)
+    s.next 'b'
+    util.assertDOM $el, util.htmlToNode(result2)
+    m.next 'two'
+    util.assertDOM $el, util.htmlToNode(result3)
+    s.next 'c'
+    util.assertDOM $el, util.htmlToNode(result4)
