@@ -39,12 +39,16 @@ zChildToHChild = (child) ->
     else
       mountCounter = 0
       subscription = null
+      instance = null
 
       # TODO: perf difference vs class constructor
       kv =
         displayName: child.constructor.name
         zoriumComponent: child
+        # coffeelint: disable=missing_fat_arrows
         componentDidMount: ($$el) ->
+        # coffeelint: enable=missing_fat_arrows
+          instance = this
           mountCounter += 1
           if mountCounter > 1
             child.beforeUnmount?()
@@ -58,10 +62,10 @@ zChildToHChild = (child) ->
                   throw err
           # TODO: .distinctUntilChanged() ?
           unless subscription
-            subscription = child.state?.subscribe (state) =>
-              this.setState state
-            , (err) =>
-              this.setState Promise.reject err
+            subscription = child.state?.subscribe (state) ->
+              instance.setState state
+            , (err) ->
+              instance.setState Promise.reject err
           child.afterMount? $$el
         componentWillUnmount: ->
           mountCounter -= 1
