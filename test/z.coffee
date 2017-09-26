@@ -4,6 +4,9 @@ z = require '../src'
 util = require './util'
 
 describe 'z()', ->
+  it 'calls h() without undefined children by default', ->
+    b z('div').children.length, 0
+
   it 'creates basic DOM trees', ->
     dom = z 'div',
       z '.cname#cid', 'abc'
