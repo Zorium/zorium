@@ -784,3 +784,31 @@ describe 'render()', ->
     util.assertDOM $el, util.htmlToNode(result3)
     s.next 'c'
     util.assertDOM $el, util.htmlToNode(result4)
+
+  it 'replaces innerHTML tree diffs properly', ->
+    a = new Rx.BehaviorSubject true
+    class Root
+      constructor: ->
+        @state = z.state
+          isA: a
+      render: =>
+        {isA} = @state.getValue()
+        if isA
+          z 'div', [undefined]
+        else
+          z 'div',
+            innerHTML: 'x'
+
+    result1 = '<div><div></div></div>'
+    result2 = '<div><div>x</div></div>'
+    result3 = '<div><div></div></div>'
+    result4 = '<div><div>x</div></div>'
+
+    z.render new Root(), $el = document.createElement 'div'
+    util.assertDOM $el, util.htmlToNode(result1)
+    a.next false
+    util.assertDOM $el, util.htmlToNode(result2)
+    a.next true
+    util.assertDOM $el, util.htmlToNode(result3)
+    a.next false
+    util.assertDOM $el, util.htmlToNode(result4)

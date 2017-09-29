@@ -63,9 +63,21 @@ zChildToHChild = (child) ->
           # TODO: .distinctUntilChanged() ?
           unless subscription
             subscription = child.state?.subscribe (state) ->
-              instance.setState state
+              try
+                instance.setState state
+              catch err
+                if window?
+                  setTimeout -> throw err
+                else
+                  console.error err
             , (err) ->
-              instance.setState Promise.reject err
+              try
+                instance.setState Promise.reject err
+              catch err
+                if window?
+                  setTimeout -> throw err
+                else
+                  console.error err
           child.afterMount? $$el
         componentWillUnmount: ->
           mountCounter -= 1
@@ -99,8 +111,9 @@ zChildToHChild = (child) ->
 
 # BREAKING: no longer supports {attributes} prop
 module.exports = (tagName, props, children...) ->
-  unless _.isPlainObject props
-    children = [props].concat children
+  unless _.isPlainObject(props)
+    if props?
+      children = [props].concat children
     props = {}
 
   if _.isArray children[0]

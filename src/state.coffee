@@ -54,14 +54,17 @@ module.exports = (initialState) ->
 
     currentState = _.merge {}, stateSubject.getValue()
 
+    didReplace = false
     _.map diff, (val, key) ->
       if initialState[key]?.subscribe?
         throw new Error 'Attempted to set observable value'
       else
         if currentState[key] isnt val
+          didReplace = true
           currentState[key] = val
 
-    stateSubject.next currentState
+    if didReplace
+      stateSubject.next currentState
 
   stablePromise = null
   state._onStable = ->
