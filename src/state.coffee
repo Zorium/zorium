@@ -79,8 +79,6 @@ module.exports = (initialState) ->
     .catch (err) ->
       disposable?.unsubscribe()
       throw err
-    .then ->
-      disposable.unsubscribe()
-      return null
+    .then -> disposable
 
   return state
