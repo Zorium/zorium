@@ -297,3 +297,35 @@ describe 'server side rendering', ->
       render: ->
         throw new Error 'x'
     '' + z new Throw()
+
+  it 'supports slow child updates', ->
+    s = new Rx.BehaviorSubject 'abc'
+
+    class Child
+      constructor: ->
+        @state = z.state
+          sideEffect: Rx.Observable.defer ->
+            new Promise (resolve) ->
+              setTimeout ->
+                s.next 'xxx'
+                resolve null
+              , 20
+
+      render: ->
+        z 'div', 'child'
+
+    class Root
+      constructor: ->
+        @$child = new Child()
+        @state = z.state
+          slow: s
+
+      render: =>
+        {slow} = @state.getValue()
+        z 'div',
+          slow
+          @$child
+
+    z.renderToString new Root()
+    .then (html) ->
+      b html, '<DIV>xxx<DIV>child</DIV></DIV>'
