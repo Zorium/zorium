@@ -812,3 +812,64 @@ describe 'render()', ->
     util.assertDOM $el, util.htmlToNode(result3)
     a.next false
     util.assertDOM $el, util.htmlToNode(result4)
+
+  it 'correctly diffs between static vdom-node and text-node', ->
+    a = new Rx.BehaviorSubject true
+    x = z 'span'
+    class Root
+      constructor: ->
+        @state = z.state
+          isA: a
+      render: =>
+        {isA} = @state.getValue()
+        z 'div',
+          if isA
+            x
+          else
+            'test'
+
+    result1 = '<div><div><span></span></div></div>'
+    result2 = '<div><div>test</div></div>'
+    result3 = '<div><div><span></span></div></div>'
+    z.render new Root(), $el = document.createElement 'div'
+    util.assertDOM $el, util.htmlToNode(result1)
+    a.next false
+    util.assertDOM $el, util.htmlToNode(result2)
+    a.next true
+    util.assertDOM $el, util.htmlToNode(result3)
+
+  it 'correctly deals mount/unmounts when static node changes', ->
+    a = new Rx.BehaviorSubject true
+
+    class Ser
+      render: ->
+        z 'div', 'ser'
+
+    class Static
+      constructor: ->
+        @state = z.state
+          child: a.map ->
+            z 'div',
+              new Ser()
+      render: =>
+        {child} = @state.getValue()
+
+        z 'div',
+          child
+
+    class Root
+      constructor: ->
+        @$s = new Static()
+        @state = z.state
+          isA: a
+      render: =>
+        {isA} = @state.getValue()
+        z 'div',
+          if isA
+            @$s
+
+    # failure triggers invariant
+    z.render new Root(), document.createElement 'div'
+    a.next false
+    a.next true
+    a.next false
