@@ -775,8 +775,8 @@ diffie-hellman@^5.0.0:
     randombytes "^2.0.0"
 
 dio.js@^8.0.1:
-  version "8.0.1"
-  resolved "https://registry.yarnpkg.com/dio.js/-/dio.js-8.0.1.tgz#0aca2c9ec314305f815773ce563460515353e738"
+  version "8.1.0"
+  resolved "https://registry.yarnpkg.com/dio.js/-/dio.js-8.1.0.tgz#34a2b0de2f2a9ade31a4e99e31a12880b7c6a461"
 
 dom-serialize@^2.2.0:
   version "2.2.1"
@@ -2864,8 +2864,8 @@ routes@^2.0.0:
   resolved "https://registry.yarnpkg.com/routes/-/routes-2.1.0.tgz#475571192a48f99b6c065dd926bb75e8ae83e8a2"
 
 rxjs@^5.2.0:
-  version "5.4.3"
-  resolved "https://registry.yarnpkg.com/rxjs/-/rxjs-5.4.3.tgz#0758cddee6033d68e0fd53676f0f3596ce3d483f"
+  version "5.5.2"
+  resolved "https://registry.yarnpkg.com/rxjs/-/rxjs-5.5.2.tgz#28d403f0071121967f18ad665563255d54236ac3"
   dependencies:
     symbol-observable "^1.0.1"
 
@@ -3534,5 +3534,5 @@ yeast@0.1.2:
   resolved "https://registry.yarnpkg.com/yeast/-/yeast-0.1.2.tgz#008e06d8094320c372dbc2f8ed76a0ca6c8ac419"
 
 zorium-coffeelint-config@^1.1.0:
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/zorium-coffeelint-config/-/zorium-coffeelint-config-1.1.1.tgz#6546696aa7c0984d1ea333fa404c122fc0450fef"
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/zorium-coffeelint-config/-/zorium-coffeelint-config-1.1.2.tgz#924d5f1b760fa714087fa8d81710bd8eda9f6c0f"
