@@ -775,8 +775,8 @@ diffie-hellman@^5.0.0:
     randombytes "^2.0.0"
 
 dio.js@^8.0.1:
-  version "8.1.0"
-  resolved "https://registry.yarnpkg.com/dio.js/-/dio.js-8.1.0.tgz#34a2b0de2f2a9ade31a4e99e31a12880b7c6a461"
+  version "8.1.1"
+  resolved "https://registry.yarnpkg.com/dio.js/-/dio.js-8.1.1.tgz#5907eb3a7ff336e0f85f26172d113f3ae450fe2b"
 
 dom-serialize@^2.2.0:
   version "2.2.1"

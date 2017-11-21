@@ -837,3 +837,39 @@ describe 'render()', ->
     util.assertDOM $el, util.htmlToNode(result2)
     a.next true
     util.assertDOM $el, util.htmlToNode(result3)
+
+  it 'correctly deals mount/unmounts when static node changes', ->
+    a = new Rx.BehaviorSubject true
+
+    class Ser
+      render: ->
+        z 'div', 'ser'
+
+    class Static
+      constructor: ->
+        @state = z.state
+          child: a.map ->
+            z 'div',
+              new Ser()
+      render: =>
+        {child} = @state.getValue()
+
+        z 'div',
+          child
+
+    class Root
+      constructor: ->
+        @$s = new Static()
+        @state = z.state
+          isA: a
+      render: =>
+        {isA} = @state.getValue()
+        z 'div',
+          if isA
+            @$s
+
+    # failure triggers invariant
+    z.render new Root(), document.createElement 'div'
+    a.next false
+    a.next true
+    a.next false
