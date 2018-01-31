@@ -13,5 +13,5 @@ module.exports = (tree, {timeout} = {}) ->
 
   untilStable tree, {timeout}
   .then (-> "#{tree}"), (err) ->
-    err.html = "#{tree}"
+    Object.defineProperty err, 'html', {value: "#{tree}", enumerable: false}
     throw err

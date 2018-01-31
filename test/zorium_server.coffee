@@ -265,6 +265,7 @@ describe 'server side rendering', ->
     .then ->
       throw new Error 'expected timeout error'
     , (err) ->
+      b Object.getOwnPropertyDescriptor(err, 'html').enumerable, false
       b (Date.now() - startTime) > 248
       b err.message, 'Timeout, request took longer than 250ms'
       b err.html, '<DIV>test</DIV>'
