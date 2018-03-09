@@ -91,6 +91,29 @@ describe 'render()', ->
         util.assertDOM root, util.htmlToNode(result2)
         done()
 
+  it 'binds state (class)', (done) ->
+    subject = new Rx.BehaviorSubject('abc')
+
+    class Root
+      constructor: ->
+        @state = z.state
+          subject: subject
+      render: =>
+        z 'div', @state.getValue().subject
+
+    root = document.createElement 'div'
+    result1 = '<div><div>abc</div></div>'
+    result2 = '<div><div>xyz</div></div>'
+
+    z.render Root, root
+    window.requestAnimationFrame ->
+      util.assertDOM root, util.htmlToNode(result1)
+      subject.next 'xyz'
+
+      window.requestAnimationFrame ->
+        util.assertDOM root, util.htmlToNode(result2)
+        done()
+
   it 'dissalows re-using components', (done) ->
     class Root
       constructor: ->
@@ -453,6 +476,23 @@ describe 'render()', ->
     root.state.set {x: 'xxx'}
     util.assertDOM $el, util.htmlToNode result
 
+  it 'state.set re-renders component (class)', ->
+    set = null
+    class Root
+      constructor: ->
+        @state = z.state
+          x: 'abc'
+      render: =>
+        set = @state.set
+        {x} = @state.getValue()
+        z 'div', x
+
+    result = '<div><div>xxx</div></div>'
+    $el = document.createElement 'div'
+    z.render Root, $el
+    set {x: 'xxx'}
+    util.assertDOM $el, util.htmlToNode result
+
   it 'remove array of children properly', (done) ->
     class Ripple
       constructor: ->
@@ -535,6 +575,28 @@ describe 'render()', ->
 
     $el = document.createElement('div')
     z.render new Root(), $el
+    l.next 'xxx'
+    setTimeout ->
+      util.assertDOM $el, util.htmlToNode(result)
+      done()
+    , 17
+
+  it 'updates on state change (class)', (done) ->
+    l = new Rx.BehaviorSubject 'abc'
+
+    class Root
+      constructor: ->
+        @state = z.state
+          locale: l
+
+      render: =>
+        {locale} = @state.getValue()
+        z 'div', locale
+
+    result = '<div><div>xxx</div></div>'
+
+    $el = document.createElement('div')
+    z.render Root, $el
     l.next 'xxx'
     setTimeout ->
       util.assertDOM $el, util.htmlToNode(result)

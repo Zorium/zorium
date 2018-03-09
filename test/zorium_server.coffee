@@ -29,6 +29,15 @@ describe 'server side rendering', ->
     .then (html) ->
       b html, '<DIV>test</DIV>'
 
+  it 'supports basic render of component to string (class)', ->
+    class Root
+      render: ->
+        z 'div', 'test'
+
+    z.renderToString Root
+    .then (html) ->
+      b html, '<DIV>test</DIV>'
+
   it 'supports render of component with props to string', ->
     class Root
       render: ({name}) ->
@@ -69,6 +78,24 @@ describe 'server side rendering', ->
     z.renderToString $async
     .then (html) ->
       b html, '<DIV>abc</DIV>'
+
+  it 'DOES NOT support async rendering to string (class)', ->
+    p = new Rx.ReplaySubject(1)
+    class Async
+      constructor: ->
+        @state = z.state
+          abc: p
+      render: =>
+        {abc} = @state.getValue()
+
+        z 'div', abc
+
+    setTimeout ->
+      p.next 'abc'
+    , 20
+    z.renderToString Async
+    .then (html) ->
+      b html, '<DIV></DIV>'
 
   it 'supports async rendering to string after sync change', ->
     componentSubject = new Rx.ReplaySubject(1)

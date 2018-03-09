@@ -3,6 +3,6 @@
 z = require './z'
 
 module.exports = (tree, $$root) ->
-  if tree.render?
+  if tree.render? or tree.prototype?.render?
     tree = z tree
   hydrate tree, $$root

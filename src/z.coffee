@@ -106,6 +106,64 @@ zChildToHChild = (child) ->
       for key, val of kv
         child._component[key] = val
       return child._component
+  else if child?.prototype?.render?
+    if child._component?
+      child._component
+    else
+      # XXX: dedupe above
+      # NOTE: does not support async server-side rendering
+      child._component = class ZoriumComponent
+        constructor: ->
+          @subscription = null
+          @zoriumComponent = new child()
+          @displayName = @zoriumComponent.constructor.name
+
+        componentDidMount: ($$el) =>
+          # TODO: .distinctUntilChanged() ?
+          @subscription = @zoriumComponent.state?.subscribe (state) =>
+            try
+              @setState state
+            catch err
+              if window?
+                setTimeout -> throw err
+              else
+                console.error err
+          , (err) =>
+            try
+              @setState Promise.reject err
+            catch err
+              if window?
+                setTimeout -> throw err
+              else
+                console.error err
+          @zoriumComponent.afterMount? $$el
+
+        componentWillUnmount: =>
+          @subscription = @subscription?.unsubscribe()
+          @subscription = null
+          @zoriumComponent.beforeUnmount?()
+
+        componentDidCatch: (err) =>
+          if @zoriumComponent.afterThrow?
+            @zoriumComponent.afterThrow err
+            err.preventDefault()
+            return null
+          else
+            return null
+
+        render: (args...) =>
+          @zoriumComponent.render.apply @zoriumComponent, args
+
+        # coffeelint: disable=missing_fat_arrows
+        shouldComponentUpdate: (props, state) ->
+          compare(this.props, props) or \
+          compare(this.state, state) or \
+          compareChildren(this.props, props)
+        # coffeelint: enable=missing_fat_arrows
+        getInitialState: =>
+          # TODO: understand what this does and add a test for it
+          if @zoriumComponent.state?
+            @zoriumComponent.state.getValue()
   else
     child
 

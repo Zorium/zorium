@@ -45,6 +45,28 @@ describe 'z.hydrate()', ->
     z.hydrate z(new X()), $el
     util.assertDOM $el, util.htmlToNode(result)
 
+  it 'hydrates with components (class)', ->
+    class Picker
+      render: ->
+        z 'div', 'picker'
+
+    class X
+      render: ->
+        z 'div',
+          [
+            z Picker
+            z Picker
+          ]
+
+    result = '<div><div>' +
+      '<div>picker</div>' +
+      '<div>picker</div>' +
+    '</div></div>'
+
+    $el = document.createElement('div')
+    z.hydrate X, $el
+    util.assertDOM $el, util.htmlToNode(result)
+
   it 'hydrates undefined', ->
     class Root
       render: ->

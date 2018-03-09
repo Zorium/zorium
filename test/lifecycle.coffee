@@ -22,6 +22,21 @@ describe 'Lifecycle Callbacks', ->
         done()
       , 20
 
+    it 'gets called after initial load (class)', (done) ->
+      mountCalled = 0
+      class BindComponent
+        afterMount: ($el) ->
+          b $el?
+          mountCalled += 1
+        render: ->
+          z 'div', 'xxx'
+
+      z.render BindComponent, document.createElement 'div'
+      setTimeout ->
+        b mountCalled, 1
+        done()
+      , 20
+
     # https://github.com/claydotio/zorium.js/issues/5
     it 'is only called once on first render', (done) ->
       mountCalled = 0
@@ -67,6 +82,7 @@ describe 'Lifecycle Callbacks', ->
       , 20
 
   describe 'beforeUnmount', ->
+    # TODO: check the DOM
     it 'gets called before removal from DOM', (done) ->
       class BindComponent
         beforeUnmount: ->
@@ -87,6 +103,28 @@ describe 'Lifecycle Callbacks', ->
       container = new ContainerComponent()
       root = document.createElement 'div'
       z.render container, root
+      setTimeout ->
+        z.render z('div'), root
+      , 20
+
+    it 'gets called before removal from DOM (class)', (done) ->
+      class BindComponent
+        beforeUnmount: ->
+          done()
+        render: ->
+          z 'div'
+
+      class ContainerComponent
+        constructor: ->
+          @removed = false
+        render: =>
+          z 'div',
+            unless @removed then BindComponent else 'hello'
+        removeChild: =>
+          @removed = true
+
+      root = document.createElement 'div'
+      z.render ContainerComponent, root
       setTimeout ->
         z.render z('div'), root
       , 20

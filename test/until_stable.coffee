@@ -25,6 +25,25 @@ describe 'untilStable', ->
       s.next 'abc'
     return promise
 
+  it 'DOES NOT stabilize simple tree prior to render (class)', ->
+    s = new Rx.ReplaySubject(1)
+    class Root
+      constructor: ->
+        @state = z.state
+          slow: s
+      render: =>
+        {slow} = @state.getValue()
+        z 'div', slow or 'root'
+
+    promise = z.untilStable Root
+    .then ->
+      result = '<div><div>root</div></div>'
+      z.render Root, $el = document.createElement 'div'
+      util.assertDOM $el, util.htmlToNode(result)
+    setTimeout ->
+      s.next 'abc'
+    return promise
+
   it 'stabilizes nested tree prior to render', ->
     s1 = new Rx.ReplaySubject(1)
     s2 = new Rx.ReplaySubject(1)
