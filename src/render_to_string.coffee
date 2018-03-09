@@ -8,7 +8,7 @@ module.exports = (tree, {timeout} = {}) ->
     throw new Error 'z.renderToString() called client-side'
   timeout ?= DEFAULT_TIMEOUT_MS
 
-  if tree.render?
+  if tree.render? or tree.prototype?.render?
     tree = z tree
 
   untilStable tree, {timeout}
