@@ -765,15 +765,15 @@ describe 'render()', ->
     z.render new Root(), document.createElement('div')
     b stack, tStack = tStack.concat ['mount|1']
     s.next 'b'
-    b stack, tStack = tStack.concat ['mount|2', 'unmount|1']
+    b stack, tStack = tStack.concat ['unmount|1', 'mount|2']
     s.next 'c'
-    b stack, tStack = tStack.concat ['mount|3', 'unmount|2']
+    b stack, tStack = tStack.concat ['unmount|2', 'mount|3']
     s.next 'd'
     b stack, tStack = \
-      tStack.concat ['mount|1', 'unmount|3', 'mount|2', 'mount|3']
+      tStack.concat ['unmount|3', 'mount|1', 'mount|2', 'mount|3']
     s.next 'e'
     b stack, tStack = \
-      tStack.concat ['unmount|3', 'mount|3', 'unmount|1', 'mount|1']
+      tStack.concat ['unmount|1', 'unmount|3', 'mount|3', 'mount|1']
 
   it 'doesnt double-mount when key updates', (done) ->
     k = new Rx.BehaviorSubject 'abc'
@@ -935,3 +935,31 @@ describe 'render()', ->
     a.next false
     a.next true
     a.next false
+
+  it 'renders nested children after parent-child state mutations', ->
+    filter = new Rx.BehaviorSubject 'abc'
+    page = new Rx.BehaviorSubject 'bbb'
+
+    class Child
+      render: ->
+        z 'div', 'child'
+
+    class Wrapper
+      constructor: ->
+        @state = z.state
+          page: page
+      render: ({children}) ->
+        z 'div', children
+
+    class Root
+      constructor: ->
+        @state = z.state
+          filter: filter
+      render: ->
+        z 'div',
+          z Wrapper,
+            z Child, 'xxx'
+
+    z.render Root, document.createElement 'div'
+    filter.next 'xxx'
+    page.next 'ccc'
