@@ -46,7 +46,7 @@
   },
   "dependencies": {
     "coffee-script": "^1.9.2",
-    "dio.js": "^8.0.1",
+    "dio.js": "^8.2.4",
     "lodash": "^4.17.4",
     "rxjs": "^5.2.0"
   }
