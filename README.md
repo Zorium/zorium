@@ -4,14 +4,13 @@
 
 #### [zorium.org](https://zorium.org/)
 
-(╯°□°)╯︵ ┻━┻  
-v1.0.0
+(╯°□°)╯︵ ┻━┻
+v2.0.0
 
 ### Features
 
   - First Class [RxJS Observables](https://github.com/Reactive-Extensions/RxJS)
   - Built for Isomorphism (server-side rendering)
-  - Fast! - [virtual-dom](http://vdom-benchmark.github.io/vdom-benchmark/)
   - Standardized [Best Practices](https://zorium.org/best-practices)
   - [Material Design Components](https://zorium.org/paper)
   - Production-ready [Seed Project](https://github.com/Zorium/zorium-seed)
@@ -21,6 +20,10 @@ v1.0.0
 
 ```coffee
 z = require 'zorium'
+
+class Icon
+  render: ({children}) ->
+    z '.icon', children
 
 class AppComponent
   constructor: ->
@@ -32,9 +35,10 @@ class AppComponent
 
     z '.zorium',
       z 'p.text',
+        z Icon, 'fireworks'
         "The Future -#{name}"
 
-z.render document.body, new AppComponent()
+z.render new AppComponent(), document.body
 ```
 
 ### Documentation
@@ -44,16 +48,22 @@ z.render document.body, new AppComponent()
 ### Installation
 
 ```bash
-npm install --save zorium
+yarn add zorium
 ```
 
 ### Contribute
 
 ```bash
-npm install
-npm test
+yarn install
+yarn test
 ```
 
-Documentation -  [zorium-site](https://github.com/Zorium/zorium-site)
-
-IRC: `#zorium` - chat.freenode.net
+### Changelog
+  - 1.x -> 2
+    - [breaking] deprecate `z.ev()`
+    - [breaking] deprecate `attributes` property for manually specifying attributes
+    - [breaking] deprecate `z.router`
+    - [breaking] upgrade to RxJS v5
+    - [breaking] remove requestAnimationFrame and Promise polyfill
+    - add support for rendering static classes as components
+    - migrate backend from [virtual-dom](https://github.com/Matt-Esch/virtual-dom) to [dio.js](https://github.com/thysultan/dio.js)
