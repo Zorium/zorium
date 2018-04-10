@@ -35,9 +35,9 @@ module.exports = (initialState) ->
         currentState = stateSubject.getValue()
         if currentState[key] isnt update
           # TODO: avoid double state subject updates for single child update
-          stateSubject.next _.defaults {
+          stateSubject.next _.assign _.clone(currentState), {
             "#{key}": update
-          }, currentState
+          }
       , ->
         unless hasSettled
           pendingSettlement -= 1
@@ -52,7 +52,7 @@ module.exports = (initialState) ->
     unless _.isPlainObject(diff)
       throw new Error 'diff must be a plain object'
 
-    currentState = _.merge {}, stateSubject.getValue()
+    currentState = _.clone stateSubject.getValue()
 
     didReplace = false
     _.map diff, (val, key) ->
