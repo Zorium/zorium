@@ -94,6 +94,16 @@ describe 'z.state', ->
     b state.getValue().lazy, 1
     b state2.getValue().lazy, 2
 
+  it 'updates observable values to "undefined"', ->
+    subject = new Rx.BehaviorSubject('abc')
+
+    state = z.state
+      subject: subject
+    state.subscribe()
+    b state.getValue(), {subject: 'abc'}
+    subject.next undefined
+    b state.getValue(), {subject: undefined}
+
   # TODO
   # it.only 'updates efficiently', (done) ->
   #   updates = 0
