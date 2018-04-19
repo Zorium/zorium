@@ -603,7 +603,7 @@ describe 'render()', ->
       done()
     , 17
 
-  it 'passes state errors to afterThrow', (done) ->
+  it 'does NOT pass state errors to afterThrow', (done) ->
     err = new Rx.BehaviorSubject null
     localError = null
 
@@ -619,23 +619,21 @@ describe 'render()', ->
     originalLog = console.error
     console.error = ->
       console.error = originalLog
-      done new Error 'console.error called'
-    z.render new Root(), document.createElement('div')
-    b localError, null
-    err.error new Error 'oh no'
-    setTimeout ->
-      b localError?.message, 'oh no'
-      console.error = originalLog
+      b localError, null
       done()
+    z.render new Root(), document.createElement('div')
+    err.error new Error 'oh no'
 
-  it 'bubbles state errors', (done) ->
-    err = new Rx.BehaviorSubject null
+  it 'passes render errors tp afterThrow', (done) ->
+    shouldError = new Rx.BehaviorSubject false
     localError = null
 
     class Child
       constructor: ->
-        @state = z.state {err}
-      render: ->
+        @state = z.state {shouldError}
+      render: =>
+        if @state.getValue().shouldError
+          throw new Error 'oh no'
         z 'div', 'xxx'
 
     class Root
@@ -647,7 +645,7 @@ describe 'render()', ->
 
     z.render new Root(), document.createElement('div')
     b localError, null
-    err.error new Error 'oh no'
+    shouldError.next true
     setTimeout ->
       b localError?.message, 'oh no'
       done()

@@ -33,7 +33,7 @@ isSame = (a, b) ->
     a isnt a and b isnt b
 
 zChildToHChild = (child) ->
-  if child?.render?
+  if _.isFunction child?.render
     if child._component?
       child._component
     else
@@ -60,7 +60,6 @@ zChildToHChild = (child) ->
                   window.__mountTwiceError err
                 else
                   throw err
-          # TODO: .distinctUntilChanged() ?
           unless subscription
             subscription = child.state?.subscribe (state) ->
               try
@@ -87,10 +86,7 @@ zChildToHChild = (child) ->
             child.beforeUnmount?()
           if mountCounter < 0
             throw new Error 'Unreachable! Something went horribly wrong'
-        componentDidCatch: if child.afterThrow? then (err) ->
-          child.afterThrow err
-          err.preventDefault()
-          return null
+        componentDidCatch: child.afterThrow
         # coffeelint: disable=missing_fat_arrows
         shouldComponentUpdate: (props, state) ->
           compare(this.props, props) or \
@@ -113,13 +109,15 @@ zChildToHChild = (child) ->
       # XXX: dedupe above
       # NOTE: does not support async server-side rendering
       child._component = class ZoriumComponent
+        @displayName: child.name
         constructor: ->
           @subscription = null
           @zoriumComponent = new child()
-          @displayName = @zoriumComponent.constructor.name
+
+          if @zoriumComponent.afterThrow?
+            @componentDidCatch = @zoriumComponent.afterThrow
 
         componentDidMount: ($$el) =>
-          # TODO: .distinctUntilChanged() ?
           @subscription = @zoriumComponent.state?.subscribe (state) =>
             try
               @setState state
@@ -142,14 +140,6 @@ zChildToHChild = (child) ->
           @subscription = @subscription?.unsubscribe()
           @subscription = null
           @zoriumComponent.beforeUnmount?()
-
-        componentDidCatch: (err) =>
-          if @zoriumComponent.afterThrow?
-            @zoriumComponent.afterThrow err
-            err.preventDefault()
-            return null
-          else
-            return null
 
         render: (args...) =>
           @zoriumComponent.render.apply @zoriumComponent, args

@@ -104,25 +104,24 @@ describe 'z.state', ->
     subject.next undefined
     b state.getValue(), {subject: undefined}
 
-  # TODO
-  # it.only 'updates efficiently', (done) ->
-  #   updates = 0
-  #   s = new Rx.BehaviorSubject 's'
-  #   state = z.state
-  #     a: 'a'
-  #     s: s
-  #
-  #   unsub = state.subscribe ->
-  #     updates += 1
-  #
-  #   b updates, 1
-  #   setTimeout ->
-  #     b updates, 1
-  #     s.next 'ss'
-  #     setTimeout ->
-  #       b updates, 2
-  #       state.set {a: 'x'}
-  #       setTimeout ->
-  #         b updates, 3
-  #         unsub.unsubscribe()
-  #         done()
+  it 'updates efficiently', (done) ->
+    updates = 0
+    s = new Rx.BehaviorSubject 's'
+    state = z.state
+      a: 'a'
+      s: s
+
+    unsub = state.subscribe ->
+      updates += 1
+
+    b updates, 1
+    setTimeout ->
+      b updates, 1
+      s.next 'ss'
+      setTimeout ->
+        b updates, 2
+        state.set {a: 'x'}
+        setTimeout ->
+          b updates, 3
+          unsub.unsubscribe()
+          done()

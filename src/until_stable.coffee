@@ -24,7 +24,7 @@ getComponents = (tree) ->
     tree.children.forEach (child) -> children.push child
     _.flatten _.map children, getComponents
 
-# TODO: leaks memory if tree never stabilizes, needs to cancel on timeout?
+# TODO: leaks memory if tree never stabilizes...
 untilStable = (component, disposablePromises) ->
   child = component.type.zoriumComponent
 
@@ -35,18 +35,18 @@ untilStable = (component, disposablePromises) ->
     cached = _.map getComponents(render(child, component)), (component) ->
       untilStable component, disposablePromises
 
-  Promise.all [
-    if child.state?
-      # NOTE: untilStable is only meant to pre-fill state
-      #   and generally succeed except with malformed trees
-      promise = child.state._onStable().catch (err) ->
-        console.error err
-        null
-      disposablePromises.push promise
-      promise
-  ]
-  .then ->
-    if child.state? and stateVal is child.state.getValue()
+  (if child.state?
+    # NOTE: untilStable is only meant to pre-fill state
+    #   and generally succeed except with malformed trees
+    promise = child.state._onStable().catch (err) ->
+      console.error err
+      null
+    disposablePromises.push promise
+    promise
+  else
+    Promise.resolve()
+  ).then ->
+    if child.state? and _.isEqual stateVal, child.state.getValue()
       return Promise.all cached
     Promise.all _.map getComponents(render(child, component)), (component) ->
       untilStable component, disposablePromises
@@ -58,6 +58,7 @@ module.exports = (tree, {timeout} = {}) ->
   return new Promise (resolve, reject) ->
     if timeout?
       setTimeout ->
+        tree = null # XXX: reduce memory leakage (...?)
         reject new Error "Timeout, request took longer than #{timeout}ms"
       , timeout
     disposablePromises = []

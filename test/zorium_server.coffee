@@ -47,19 +47,6 @@ describe 'server side rendering', ->
     .then (html) ->
       b html, '<DIV>test abc</DIV>'
 
-  it 'propogates errors', ->
-    localError = null
-    class MoveAlong
-      afterThrow: (err) ->
-        localError = err
-      render: ->
-        throw new Error 'test'
-
-    $move = new MoveAlong()
-    z.renderToString $move
-    .then ->
-      b localError.message, 'test'
-
   it 'supports async rendering to string', ->
     class Async
       constructor: ->
@@ -142,9 +129,34 @@ describe 'server side rendering', ->
 
     class Parent
       constructor: ->
+        @$async = new Async()
+      render: (params) =>
+        z 'div',
+          z @$async, params
+
+    setTimeout ->
+      pending.next 'abc'
+    , 50
+
+    z.renderToString z new Parent(), {name: 'xxx'}
+    .then (html) ->
+      b html, '<DIV><DIV>abc xxx</DIV></DIV>'
+
+  it 'supports async rendering with parent state with no streams', ->
+    pending = new Rx.ReplaySubject(1)
+    class Async
+      constructor: ->
+        @state = z.state
+          abc: pending
+      render: ({name}) =>
+        {abc} = @state.getValue()
+
+        z 'div', abc + ' ' + name
+
+    class Parent
+      constructor: ->
         @state = z.state
           $async: new Async()
-
       render: (params) =>
         {$async} = @state.getValue()
 
@@ -175,52 +187,6 @@ describe 'server side rendering', ->
     .then (html) ->
       console.error = oldLog
       b html, '<DIV>abc</DIV>'
-      b localError?.message, 'test'
-
-  it 'handles runtime errors', ->
-    localError = null
-
-    class Root
-      afterThrow: (err) ->
-        localError = err
-        null
-      render: ->
-        throw new Error 'test'
-        z 'div', 'abc'
-
-    $root = new Root()
-
-    z.renderToString $root
-    .then (html) ->
-      b html, ''
-      b localError?.message, 'test'
-
-  it 'handles async runtime errors, returning last render (not guaranteed)', ->
-    pending = new Rx.ReplaySubject(1)
-    localError = null
-
-    class Root
-      constructor: ->
-        @state = z.state
-          err: pending
-      afterThrow: (err) ->
-        localError = err
-        null
-      render: =>
-        {err} = @state.getValue()
-        if err is 'invalid'
-          throw new Error 'test'
-        z 'div', 'abc'
-
-    $root = new Root()
-
-    setTimeout ->
-      pending.next 'invalid'
-    , 200
-
-    z.renderToString $root
-    .then (html) ->
-      b html, ''
       b localError?.message, 'test'
 
   it 'supports concurrent requests', (done) ->
@@ -281,7 +247,7 @@ describe 'server side rendering', ->
     class Timeout
       constructor: ->
         @state = z.state
-          never: Rx.Observable.empty()
+          never: new Rx.ReplaySubject(1)
       render: ->
         z 'div', 'test'
 
@@ -301,7 +267,7 @@ describe 'server side rendering', ->
     class Timeout
       constructor: ->
         @state = z.state
-          never: Rx.Observable.empty()
+          never: new Rx.ReplaySubject(1)
       render: ->
         z 'div', 'test'
 
@@ -312,19 +278,48 @@ describe 'server side rendering', ->
     .then ->
       throw new Error 'expected timeout error'
     , (err) ->
-      b (Date.now() - startTime) > 299
+      b (Date.now() - startTime) > 298
       b err.message, 'Timeout, request took longer than 300ms'
       b err.html, '<DIV>test</DIV>'
 
-  it 'names components for logging', (done) ->
+  # FIXME: https://github.com/thysultan/dio.js/issues/61
+  # it.only 'names components for logging (instance)', (done) ->
+  #   oldLog = console.error
+  #   console.error = (err) ->
+  #     console.log 'err', err
+  #     console.error = oldLog
+  #     b err.indexOf('<Throw>') isnt -1
+  #     done()
+  #
+  #   class Throw
+  #     render: ->
+  #       throw new Error 'x'
+  #   '' + z new Throw()
+  # it.only 'xx', (done) ->
+  #   {h} = require 'dio.js'
+  #   oldLog = console.error
+  #   console.error = (err) ->
+  #     console.error = oldLog
+  #     console.log err
+  #     done()
+  #
+  #   Component = ->
+  #     throw new Error 'xxx'
+  #   Component.displayName = 'yyy'
+  #
+  #   '' + h(Component)
+
+  it 'names components for logging (static)', (done) ->
+    oldLog = console.error
+    console.error = (err) ->
+      console.error = oldLog
+      b err.indexOf('<Throw>') isnt -1
+      done()
+
     class Throw
-      afterThrow: (err) ->
-        err.preventDefault()
-        b err.componentStack.indexOf('<Throw>') isnt -1
-        done()
       render: ->
         throw new Error 'x'
-    '' + z new Throw()
+    '' + z Throw
 
   it 'supports slow child updates', ->
     s = new Rx.BehaviorSubject 'abc'

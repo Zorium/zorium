@@ -806,9 +806,9 @@ diffie-hellman@^5.0.0:
     miller-rabin "^4.0.0"
     randombytes "^2.0.0"
 
-dio.js@^8.2.4:
-  version "8.2.4"
-  resolved "https://registry.yarnpkg.com/dio.js/-/dio.js-8.2.4.tgz#2e8a1eaef0b8d157fa743f8129bde457eba9d4ad"
+dio.js@^9.0.0:
+  version "9.0.3"
+  resolved "https://registry.yarnpkg.com/dio.js/-/dio.js-9.0.3.tgz#320167ee9afa56f1819c9e1216322558717219c9"
 
 dom-serialize@^2.2.0:
   version "2.2.1"

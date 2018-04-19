@@ -1,8 +1,11 @@
 _ = require 'lodash'
 Rx = require 'rxjs/Rx'
 
-subjectFromInitialState = (initialState) ->
-  new Rx.BehaviorSubject _.mapValues initialState, (val) ->
+module.exports = (initialState) ->
+  unless _.isPlainObject(initialState)
+    throw new Error 'initialState must be a plain object'
+
+  currentState = _.mapValues initialState, (val) ->
     if val?.subscribe?
       # BehaviorSubject
       if _.isFunction val.getValue
@@ -14,45 +17,37 @@ subjectFromInitialState = (initialState) ->
         null
     else
       val
+  stateSubject = new Rx.BehaviorSubject currentState
+  streams = _.pickBy initialState, (x) -> x?.subscribe?
 
-module.exports = (initialState) ->
-  unless _.isPlainObject(initialState)
-    throw new Error 'initialState must be a plain object'
+  pendingStream = if _.isEmpty streams
+    Rx.Observable.of null
+  else
+    Rx.Observable.combineLatest _.map streams, (val, key) ->
+      val.do (update) ->
+        currentState = _.assign _.clone(currentState), {
+          "#{key}": update
+        }
 
-  pendingSettlement = 0
-  stateSubject = subjectFromInitialState initialState
-
-  state = Rx.Observable.combineLatest _.map initialState, (val, key) ->
-    if val?.subscribe?
-      pendingSettlement += 1
-      hasSettled = false
-      val = val
+  state = Rx.Observable.combineLatest \
+  [stateSubject].concat _.map streams, (val, key) ->
+    Rx.Observable.of if _.isFunction(val.getValue) then val.getValue() else null
+    .concat val.distinctUntilChanged _.isEqual
       .do (update) ->
-        unless hasSettled
-          pendingSettlement -= 1
-          hasSettled = true
+        currentState = _.assign _.clone(currentState), {
+          "#{key}": update
+        }
+    .map (val) -> [key, val]
+    .publishReplay(1).refCount()
+  .map ([base, pairs...]) ->
+    _.defaults _.fromPairs(pairs), base
+  .distinctUntilChanged _.isEqual
+  .publishReplay(1).refCount()
 
-        currentState = stateSubject.getValue()
-        if currentState[key] isnt update
-          # TODO: avoid double state subject updates for single child update
-          stateSubject.next _.assign _.clone(currentState), {
-            "#{key}": update
-          }
-      , ->
-        unless hasSettled
-          pendingSettlement -= 1
-          hasSettled = true
-      Rx.Observable.of(null).concat(val)
-    else
-      Rx.Observable.of null
-  .switchMap -> stateSubject
-
-  state.getValue = _.bind stateSubject.getValue, stateSubject
+  state.getValue = -> currentState
   state.set = (diff) ->
     unless _.isPlainObject(diff)
       throw new Error 'diff must be a plain object'
-
-    currentState = _.clone stateSubject.getValue()
 
     didReplace = false
     _.map diff, (val, key) ->
@@ -61,21 +56,20 @@ module.exports = (initialState) ->
       else
         if currentState[key] isnt val
           didReplace = true
-          currentState[key] = val
 
     if didReplace
+      currentState = _.assign _.clone(currentState), diff
       stateSubject.next currentState
 
   stablePromise = null
   state._onStable = ->
     if stablePromise?
       return stablePromise
+    # NOTE: we subscribe here instead of take(1) to allow for state
+    #  updates caused by chilren to their parents (who have already stabilized)
     disposable = null
     stablePromise = new Promise (resolve, reject) ->
-      disposable = state.subscribe ->
-        if pendingSettlement is 0
-          resolve()
-      , reject
+      disposable = pendingStream.subscribe resolve, reject
     .catch (err) ->
       disposable?.unsubscribe()
       throw err
