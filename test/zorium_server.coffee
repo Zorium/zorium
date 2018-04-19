@@ -282,32 +282,17 @@ describe 'server side rendering', ->
       b err.message, 'Timeout, request took longer than 300ms'
       b err.html, '<DIV>test</DIV>'
 
-  # FIXME: https://github.com/thysultan/dio.js/issues/61
-  # it.only 'names components for logging (instance)', (done) ->
-  #   oldLog = console.error
-  #   console.error = (err) ->
-  #     console.log 'err', err
-  #     console.error = oldLog
-  #     b err.indexOf('<Throw>') isnt -1
-  #     done()
-  #
-  #   class Throw
-  #     render: ->
-  #       throw new Error 'x'
-  #   '' + z new Throw()
-  # it.only 'xx', (done) ->
-  #   {h} = require 'dio.js'
-  #   oldLog = console.error
-  #   console.error = (err) ->
-  #     console.error = oldLog
-  #     console.log err
-  #     done()
-  #
-  #   Component = ->
-  #     throw new Error 'xxx'
-  #   Component.displayName = 'yyy'
-  #
-  #   '' + h(Component)
+  it 'names components for logging (instance)', (done) ->
+    oldLog = console.error
+    console.error = (err) ->
+      console.error = oldLog
+      b err.indexOf('<Throw>') isnt -1
+      done()
+
+    class Throw
+      render: ->
+        throw new Error 'x'
+    '' + z new Throw()
 
   it 'names components for logging (static)', (done) ->
     oldLog = console.error
