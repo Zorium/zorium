@@ -45,11 +45,11 @@ zChildToHChild = (child) ->
       kv =
         displayName: child.constructor.name
         zoriumComponent: child
+        componentWillMount: ->
+          mountCounter += 1
         # coffeelint: disable=missing_fat_arrows
         componentDidMount: ($$el) ->
         # coffeelint: enable=missing_fat_arrows
-          instance = this
-          mountCounter += 1
           if mountCounter > 1
             child.beforeUnmount?()
             setTimeout ->
@@ -60,6 +60,7 @@ zChildToHChild = (child) ->
                   window.__mountTwiceError err
                 else
                   throw err
+          instance = this
           unless subscription
             subscription = child.state?.subscribe (state) ->
               try
@@ -86,8 +87,11 @@ zChildToHChild = (child) ->
             child.beforeUnmount?()
           if mountCounter < 0
             throw new Error 'Unreachable! Something went horribly wrong'
-        componentDidCatch: child.afterThrow
         # coffeelint: disable=missing_fat_arrows
+        componentDidCatch: if child.afterThrow?
+          (args...) ->
+            child.afterThrow.apply child, args
+            this.forceUpdate()
         shouldComponentUpdate: (props, state) ->
           compare(this.props, props) or \
           compare(this.state, state) or \
@@ -115,7 +119,9 @@ zChildToHChild = (child) ->
           @zoriumComponent = new child()
 
           if @zoriumComponent.afterThrow?
-            @componentDidCatch = @zoriumComponent.afterThrow
+            @componentDidCatch = (args...) =>
+              @zoriumComponent.afterThrow.apply @zoriumComponent, args
+              @forceUpdate()
 
         componentDidMount: ($$el) =>
           @subscription = @zoriumComponent.state?.subscribe (state) =>

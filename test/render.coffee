@@ -134,6 +134,26 @@ describe 'render()', ->
 
     z.render new Root(), root
 
+  it 'correctly handle component which fails to mount', ->
+    class Throw
+      render: ->
+        throw new Error 'xxx'
+
+    class Root
+      constructor: ->
+        @$x = new Throw()
+      render: =>
+        z @$x
+
+    errFn = console.error
+    console.error = -> null
+    try
+      z.render new Root(), document.createElement 'div'
+    catch err
+      b err.message, 'xxx'
+    finally
+      console.error = errFn
+
   it 'passes props', (done) ->
     subject = new Rx.BehaviorSubject(null)
 
@@ -624,7 +644,7 @@ describe 'render()', ->
     z.render new Root(), document.createElement('div')
     err.error new Error 'oh no'
 
-  it 'passes render errors tp afterThrow', (done) ->
+  it 'passes render errors to afterThrow', (done) ->
     shouldError = new Rx.BehaviorSubject false
     localError = null
 
@@ -641,6 +661,8 @@ describe 'render()', ->
         @$child = new Child()
       afterThrow: (err) -> localError = err
       render: =>
+        if localError?
+          return null
         z 'div', @$child
 
     z.render new Root(), document.createElement('div')
@@ -649,6 +671,44 @@ describe 'render()', ->
     setTimeout ->
       b localError?.message, 'oh no'
       done()
+
+  it 'recovers gracefully with afterThrow', ->
+    hasErrored = false
+
+    class Throw
+      render: ->
+        throw new Error 'xxx'
+
+    class Root
+      afterThrow: ->
+        hasErrored = true
+      render: ->
+        if hasErrored
+          return z 'div', 'abc'
+        z Throw
+
+    result = '<div><div>abc</div></div>'
+    z.render new Root(), $el = document.createElement('div')
+    util.assertDOM $el, util.htmlToNode(result)
+
+  it 'recovers gracefully with afterThrow (class)', ->
+    hasErrored = false
+
+    class Throw
+      render: ->
+        throw new Error 'xxx'
+
+    class Root
+      afterThrow: ->
+        hasErrored = true
+      render: ->
+        if hasErrored
+          return z 'div', 'abc'
+        z Throw
+
+    result = '<div><div>abc</div></div>'
+    z.render Root, $el = document.createElement('div')
+    util.assertDOM $el, util.htmlToNode(result)
 
   it 'logs state errors if uncaught', (done) ->
     err = new Rx.BehaviorSubject null
