@@ -150,7 +150,7 @@ describe 'render()', ->
     try
       z.render new Root(), document.createElement 'div'
     catch err
-      b err.message, 'xxx'
+      b _.includes err.message, 'xxx'
     finally
       console.error = errFn
 
@@ -695,6 +695,46 @@ describe 'render()', ->
     result = '<div><div>abc</div></div>'
     z.render new Root(), $el = document.createElement('div')
     util.assertDOM $el, util.htmlToNode(result)
+
+  it 'recovers gracefully with afterThrow', (done) ->
+    setTimeout ->
+      done()
+    , 100
+
+    errors = []
+    class Errorable
+      afterThrow: (err) =>
+        errors.push err
+        @badChildren = @children
+
+      render: ({@children}) =>
+        if @badChildren is @children
+          return z 'div', 'ERRR'
+        @children
+
+    class BottomNav
+      render: ->
+        z 'div', 'bottom nav'
+
+    s = new Rx.BehaviorSubject 'abc'
+    module.exports = class MiningPage
+      constructor: ->
+        @$bottomNav = new BottomNav()
+        @state = z.state
+          s: s
+
+      render: =>
+        z 'div',
+          z Errorable, (-> throw new Error 'x')
+          z @$bottomNav
+
+    z.hydrate MiningPage, $el = document.createElement('div')
+    s.next 'xxx'
+    result = '<div><div><div>ERRR</div><div>bottom nav</div></div></div>'
+    util.assertDOM $el, util.htmlToNode(result)
+    b errors.length, 2
+    b errors[0].message, 'x'
+    return null
 
   it 'recovers gracefully with afterThrow (class)', ->
     hasErrored = false
