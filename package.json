@@ -29,9 +29,9 @@
   "homepage": "https://zorium.org/",
   "devDependencies": {
     "b-assert": "^0.1.2",
-    "coffee-loader": "^0.7.3",
-    "coffee-script": "^1.9.2",
+    "coffee-loader": "^0.9.0",
     "coffeescope2": "^0.4.6",
+    "coffeescript": "^2.3.2",
     "gulp": "^3.8.11",
     "gulp-coffeelint": "^0.6.0",
     "gulp-mocha": "^4.3.1",
@@ -45,7 +45,6 @@
     "zorium-coffeelint-config": "^1.1.0"
   },
   "dependencies": {
-    "coffee-script": "^1.9.2",
     "dio.js": "^9.1.0",
     "lodash": "^4.17.4",
     "rxjs": "^5.2.0"

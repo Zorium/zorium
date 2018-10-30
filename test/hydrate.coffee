@@ -1,6 +1,3 @@
-_ = require 'lodash'
-b = require 'b-assert'
-
 z = require '../src'
 util = require './util'
 
