@@ -2,7 +2,6 @@ gulp = require 'gulp'
 mocha = require 'gulp-mocha'
 karma = require 'karma'
 webpackStream = require 'webpack-stream'
-coffeelint = require 'gulp-coffeelint'
 
 paths =
   coffee: ['./src/**/*.coffee', './*.coffee', './test/**/*.coffee']
@@ -12,38 +11,6 @@ paths =
   build: './build'
   output:
     tests: 'tests.js'
-
-gulp.task 'test', ['test:lint', 'test:server', 'test:browser']
-
-gulp.task 'watch', ->
-  gulp.watch paths.coffee, ['test:browser', 'test:server']
-
-gulp.task 'test:lint', ->
-  gulp.src paths.coffee
-    .pipe coffeelint()
-    .pipe coffeelint.reporter()
-
-gulp.task 'test:server', ->
-  gulp.src paths.rootServerTests
-    .pipe mocha
-      compilers: 'coffee:coffee-script/register'
-      timeout: 400
-      useColors: true
-
-gulp.task 'test:browser', ['scripts:test'], (cb) ->
-  new karma.Server({
-    singleRun: true
-    frameworks: ['mocha']
-    client:
-      useIframe: true
-      captureConsole: true
-      mocha:
-        timeout: 300
-    files: [
-      "#{paths.build}/#{paths.output.tests}"
-    ]
-    browsers: ['ChromeHeadless']
-  }, cb).start()
 
 gulp.task 'scripts:test', ->
   gulp.src paths.tests
@@ -60,3 +27,32 @@ gulp.task 'scripts:test', ->
     resolve:
       extensions: ['.coffee', '.js']
   .pipe gulp.dest paths.build
+
+gulp.task 'test:server', ->
+  gulp.src paths.rootServerTests
+    .pipe mocha
+      require: 'coffeescript/register'
+      timeout: 400
+      color: true
+
+gulp.task 'test:browser', gulp.series ['scripts:test'], (cb) ->
+  new karma.Server({
+    singleRun: true
+    frameworks: ['mocha']
+    client:
+      useIframe: true
+      captureConsole: true
+      mocha:
+        timeout: 300
+    files: [
+      "#{paths.build}/#{paths.output.tests}"
+    ]
+    browsers: ['ChromeHeadless']
+  }, cb).start()
+
+gulp.task 'test', gulp.parallel ['test:server', 'test:browser']
+
+gulp.task 'watch', ->
+  # gulp.watch paths.coffee, gulp.parallel ['test:browser', 'test:server']
+  # FIXME
+  gulp.watch paths.coffee, gulp.series ['test:server']

@@ -1,9 +1,9 @@
 b = require 'b-assert'
 Rx = require 'rxjs/Rx'
 
-z = require '../src'
+{z, useState, Boudary} = require '../src'
 
-describe 'server side rendering', ->
+describe.only 'server side rendering', ->
   if window?
     return
 
@@ -21,169 +21,118 @@ describe 'server side rendering', ->
       b html, '<INPUT>'
 
   it 'supports basic render of component to string', ->
-    class Root
-      render: ->
-        z 'div', 'test'
-
-    z.renderToString new Root()
-    .then (html) ->
-      b html, '<DIV>test</DIV>'
-
-  it 'supports basic render of component to string (class)', ->
-    class Root
-      render: ->
-        z 'div', 'test'
+    Root = ->
+      z 'div', 'test'
 
     z.renderToString Root
     .then (html) ->
       b html, '<DIV>test</DIV>'
 
   it 'supports render of component with props to string', ->
-    class Root
-      render: ({name}) ->
-        z 'div', 'test ' + name
+    Root = ({name}) ->
+      z 'div', 'test ' + name
 
-    z.renderToString z new Root(), {name: 'abc'}
+    z.renderToString z Root, {name: 'abc'}
     .then (html) ->
       b html, '<DIV>test abc</DIV>'
 
   it 'supports async rendering to string', ->
-    class Async
-      constructor: ->
-        @pending = new Rx.ReplaySubject(1)
-        @state = z.state
-          abc: @pending
-      render: =>
-        {abc} = @state.getValue()
+    pending = new Rx.ReplaySubject(1)
+    Async = ->
+      {abc} = await useState ->
+        abc: pending
 
-        z 'div', abc
-
-    $async = new Async()
-    setTimeout ->
-      $async.pending.next 'abc'
-    , 20
-    z.renderToString $async
-    .then (html) ->
-      b html, '<DIV>abc</DIV>'
-
-  it 'DOES NOT support async rendering to string (class)', ->
-    p = new Rx.ReplaySubject(1)
-    class Async
-      constructor: ->
-        @state = z.state
-          abc: p
-      render: =>
-        {abc} = @state.getValue()
-
-        z 'div', abc
+      z 'div', abc
 
     setTimeout ->
-      p.next 'abc'
+      pending.next 'abc'
     , 20
     z.renderToString Async
     .then (html) ->
-      b html, '<DIV></DIV>'
+      b html, '<DIV>abc</DIV>'
 
   it 'supports async rendering to string after sync change', ->
     componentSubject = new Rx.ReplaySubject(1)
+    pending = new Rx.ReplaySubject(1)
 
-    class AsyncChild
-      constructor: ->
-        @pending = new Rx.ReplaySubject(1)
-        @state = z.state
-          abc: @pending
-      render: =>
-        {abc} = @state.getValue()
+    AsyncChild = ->
+      {abc} = await useState ->
+        abc: pending
 
-        z 'div', abc
+      z 'div', abc
 
-    class Root
-      constructor: ->
-        @state = z.state
-          $component: componentSubject
-      render: =>
-        {$component} = @state.getValue()
+    Root = ->
+      {$component} = await useState ->
+        $component: componentSubject
 
-        z 'div',
-          $component
+      z 'div',
+        $component
 
-    $root = new Root()
-    child = new AsyncChild()
-    componentSubject.next child
+    componentSubject.next AsyncChild
     setTimeout ->
-      child.pending.next 'abc'
-    z.renderToString $root
+      pending.next 'abc'
+    , 20
+    z.renderToString Root
     .then (html) ->
       b html, '<DIV><DIV>abc</DIV></DIV>'
 
   it 'supports async rendering with props to string', ->
     pending = new Rx.ReplaySubject(1)
-    class Async
-      constructor: ->
-        @state = z.state
-          abc: pending
-      render: ({name}) =>
-        {abc} = @state.getValue()
+    Async = ({name}) ->
+      {abc} = await useState ->
+        abc: pending
 
-        z 'div', abc + ' ' + name
+      z 'div', abc + ' ' + name
 
-    class Parent
-      constructor: ->
-        @$async = new Async()
-      render: (params) =>
-        z 'div',
-          z @$async, params
+    Parent = (params) ->
+      z 'div',
+        z Async, params
 
     setTimeout ->
       pending.next 'abc'
     , 50
 
-    z.renderToString z new Parent(), {name: 'xxx'}
+    z.renderToString z Parent, {name: 'xxx'}
     .then (html) ->
       b html, '<DIV><DIV>abc xxx</DIV></DIV>'
 
   it 'supports async rendering with parent state with no streams', ->
     pending = new Rx.ReplaySubject(1)
-    class Async
-      constructor: ->
-        @state = z.state
-          abc: pending
-      render: ({name}) =>
-        {abc} = @state.getValue()
+    Async = ({name}) ->
+      {abc} = await useState ->
+        abc: pending
 
-        z 'div', abc + ' ' + name
+      z 'div', abc + ' ' + name
 
-    class Parent
-      constructor: ->
-        @state = z.state
-          $async: new Async()
-      render: (params) =>
-        {$async} = @state.getValue()
+    Parent = (params) ->
+      {$async} = await useState ->
+        $async: Async
 
-        z 'div',
-          z $async, params
+      z 'div',
+        z $async, params
 
     setTimeout ->
       pending.next 'abc'
     , 50
 
-    z.renderToString z new Parent(), {name: 'xxx'}
+    z.renderToString z Parent, {name: 'xxx'}
     .then (html) ->
       b html, '<DIV><DIV>abc xxx</DIV></DIV>'
 
-  it 'logs state errors', ->
+  it.only 'logs state errors', ->
     localError = null
-    class Root
-      constructor: ->
-        @state = z.state
-          pending: Rx.Observable.throw new Error 'test'
-      render: ->
-        z 'div', 'abc'
+    Root = ->
+      await Promise.resolve null
+      throw new Error 'x'
+
+      # await useState ->
+      #   pending: Rx.Observable.throw new Error 'test'
+      z 'div', 'abc'
 
     oldLog = console.error
     console.error = (err) ->
       localError = err
-    z.renderToString new Root()
+    z.renderToString Root
     .then (html) ->
       console.error = oldLog
       b html, '<DIV>abc</DIV>'

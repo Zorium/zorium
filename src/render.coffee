@@ -1,4 +1,4 @@
-{render} = require 'dio.js'
+{render} = require 'dyo'
 
 z = require './z'
 

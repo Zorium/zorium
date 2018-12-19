@@ -16,9 +16,10 @@
   ],
   "main": "src/index.coffee",
   "scripts": {
-    "test": "gulp test",
+    "test": "yarn lint && gulp test",
     "build": "gulp build",
-    "watch": "gulp watch"
+    "watch": "gulp watch",
+    "lint": "coffeelint $(find . -type f -name \\*.coffee -not -path ./node_modules/\\*)"
   },
   "repository": "https://github.com/zorium/zorium.git",
   "bugs": {
@@ -30,22 +31,22 @@
   "devDependencies": {
     "b-assert": "^0.1.2",
     "coffee-loader": "^0.9.0",
-    "coffeescope2": "^0.4.6",
+    "coffeelint": "^2.1.0",
+    "coffeescope2": "^0.5.1",
     "coffeescript": "^2.3.2",
-    "gulp": "^3.8.11",
-    "gulp-coffeelint": "^0.6.0",
-    "gulp-mocha": "^4.3.1",
+    "gulp": "^4.0.2",
+    "gulp-mocha": "^7.0.2",
     "karma": "^1.3.0",
     "karma-chrome-launcher": "^2.2.0",
     "karma-mocha": "^1.3.0",
     "location-router": "^0.1.2",
-    "mocha": "^3.5.0",
+    "mocha": "^6.2.2",
     "routes": "^2.0.0",
     "webpack-stream": "^4.0.0",
-    "zorium-coffeelint-config": "^1.1.0"
+    "zorium-coffeelint-config": "^1.2.3"
   },
   "dependencies": {
-    "dio.js": "^9.1.0",
+    "dyo": "^1.0.1",
     "lodash": "^4.17.4",
     "rxjs": "^5.2.0"
   }

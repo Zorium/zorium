@@ -1,4 +1,4 @@
-{hydrate} = require 'dio.js'
+{hydrate} = require 'dyo'
 
 z = require './z'
 

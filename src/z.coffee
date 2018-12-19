@@ -1,7 +1,7 @@
 _ = require 'lodash'
 
 parseTag = require './parse_tag'
-{h} = require 'dio.js'
+{h} = require 'dyo/server/dist/dyo.umd.js'
 
 hasOwnProperty = Object.hasOwnProperty
 
@@ -49,6 +49,7 @@ zChildToHChild = (child) ->
           mountCounter += 1
         # coffeelint: disable=missing_fat_arrows
         componentDidMount: ($$el) ->
+          console.log 'MOUNT!!!!!!!!!! SHOULD NOT HAPPEN'
         # coffeelint: enable=missing_fat_arrows
           if mountCounter > 1
             child.beforeUnmount?()
@@ -175,10 +176,11 @@ module.exports = (tagName, props, children...) ->
 
   if _.isString tagName
     tagName = parseTag tagName, props
-  else
-    tagName = zChildToHChild tagName
+  # else
+  #   tagName = zChildToHChild tagName
 
   # TODO: test perf
   # chillen = _.map children, zChildToHChild
   # unless chillen.length is 0 then chillen
-  h tagName, props, _.map children, zChildToHChild
+  # h tagName, props, _.map children, zChildToHChild
+  h tagName, props, children

@@ -66,4 +66,4 @@ yarn test
     - [breaking] upgrade to RxJS v5
     - [breaking] remove requestAnimationFrame and Promise polyfill
     - add support for rendering static classes as components
-    - migrate backend from [virtual-dom](https://github.com/Matt-Esch/virtual-dom) to [dio.js](https://github.com/thysultan/dio.js)
+    - migrate backend from [virtual-dom](https://github.com/Matt-Esch/virtual-dom) to [dyo](https://github.com/thysultan/dyo)
