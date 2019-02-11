@@ -111,7 +111,7 @@ describe 'z.state', ->
       a: 'a'
       s: s
 
-    unsub = state.subscribe ->
+    state.subscribe ->
       updates += 1
 
     b updates, 1
@@ -123,5 +123,27 @@ describe 'z.state', ->
         state.set {a: 'x'}
         setTimeout ->
           b updates, 3
-          unsub.unsubscribe()
           done()
+
+  it 'does not re-emit value when re-subscribing', ->
+    subject = new Rx.BehaviorSubject 'abc'
+    state = z.state
+      static: new Rx.BehaviorSubject 'xxx'
+      cold: Rx.Observable.defer -> subject
+      never: Rx.Observable.fromPromise new Promise(-> null)
+
+    b state.getValue().cold, null
+    callbackCounter = 0
+    state.subscribe (currentState) ->
+      callbackCounter += 1
+      b currentState.cold, 'abc'
+      b state.getValue() is currentState
+    .unsubscribe()
+    b callbackCounter, 1
+
+    callbackCounter = 0
+    state.subscribe (currentState) ->
+      callbackCounter += 1
+      b currentState.cold, 'abc'
+      b state.getValue() is currentState
+    b callbackCounter, 1

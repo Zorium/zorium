@@ -30,19 +30,18 @@ module.exports = (initialState) ->
         }
 
   state = Rx.Observable.combineLatest \
-  [stateSubject].concat _.map streams, (val, key) ->
-    Rx.Observable.of if _.isFunction(val.getValue) then val.getValue() else null
-    .concat val.distinctUntilChanged _.isEqual
-      .do (update) ->
-        currentState = _.assign _.clone(currentState), {
-          "#{key}": update
-        }
-    .map (val) -> [key, val]
-    .publishReplay(1).refCount()
-  .map ([base, pairs...]) ->
-    _.defaults _.fromPairs(pairs), base
-  .distinctUntilChanged _.isEqual
-  .publishReplay(1).refCount()
+    [stateSubject].concat _.map streams, (val, key) ->
+      Rx.Observable.defer ->
+        Rx.Observable.of currentState[key]
+      .concat(
+        val.do (update) ->
+          if currentState[key] isnt update
+            currentState = _.assign _.clone(currentState), {
+              "#{key}": update
+            }
+      )
+      .distinctUntilChanged()
+    .map -> currentState
 
   state.getValue = -> currentState
   state.set = (diff) ->
