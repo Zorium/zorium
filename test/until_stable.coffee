@@ -116,7 +116,7 @@ describe 'untilStable', ->
       constructor: ->
         @$child = new Child()
       render: =>
-        [z @$child]
+        [undefined, z @$child]
 
     root = new Root()
     promise = z.untilStable root

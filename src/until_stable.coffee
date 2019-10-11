@@ -13,7 +13,7 @@ render = (child, component) ->
 
 getComponents = (tree) ->
   if _.isArray tree
-    return _.flatten _.map tree, getComponents
+    return _.flatten _.map _.filter(tree), getComponents
 
   if tree.type?.zoriumComponent?
     [tree]
