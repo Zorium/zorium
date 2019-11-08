@@ -12,8 +12,7 @@ class Writable
     this.innerHTML += value
 
 stringify = (tree) ->
-  {innerHTML} = await render tree, new Writable(), ->
-    console.log 'cb??????'
+  {innerHTML} = await render tree, new Writable()
   return innerHTML
 
 module.exports = (tree, {timeout} = {}) ->
