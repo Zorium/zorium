@@ -39,10 +39,10 @@ describe.only 'server side rendering', ->
   it 'supports async rendering to string', ->
     pending = new Rx.ReplaySubject(1)
     Async = ->
-      yield {abc} = await useState ->
+      {abc} = await useState ->
         abc: pending
 
-      yield z 'div', abc
+      z 'div', abc
 
     setTimeout ->
       pending.next 'abc'
@@ -56,16 +56,16 @@ describe.only 'server side rendering', ->
     pending = new Rx.ReplaySubject(1)
 
     AsyncChild = ->
-      yield {abc} = await useState ->
+      {abc} = await useState ->
         abc: pending
 
-      yield z 'div', abc
+      z 'div', abc
 
     Root = ->
-      yield {$component} = await useState ->
+      {$component} = await useState ->
         $component: componentSubject
 
-      yield z 'div',
+      z 'div',
         $component
 
     componentSubject.next AsyncChild
@@ -79,10 +79,10 @@ describe.only 'server side rendering', ->
   it 'supports async rendering with props to string', ->
     pending = new Rx.ReplaySubject(1)
     Async = ({name}) ->
-      yield {abc} = await useState ->
+      {abc} = await useState ->
         abc: pending
 
-      yield z 'div', abc + ' ' + name
+      z 'div', abc + ' ' + name
 
     Parent = (params) ->
       z 'div',
@@ -99,16 +99,16 @@ describe.only 'server side rendering', ->
   it 'supports async rendering with parent state with no streams', ->
     pending = new Rx.ReplaySubject(1)
     Async = ({name}) ->
-      yield {abc} = await useState ->
+      {abc} = await useState ->
         abc: pending
 
-      yield z 'div', abc + ' ' + name
+      z 'div', abc + ' ' + name
 
     Parent = (params) ->
-      yield {$async} = await useState ->
+      {$async} = await useState ->
         $async: Async
 
-      yield z 'div',
+      z 'div',
         z $async, params
 
     setTimeout ->
@@ -121,12 +121,12 @@ describe.only 'server side rendering', ->
 
   it 'logs state errors', ->
     Root = ->
-      yield await Promise.resolve null
+      await Promise.resolve null
 
-      yield await useState ->
+      await useState ->
         pending: Rx.Observable.throw new Error 'test'
 
-      yield z 'div', 'abc'
+      z 'div', 'abc'
 
     z.renderToString Root
     .then (html) ->
@@ -140,17 +140,17 @@ describe.only 'server side rendering', ->
     fastCallCnt = 0
 
     Slow = ->
-      yield await useState ->
+      await useState ->
         slow: Rx.Observable.fromPromise(
           new Promise (resolve) ->
             setTimeout ->
               resolve 'slow'
             , 20
         )
-      yield z 'div', 'slow'
+      z 'div', 'slow'
 
     Fast = ->
-      yield z 'div', 'fast'
+      z 'div', 'fast'
 
 
     z.renderToString Slow
@@ -187,9 +187,9 @@ describe.only 'server side rendering', ->
 
   it 'defaults to 250ms timeout', ->
     Timeout = ->
-      yield await useState ->
+      await useState ->
         never: new Rx.ReplaySubject(1)
-      yield z 'div', 'test'
+      z 'div', 'test'
 
     startTime = Date.now()
 
@@ -204,9 +204,9 @@ describe.only 'server side rendering', ->
 
   it 'allows custom timeouts', ->
     Timeout = ->
-      yield await useState ->
+      await useState ->
         never: new Rx.ReplaySubject(1)
-      yield z 'div', 'test'
+      z 'div', 'test'
 
     startTime = Date.now()
 
