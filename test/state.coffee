@@ -2,13 +2,13 @@ _ = require 'lodash'
 b = require 'b-assert'
 Rx = require 'rxjs/Rx'
 
-z = require '../src'
+State = require '../src/state'
 
-describe 'z.state', ->
+describe 'State', ->
   it 'obesrves state, returning an observable', ->
     subject = new Rx.BehaviorSubject(null)
     promise = Promise.resolve 'b'
-    state = z.state
+    state = State
       a: 'a'
       b: Rx.Observable.fromPromise promise
       c: subject
@@ -31,7 +31,7 @@ describe 'z.state', ->
       b state.getValue().x, 'X'
 
   it 'sets state with false values', ->
-    state = z.state
+    state = State
       a: 'a'
       b: false
       c: 123
@@ -41,7 +41,7 @@ describe 'z.state', ->
   it 'errors when setting observable values in diff', ->
     subject = new Rx.BehaviorSubject(null)
 
-    state = z.state
+    state = State
       subject: subject
 
     try
@@ -53,7 +53,7 @@ describe 'z.state', ->
   it 'throws errors', ->
     subject = new Rx.BehaviorSubject(null)
 
-    state = z.state
+    state = State
       subject: subject
     disposable = state.subscribe -> null
 
@@ -72,7 +72,7 @@ describe 'z.state', ->
       lazyRuns += 1
       Rx.Observable.of lazyRuns
 
-    state = z.state
+    state = State
       lazy: cold
 
     b lazyRuns, 0
@@ -83,7 +83,7 @@ describe 'z.state', ->
     state.set a: 'b'
     b lazyRuns, 1
 
-    state2 = z.state
+    state2 = State
       lazy: cold
 
     b lazyRuns, 1
@@ -97,7 +97,7 @@ describe 'z.state', ->
   it 'updates observable values to "undefined"', ->
     subject = new Rx.BehaviorSubject('abc')
 
-    state = z.state
+    state = State
       subject: subject
     state.subscribe()
     b state.getValue(), {subject: 'abc'}
@@ -107,7 +107,7 @@ describe 'z.state', ->
   it 'updates efficiently', (done) ->
     updates = 0
     s = new Rx.BehaviorSubject 's'
-    state = z.state
+    state = State
       a: 'a'
       s: s
 
@@ -125,3 +125,26 @@ describe 'z.state', ->
           b updates, 3
           unsub.unsubscribe()
           done()
+
+  it 'does not re-emit value when re-subscribing', ->
+    subject = new Rx.BehaviorSubject 'abc'
+    state = State
+      static: new Rx.BehaviorSubject 'xxx'
+      cold: Rx.Observable.defer -> subject
+      never: Rx.Observable.fromPromise new Promise(-> null)
+
+    b state.getValue().cold, null
+    callbackCounter = 0
+    state.subscribe (currentState) ->
+      callbackCounter += 1
+      b currentState.cold, 'abc'
+      b state.getValue() is currentState
+    .unsubscribe()
+    b callbackCounter, 1
+
+    callbackCounter = 0
+    state.subscribe (currentState) ->
+      callbackCounter += 1
+      b currentState.cold, 'abc'
+      b state.getValue() is currentState
+    b callbackCounter, 1

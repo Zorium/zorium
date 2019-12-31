@@ -1,69 +1,116 @@
 _ = require 'lodash'
 
-z = require './z'
-render = require './render'
-hydrate = require './hydrate'
-renderToString = require './render_to_string'
 State = require './state'
-classKebab = require './class_kebab'
-isSimpleClick = require './is_simple_click'
-untilStable = require './until_stable'
-{useMemo, Boundary, Context, useContext, useState} = require 'dyo/server/dist/dyo.umd.js'
+dyo = require 'dyo'
+parseTag = require './parse_tag'
+{
+  h, useMemo, Context, useContext, useState,
+  useResource, useLayout, Suspense, render
+} = dyo
 
 DEFAULT_TIMEOUT_MS = 250
 
-RootContext = ({children, awaitState}) ->
-  z Context, {value: {awaitState}}, children
+z = (tagName, props, children...) ->
+  unless _.isPlainObject(props)
+    if props?
+      children = [props].concat children
+    props = {}
 
-# BREAKING: remove z.bind()
-# BREAKING: remove z.ev()
-_.assign z, {
+  if _.isArray children[0]
+    children = children[0]
+
+  if _.isString tagName
+    tagName = parseTag tagName, props
+
+  h tagName, props, children
+
+RootContext = ({shouldSuspend, awaitStable, children}) ->
+  z Context, {value: {shouldSuspend, awaitStable}}, children
+
+module.exports = _.defaults {
   z
-  render
-  hydrate
-  renderToString: (tree, {timeout} = {}) ->
-    timeout ?= DEFAULT_TIMEOUT_MS
 
-    [initialHtml, html] = await Promise.all [
-      renderToString z RootContext, {awaitState: false}, tree
-      Promise.race [
-        renderToString z RootContext, {awaitState: true}, tree
-        new Promise (resolve, reject) ->
-          setTimeout ->
-            resolve null
-          , timeout
-      ]
-    ]
+  Boundary: ({children, fallback}) ->
+    z dyo.Boundary,
+      fallback: (err) ->
+        fallback err.message
+      children
 
-    if html?
-      return html
-    else
-      error = new Error 'Timeout'
-      Object.defineProperty error, 'html',
-        value: initialHtml
-        enumerable: false
-      throw error
+  classKebab: (classes) ->
+    _.map _.keys(_.pickBy classes, _.identity), _.kebabCase
+    .join ' '
 
-  classKebab
-  isSimpleClick
-  untilStable
-  Boundary
-  useMemo
-  useState: (cb) ->
-    {awaitState} = useContext RootContext
+  isSimpleClick: (e) ->
+    not (e.which > 1 or e.shiftKey or e.altKey or e.metaKey or e.ctrlKey)
+
+  useStream: (cb) ->
+    {awaitStable, shouldSuspend} = useContext RootContext
     state = useMemo ->
-      # TODO: only call cb() if awaitState?
+      # TODO: only call cb() if not shouldSuspend and not awaitStable?
       State(cb())
     , []
 
-    await useMemo ->
-      if awaitState
+    [value, setValue] = useState state.getValue()
+    [error, setError] = useState null
+
+    if error?
+      throw error
+
+    if shouldSuspend
+      # XXX
+      value = useResource ->
         state._onStable().then (stableDisposable) ->
+          # TODO: is this a huge performance penalty? (for concurrent)
+          # FIXME: should promise chain the nextTick (+tests)
           process.nextTick ->
             stableDisposable.unsubscribe()
-    , [awaitState]
+        .then -> state.getValue()
+    else if window?
+      useLayout ->
+        subscription = state.subscribe setValue, setError
+        # TODO: tests for unsubscribe
+        ->
+          subscription.unsubscribe()
+      , []
+    else
+      useMemo ->
+        if awaitStable?
+          awaitStable state._onStable().then (stableDisposable) ->
+            setValue value = state.getValue()
+            stableDisposable
+      , [awaitStable]
 
-    state.getValue()
-}
+    value
 
-module.exports = z
+  render: (tree, $$root) ->
+    render z(RootContext, {shouldSuspend: false}, tree), $$root
+
+  renderToString: (tree, {timeout} = {}) ->
+    timeout ?= DEFAULT_TIMEOUT_MS
+
+    stablePromises = []
+    awaitStable = (x) -> stablePromises.push x
+    initialHtml = await render \
+      z(RootContext, {shouldSuspend: false, awaitStable}, tree), {}
+
+    try
+      return await Promise.race [
+        Promise.all stablePromises
+        .then (stableDisposables) ->
+          render \
+            z(RootContext, {shouldSuspend: true}, z Suspense, tree), {}
+          .then (html) ->
+            _.map stableDisposables, (stableDisposable) ->
+              stableDisposable.unsubscribe()
+            html
+        new Promise (resolve, reject) ->
+          setTimeout ->
+            reject new Error 'Timeout'
+          , timeout
+      ]
+    catch err
+      Object.defineProperty err, 'html',
+        value: initialHtml
+        enumerable: false
+      throw err
+}, dyo

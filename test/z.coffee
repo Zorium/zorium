@@ -1,12 +1,11 @@
 b = require 'b-assert'
 
-z = require '../src'
-util = require './util'
+{z, render, classKebab, isSimpleClick} = require '../src'
+{assertDOM} = require './util'
+
+it = if window? then global.it else (-> null)
 
 describe 'z()', ->
-  it 'calls h() without undefined children by default', ->
-    b z('div').children.length, 0
-
   it 'creates basic DOM trees', ->
     dom = z 'div',
       z '.cname#cid', 'abc'
@@ -24,8 +23,8 @@ describe 'z()', ->
     '</div></div>'
 
     $el = document.createElement('div')
-    z.render dom, $el
-    util.assertDOM $el, util.htmlToNode result
+    render dom, $el
+    assertDOM $el, result
 
   it 'sets style', ->
     dom = z 'img',
@@ -34,7 +33,7 @@ describe 'z()', ->
         lineHeight: '1rem'
 
     $el = document.createElement('div')
-    z.render dom, $el
+    render dom, $el
     b $el.children[0].style.lineHeight, '1rem'
     b $el.children[0].style.backgroundColor, 'red'
 
@@ -44,7 +43,7 @@ describe 'z()', ->
     result = '<div>123</div>'
 
     $el = document.createElement('div')
-    z.render dom, $el
+    render dom, $el
     b $el.innerHTML, result
 
   it 'supports default div tag prefixing', ->
@@ -58,20 +57,19 @@ describe 'z()', ->
     '</div>'
 
     $el = document.createElement('div')
-    z.render dom, $el
+    render dom, $el
     b $el.innerHTML, result
 
   it 'supports nested zorium components', ->
-    class HelloWorldComponent
-      render: ->
-        z 'span', 'Hello World'
+    HelloWorldComponent = ->
+      z 'span', 'Hello World'
     hello = new HelloWorldComponent()
     dom = z 'div', hello
 
     result = '<div><span>Hello World</span></div>'
 
     $el = document.createElement('div')
-    z.render dom, $el
+    render dom, $el
     b $el.innerHTML, result
 
   it 'supports arrs', ->
@@ -83,8 +81,8 @@ describe 'z()', ->
     result = '<div><div><div>a</div><div>b</div></div></div>'
 
     $el = document.createElement('div')
-    z.render dom, $el
-    b $el.isEqualNode(util.htmlToNode(result)), true
+    render dom, $el
+    assertDOM $el, result
 
   it 'allows component render to return undefined', ->
     class HelloWorldComponent
@@ -107,9 +105,9 @@ describe 'z()', ->
       # '<noscript></noscript>' +
     '</div></div>'
 
-    z.render dom, root
+    render dom, root
 
-    util.assertDOM(root, util.htmlToNode(result))
+    assertDOM root, result
 
   it 'allows undefined children on redraw', ->
     dom = z 'div',
@@ -123,15 +121,15 @@ describe 'z()', ->
       '<div>b</div>' +
     '</div></div>'
 
-    z.render dom, root
+    render dom, root
 
     dom = z 'div',
       z 'div', 'a'
       z 'div', 'b'
       undefined
 
-    z.render dom, root
-    util.assertDOM root, util.htmlToNode result
+    render dom, root
+    assertDOM root, result
 
   it 'handles null children', ->
     dom = z 'div',
@@ -144,7 +142,7 @@ describe 'z()', ->
       ]
 
     $el = document.createElement 'div'
-    z.render dom, $el
+    render dom, $el
 
     result = '<div><div>' +
       '<span>Hello World</span>' +
@@ -153,16 +151,16 @@ describe 'z()', ->
       '</div>' +
     '</div></div>'
 
-    util.assertDOM $el, util.htmlToNode result
+    assertDOM $el, result
 
   # https://github.com/claydotio/zorium.js/issues/1
   it 'doesn\'t add extra class names', ->
     dom = z 'a', href: 'http://192.168.1.0', 'test'
     $el = document.createElement 'div'
-    z.render dom, $el
+    render dom, $el
     result = '<div><a href="http://192.168.1.0">test</a></div>'
 
-    b $el.isEqualNode(util.htmlToNode(result)), true
+    assertDOM $el, result
 
 
   # https://github.com/claydotio/zorium.js/issues/3
@@ -174,37 +172,33 @@ describe 'z()', ->
     dom = new Uniq()
 
     root = document.createElement 'div'
-    z.render dom, root
+    render dom, root
     first = root.querySelector '#uniq'
     b (first is root.querySelector '#uniq'), true
-    z.render dom, root
+    render dom, root
     b (first is root.querySelector '#uniq'), true
-    z.render dom, root
+    render dom, root
 
   it 'passes props to render when z is used with a component', ->
-    class A
-      render: ({world}) ->
-        z 'div', 'hello ' + world
+    A = ({world}) ->
+      z 'div', 'hello ' + world
 
-    class B
-      constructor: ->
-        @$a = new A()
-      render: =>
-        z 'div',
-          z @$a, {world: 'world'}
+    B = ->
+      z 'div',
+        z A, {world: 'world'}
 
     $b = new B()
 
     root = document.createElement 'div'
 
-    z.render $b, root
+    render $b, root
 
     result = '<div><div><div>hello world</div></div></div>'
-    b root.isEqualNode(util.htmlToNode(result)), true
+    assertDOM root, result
 
 describe 'z.classKebab', ->
   it 'kebabs objects', ->
-    kebab = z.classKebab
+    kebab = classKebab
       a: true
       b: true
       c: true
@@ -217,6 +211,6 @@ describe 'z.classKebab', ->
 
 describe 'z.isSimpleClick', ->
   it 'checks for non-left clicks', ->
-    b z.isSimpleClick({which: 2}), false
-    b z.isSimpleClick({which: 1}), true
-    b z.isSimpleClick({which: 1, shiftKey: true}), false
+    b isSimpleClick({which: 2}), false
+    b isSimpleClick({which: 1}), true
+    b isSimpleClick({which: 1, shiftKey: true}), false

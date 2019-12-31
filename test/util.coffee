@@ -32,12 +32,12 @@ assertDOM = (a, b) ->
 
   return null
 
-module.exports =
-  htmlToNode: (html) ->
-    root = document.createElement 'div'
-    root.innerHTML = html
-    return root.firstChild
+htmlToNode = (html) ->
+  root = document.createElement 'div'
+  root.innerHTML = html
+  return root.firstChild
 
+module.exports =
   deferred: ->
     resolve = null
     reject = null
@@ -49,4 +49,11 @@ module.exports =
 
     return promise
 
-  assertDOM: assertDOM
+  assertDOM: (a, b) ->
+    if typeof a is 'string'
+      a = htmlToNode a
+
+    if typeof b is 'string'
+      b = htmlToNode b
+
+    assertDOM a, b

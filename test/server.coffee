@@ -1,22 +1,21 @@
 b = require 'b-assert'
 Rx = require 'rxjs/Rx'
 
-{z, useState, useMemo} = require '../src'
+{z, useStream, useResource, renderToString} = require '../src'
 
-describe.only 'server side rendering', ->
-  if window?
-    return
+it = if window? then (-> null) else global.it
 
+describe 'server side rendering', ->
   it 'supports basic render to string', ->
-    z.renderToString z 'div', 'test'
+    renderToString z 'div', 'test'
     .then (html) ->
       b html, '<DIV>test</DIV>'
 
   it 'renders un-paired tags properly', ->
-    z.renderToString z 'br'
+    renderToString z 'br'
     .then (html) ->
       b html, '<BR>'
-      z.renderToString z 'input'
+      renderToString z 'input'
     .then (html) ->
       b html, '<INPUT>'
 
@@ -24,7 +23,7 @@ describe.only 'server side rendering', ->
     Root = ->
       z 'div', 'test'
 
-    z.renderToString Root
+    renderToString Root
     .then (html) ->
       b html, '<DIV>test</DIV>'
 
@@ -32,14 +31,14 @@ describe.only 'server side rendering', ->
     Root = ({name}) ->
       z 'div', 'test ' + name
 
-    z.renderToString z Root, {name: 'abc'}
+    renderToString z Root, {name: 'abc'}
     .then (html) ->
       b html, '<DIV>test abc</DIV>'
 
   it 'supports async rendering to string', ->
     pending = new Rx.ReplaySubject(1)
     Async = ->
-      {abc} = await useState ->
+      {abc} = useStream ->
         abc: pending
 
       z 'div', abc
@@ -47,7 +46,7 @@ describe.only 'server side rendering', ->
     setTimeout ->
       pending.next 'abc'
     , 20
-    z.renderToString Async
+    renderToString Async
     .then (html) ->
       b html, '<DIV>abc</DIV>'
 
@@ -56,13 +55,15 @@ describe.only 'server side rendering', ->
     pending = new Rx.ReplaySubject(1)
 
     AsyncChild = ->
-      {abc} = await useState ->
+      {abc} = useStream ->
         abc: pending
+      useResource ->
+        Promise.resolve null
 
       z 'div', abc
 
     Root = ->
-      {$component} = await useState ->
+      {$component} = useStream ->
         $component: componentSubject
 
       z 'div',
@@ -72,14 +73,14 @@ describe.only 'server side rendering', ->
     setTimeout ->
       pending.next 'abc'
     , 20
-    z.renderToString Root
+    renderToString Root
     .then (html) ->
       b html, '<DIV><DIV>abc</DIV></DIV>'
 
   it 'supports async rendering with props to string', ->
     pending = new Rx.ReplaySubject(1)
     Async = ({name}) ->
-      {abc} = await useState ->
+      {abc} = useStream ->
         abc: pending
 
       z 'div', abc + ' ' + name
@@ -92,20 +93,20 @@ describe.only 'server side rendering', ->
       pending.next 'abc'
     , 50
 
-    z.renderToString z Parent, {name: 'xxx'}
+    renderToString z Parent, {name: 'xxx'}
     .then (html) ->
       b html, '<DIV><DIV>abc xxx</DIV></DIV>'
 
   it 'supports async rendering with parent state with no streams', ->
     pending = new Rx.ReplaySubject(1)
     Async = ({name}) ->
-      {abc} = await useState ->
+      {abc} = useStream ->
         abc: pending
 
       z 'div', abc + ' ' + name
 
     Parent = (params) ->
-      {$async} = await useState ->
+      {$async} = useStream ->
         $async: Async
 
       z 'div',
@@ -115,32 +116,28 @@ describe.only 'server side rendering', ->
       pending.next 'abc'
     , 50
 
-    z.renderToString z Parent, {name: 'xxx'}
+    renderToString z Parent, {name: 'xxx'}
     .then (html) ->
       b html, '<DIV><DIV>abc xxx</DIV></DIV>'
 
   it 'logs state errors', ->
     Root = ->
-      await Promise.resolve null
-
-      await useState ->
+      useStream ->
         pending: Rx.Observable.throw new Error 'test'
 
       z 'div', 'abc'
 
-    z.renderToString Root
+    renderToString Root
     .then (html) ->
       throw new Error 'expected error'
     , (err) ->
       b err.message, 'test'
-    .catch (err) ->
-      console.log '???'
 
   it 'supports concurrent requests', (done) ->
     fastCallCnt = 0
 
     Slow = ->
-      await useState ->
+      useStream ->
         slow: Rx.Observable.fromPromise(
           new Promise (resolve) ->
             setTimeout ->
@@ -153,32 +150,32 @@ describe.only 'server side rendering', ->
       z 'div', 'fast'
 
 
-    z.renderToString Slow
+    renderToString Slow
     .then (html) ->
       b fastCallCnt, 4
       b html, '<DIV>slow</DIV>'
       done()
     .catch done
 
-    z.renderToString Fast
+    renderToString Fast
     .then (html) ->
       b html, '<DIV>fast</DIV>'
       fastCallCnt += 1
     .catch done
 
-    z.renderToString Fast
+    renderToString Fast
     .then (html) ->
       b html, '<DIV>fast</DIV>'
       fastCallCnt += 1
     .catch done
 
-    z.renderToString Fast
+    renderToString Fast
     .then (html) ->
       b html, '<DIV>fast</DIV>'
       fastCallCnt += 1
     .catch done
 
-    z.renderToString Fast
+    renderToString Fast
     .then (html) ->
       b html, '<DIV>fast</DIV>'
       fastCallCnt += 1
@@ -187,13 +184,13 @@ describe.only 'server side rendering', ->
 
   it 'defaults to 250ms timeout', ->
     Timeout = ->
-      await useState ->
+      useStream ->
         never: new Rx.ReplaySubject(1)
       z 'div', 'test'
 
     startTime = Date.now()
 
-    z.renderToString Timeout
+    renderToString Timeout
     .then (x) ->
       throw new Error 'expected timeout error'
     , (err) ->
@@ -204,47 +201,43 @@ describe.only 'server side rendering', ->
 
   it 'allows custom timeouts', ->
     Timeout = ->
-      await useState ->
+      useStream ->
         never: new Rx.ReplaySubject(1)
       z 'div', 'test'
 
     startTime = Date.now()
 
-    z.renderToString Timeout, {timeout: 300}
+    renderToString Timeout, {timeout: 275}
     .then ->
       throw new Error 'expected timeout error'
     , (err) ->
-      b (Date.now() - startTime) > 298
+      b (Date.now() - startTime) >= 275
       b err.message, 'Timeout'
       b err.html, '<DIV>test</DIV>'
 
+  it 'supports slow child updates', ->
+    s = new Rx.BehaviorSubject 'abc'
 
-  # FIXME: no longer supported
-  #   to add support would need to create a custom render target for updates
-  # it.only 'supports slow child updates', ->
-  #   s = new Rx.BehaviorSubject 'abc'
-  #
-  #   Child = ->
-  #     yield await useState ->
-  #       sideEffect: Rx.Observable.defer ->
-  #         new Promise (resolve) ->
-  #           setTimeout ->
-  #             console.log 'NEXT'
-  #             s.next 'xxx'
-  #             resolve null
-  #           , 20
-  #
-  #     yield z 'div', 'child'
-  #
-  #   Root = ->
-  #     yield {slow} = await useState ->
-  #       slow: s
-  #
-  #     yield z 'div', [
-  #       slow
-  #       Child
-  #     ]
-  #
-  #   z.renderToString Root
-  #   .then (html) ->
-  #     b html, '<DIV>xxx<DIV>child</DIV></DIV>'
+    Child = ->
+      useStream ->
+        sideEffect: Rx.Observable.defer ->
+          new Promise (resolve) ->
+            setTimeout ->
+              s.next 'xxx'
+              resolve null
+            , 20
+
+      z 'div', 'child'
+
+    Root = ->
+      {slow} = useStream ->
+        slow: s
+
+      z 'div', [
+        slow
+        Child
+      ]
+
+    renderToString Root
+    .then (html) ->
+      b html, '<DIV>xxx<DIV>child</DIV></DIV>'
