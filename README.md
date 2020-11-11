@@ -1,8 +1,8 @@
-[![Zorium](./icons/zorium_logo.png)](https://zorium.org/)
+[![Zorium](./icons/zorium_logo.png)](https://zorium.zolmeister.com/)
 
-## [Zorium](https://zorium.org/) - The CoffeeScript Web Framework
+## [Zorium](https://zorium.zolmeister.com/) - The CoffeeScript Web Framework
 
-#### [zorium.org](https://zorium.org/)
+#### [zorium.zolmeister.com](https://zorium.zolmeister.com/)
 
 (╯°□°)╯︵ ┻━┻
 v2.0.0
@@ -11,8 +11,8 @@ v2.0.0
 
   - First Class [RxJS Observables](https://github.com/Reactive-Extensions/RxJS)
   - Built for Isomorphism (server-side rendering)
-  - Standardized [Best Practices](https://zorium.org/best-practices)
-  - [Material Design Components](https://zorium.org/paper)
+  - Standardized [Best Practices](https://zorium.zolmeister.com/best-practices)
+  - [Material Design Components](https://zorium.zolmeister.com/paper)
   - Production-ready [Seed Project](https://github.com/Zorium/zorium-seed)
   - It's just CoffeeScript, no magic
 
@@ -43,7 +43,7 @@ z.render new AppComponent(), document.body
 
 ### Documentation
 
-[zorium.org](https://zorium.org/)
+[zorium.zolmeister.com](https://zorium.zolmeister.com/)
 
 ### Installation
 
