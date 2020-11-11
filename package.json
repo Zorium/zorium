@@ -26,7 +26,7 @@
   },
   "license": "MIT",
   "author": "Zolmeister (https://zolmeister.com)",
-  "homepage": "https://zorium.org/",
+  "homepage": "https://zorium.zolmeister.com/",
   "devDependencies": {
     "b-assert": "^0.1.2",
     "coffee-loader": "^0.9.0",
